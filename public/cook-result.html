@@ -273,9 +273,63 @@
         grid-template-columns: 3fr 2fr 1fr;
       }
     }
+
+    /* User Status Indicator */
+    .user-status {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        z-index: 1001;
+        display: flex;
+        align-items: center;
+        background-color: rgba(255, 255, 255, 0.9);
+        padding: 5px 10px;
+        border-radius: 20px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .user-status:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .user-status img {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: 2px solid #FF9800;
+        object-fit: cover;
+    }
+
+    .user-status .username {
+        margin-left: 8px;
+        font-weight: 600;
+        color: #2c3e50;
+        max-width: 120px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    @media (max-width: 767px) {
+        .user-status {
+            padding: 3px;
+        }
+        .user-status .username {
+            display: none;
+        }
+    }
   </style>
 </head>
 <body>
+  <!-- 用戶狀態指示器 -->
+  <div id="userStatus" class="user-status" style="display: none;">
+      <img id="userStatusAvatar" src="/images/a01girlmove.gif" alt="User">
+      <span id="userStatusName" class="username"></span>
+  </div>
+
   <div class="header">
     <div class="header-title">廚房急先鋒 - 遊戲結果</div>
   </div>
@@ -377,11 +431,51 @@
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       // 檢查是否有登入令牌，若無則導回登入頁
-      const token = localStorage.getItem('auth_token');
+      const token = localStorage.getItem('cookGameToken');
       if (!token) {
         window.location.href = '/cook-login.html';
         return;
       }
+
+      // 首先獲取用戶資料
+      let currentUser = null;
+      fetch('/cook-api/users/profile', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      .then(response => {
+        if (!response.ok) throw new Error('無法驗證使用者身份');
+        return response.json();
+      })
+      .then(data => {
+        currentUser = data.user;
+        
+        // Populate user status indicator
+        const userStatus = document.getElementById('userStatus');
+        const userStatusAvatar = document.getElementById('userStatusAvatar');
+        const userStatusName = document.getElementById('userStatusName');
+        
+        userStatusAvatar.src = currentUser.user_profile_image_url || '/images/a01girlmove.gif';
+        userStatusName.textContent = currentUser.display_name || currentUser.username;
+        userStatus.style.display = 'flex';
+        userStatus.addEventListener('click', () => {
+            window.location.href = `member-editor.html?userId=${currentUser.user_id}`;
+        });
+
+        // 獲取遊戲結果參數
+        const urlParams = new URLSearchParams(window.location.search);
+        const gameId = urlParams.get('gameId');
+        
+        if (!gameId) {
+          showDummyData();
+        } else {
+          fetchGameResults(gameId);
+        }
+      })
+      .catch(error => {
+        console.error('初始化頁面失敗:', error);
+        alert('頁面載入失敗，將返回大廳。');
+        window.location.href = 'cook-lobby.html';
+      });
       
       // DOM元素
       const totalScore = document.getElementById('totalScore');

@@ -395,9 +395,63 @@
       25% { transform: translateX(-5px); }
       75% { transform: translateX(5px); }
     }
+    
+    /* User Status Indicator */
+    .user-status {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        z-index: 1001;
+        display: flex;
+        align-items: center;
+        background-color: rgba(255, 255, 255, 0.9);
+        padding: 5px 10px;
+        border-radius: 20px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .user-status:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .user-status img {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: 2px solid #FF9800;
+        object-fit: cover;
+    }
+
+    .user-status .username {
+        margin-left: 8px;
+        font-weight: 600;
+        color: #2c3e50;
+        max-width: 120px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    @media (max-width: 767px) {
+        .user-status {
+            padding: 3px;
+        }
+        .user-status .username {
+            display: none;
+        }
+    }
   </style>
 </head>
 <body>
+  <!-- 用戶狀態指示器 -->
+  <div id="userStatus" class="user-status" style="display: none;">
+      <img id="userStatusAvatar" src="/images/a01girlmove.gif" alt="User">
+      <span id="userStatusName" class="username"></span>
+  </div>
+
   <div class="game-container" id="gameContainer">
     <!-- 遊戲載入畫面 -->
     <div class="loading-screen" id="loadingScreen">
@@ -452,7 +506,7 @@
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       // 檢查是否有登入令牌，若無則導回登入頁
-      const token = localStorage.getItem('auth_token');
+      const token = localStorage.getItem('cookGameToken');
       if (!token) {
         window.location.href = '/cook-login.html';
         return;
@@ -508,10 +562,44 @@
       const maxReconnectAttempts = 5;
       const reconnectDelay = 3000;
       
+      // 首先獲取用戶資料
+      fetch('/cook-api/users/profile', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('無法驗證使用者身份');
+        }
+        return response.json();
+      })
+      .then(data => {
+        gameState.currentPlayer = data.user;
+        
+        // Populate user status indicator
+        const userStatus = document.getElementById('userStatus');
+        const userStatusAvatar = document.getElementById('userStatusAvatar');
+        const userStatusName = document.getElementById('userStatusName');
+        
+        userStatusAvatar.src = gameState.currentPlayer.user_profile_image_url || '/images/a01girlmove.gif';
+        userStatusName.textContent = gameState.currentPlayer.display_name || gameState.currentPlayer.username;
+        userStatus.style.display = 'flex';
+        userStatus.addEventListener('click', () => {
+            window.location.href = `member-editor.html?userId=${gameState.currentPlayer.user_id}`;
+        });
+        
+        // 連接WebSocket並啟動遊戲
+        connectWebsocket();
+      })
+      .catch(error => {
+        console.error('獲取用戶資料失敗:', error);
+        alert('獲取用戶資料失敗，將返回大廳。');
+        window.location.href = 'cook-lobby.html';
+      });
+      
       // 連接WebSocket
       function connectWebsocket() {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/ws`;
+        const wsUrl = `${protocol}//${window.location.host}/cook-ws`;
         
         websocket = new WebSocket(wsUrl);
         
@@ -1045,9 +1133,6 @@
           sendAction('select_slot', { slotIndex });
         }
       });
-      
-      // 連接WebSocket並啟動遊戲
-      connectWebsocket();
     });
   </script>
 </body>

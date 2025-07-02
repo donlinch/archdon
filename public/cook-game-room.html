@@ -192,6 +192,10 @@
       background-color: #aaa;
     }
     
+    .player-status .username {
+      display: none;
+    }
+    
     .status-ready {
       background-color: var(--ready-color);
       box-shadow: 0 0 5px var(--ready-color);
@@ -409,6 +413,12 @@
   </style>
 </head>
 <body>
+  <!-- 用戶狀態指示器 -->
+  <div id="userStatus" class="user-status" style="display: none;">
+      <img id="userStatusAvatar" src="/images/a01girlmove.gif" alt="User">
+      <span id="userStatusName" class="username"></span>
+  </div>
+
   <div class="header">
     <div class="header-title" id="roomHeaderTitle">廚房急先鋒 - 遊戲房間</div>
   </div>
@@ -514,6 +524,17 @@
       .then(data => {
         currentUser = data.user;
         // 成功獲取用戶資料後，再連接WebSocket
+        const userStatus = document.getElementById('userStatus');
+        const userStatusAvatar = document.getElementById('userStatusAvatar');
+        const userStatusName = document.getElementById('userStatusName');
+        
+        userStatusAvatar.src = currentUser.user_profile_image_url || '/images/a01girlmove.gif';
+        userStatusName.textContent = currentUser.display_name || currentUser.username;
+        userStatus.style.display = 'flex';
+        userStatus.addEventListener('click', () => {
+            window.location.href = `member-editor.html?userId=${currentUser.user_id}`;
+        });
+
         connectWebsocket();
       })
       .catch(error => {
@@ -541,13 +562,7 @@
             token: token
           }));
           
-          // 發送加入房間訊息
-          websocket.send(JSON.stringify({
-            type: 'join_room',
-            roomId: roomId
-          }));
-          
-          addSystemMessage('已連接到伺服器');
+          addSystemMessage('已連接到伺服器，正在進行認證...');
         };
         
         websocket.onmessage = (event) => {
@@ -583,6 +598,14 @@
         console.log('收到訊息:', message);
         
         switch (message.type) {
+          case 'auth_success':
+            addSystemMessage('認證成功，正在加入房間...');
+            // 發送加入房間訊息
+            websocket.send(JSON.stringify({
+                type: 'join_room',
+                roomId: roomId
+            }));
+            break;
           case 'room_info':
             updateRoomInfo(message.room);
             break;

@@ -204,9 +204,63 @@
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
     }
+
+    /* User Status Indicator */
+    .user-status {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        z-index: 1001;
+        display: flex;
+        align-items: center;
+        background-color: rgba(255, 255, 255, 0.9);
+        padding: 5px 10px;
+        border-radius: 20px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .user-status:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .user-status img {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: 2px solid #FF9800;
+        object-fit: cover;
+    }
+
+    .user-status .username {
+        margin-left: 8px;
+        font-weight: 600;
+        color: #2c3e50;
+        max-width: 120px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    @media (max-width: 767px) {
+        .user-status {
+            padding: 3px;
+        }
+        .user-status .username {
+            display: none;
+        }
+    }
   </style>
 </head>
 <body>
+  <!-- 用戶狀態指示器 -->
+  <div id="userStatus" class="user-status" style="display: none;">
+      <img id="userStatusAvatar" src="/images/a01girlmove.gif" alt="User">
+      <span id="userStatusName" class="username"></span>
+  </div>
+
   <div class="header">
     <button class="back-btn" id="backBtn">[返回]</button>
     <div class="header-title">廚房急先鋒 - 遊戲說明</div>
@@ -361,6 +415,32 @@
     document.addEventListener('DOMContentLoaded', () => {
       const backBtn = document.getElementById('backBtn');
       const returnBtn = document.getElementById('returnBtn');
+      
+      // --- Add User Status Indicator Logic ---
+      const token = localStorage.getItem('cookGameToken');
+      if (token) {
+        fetch('/cook-api/users/profile', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        .then(response => {
+          if (!response.ok) return;
+          return response.json();
+        })
+        .then(data => {
+          if (!data || !data.user) return;
+          const currentUser = data.user;
+          const userStatus = document.getElementById('userStatus');
+          const userStatusAvatar = document.getElementById('userStatusAvatar');
+          const userStatusName = document.getElementById('userStatusName');
+          
+          userStatusAvatar.src = currentUser.user_profile_image_url || '/images/a01girlmove.gif';
+          userStatusName.textContent = currentUser.display_name || currentUser.username;
+          userStatus.style.display = 'flex';
+          userStatus.addEventListener('click', () => {
+              window.location.href = `member-editor.html?userId=${currentUser.user_id}`;
+          });
+        }).catch(err => console.error("Could not fetch user profile for status indicator:", err));
+      }
       
       // 返回按鈕處理
       function handleReturn() {
