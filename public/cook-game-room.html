@@ -664,6 +664,10 @@
             break;
           case 'room_info':
             updateRoomInfo(message.room);
+            // 收到房間資訊後，可能也需要更新玩家列表
+            if(message.room.players) {
+                updatePlayerList(message.room.players);
+            }
             break;
             
           case 'player_list':
@@ -745,9 +749,13 @@
           }
           
           const statusClass = player.ready ? 'status-ready' : '';
-          
+          const avatarUrl = player.avatar || '/images/a01girlmove.gif';
+          const avatarInitial = player.username ? player.username.charAt(0).toUpperCase() : '?';
+
           playerCard.innerHTML = `
-            <div class="player-avatar">${player.username.charAt(0).toUpperCase()}</div>
+            <div class="player-avatar" style="background-image: url('${avatarUrl}'); background-size: cover; background-position: center;">
+              ${!player.avatar ? avatarInitial : ''}
+            </div>
             <div class="player-info">
               <div class="player-name">${player.username}</div>
               <div class="player-level">Lv.${player.level}</div>
@@ -818,8 +826,8 @@
         if (websocket && websocket.readyState === WebSocket.OPEN) {
           websocket.send(JSON.stringify({
             type: 'chat_message',
-            roomId: roomId,
-            text: text
+            message: text,
+            roomId: roomId
           }));
           
           chatInput.value = '';

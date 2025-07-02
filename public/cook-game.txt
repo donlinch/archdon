@@ -1576,16 +1576,17 @@ CREATE TABLE cook_ai_levels (
 
 ## 14.2 WebSocket 事件規範
 
-| 事件類型                   | 方向                   | 資料結構                       | 描述                           |
-|---------------------------|------------------------|-------------------------------|--------------------------------|
-| join_room                 | 客戶端 → 伺服器        | `{room_id, user_id}`          | 玩家加入房間                     |
-| player_ready              | 客戶端 → 伺服器        | `{user_id, station_id}`       | 玩家準備開始並選擇工作站          |
-| game_action               | 客戶端 → 伺服器        | `{action, target, params}`    | 執行遊戲操作                     |
-| chat_message              | 雙向                  | `{user_id, message, time}`    | 聊天訊息                        |
-| state_update              | 伺服器 → 客戶端        | `{game_state, timestamp}`     | 遊戲狀態更新                     |
-| player_joined             | 伺服器 → 客戶端        | `{user, station}`             | 新玩家加入通知                   |
-| order_complete            | 伺服器 → 客戶端        | `{order_id, score, time}`     | 訂單完成通知                     |
-| game_over                 | 伺服器 → 客戶端        | `{results, rewards}`          | 遊戲結束結算                     |
+| 事件類型        | 方向            | 資料結構                                         | 描述                       |
+|-----------------|-----------------|--------------------------------------------------|----------------------------|
+| authenticate    | 客戶端 → 伺服器 | `{ "type": "authenticate", "token": "..." }`     | 使用JWT進行WebSocket連接認證 |
+| join_room       | 客戶端 → 伺服器 | `{ "type": "join_room", "roomId": "...", "userId": "..." }` | 玩家加入房間               |
+| player_ready    | 客戶端 → 伺服器 | `{ "user_id": "...", "station_id": "..." }`      | 玩家準備開始並選擇工作站   |
+| game_action     | 客戶端 → 伺服器 | `{ "action": "...", "target": "...", "params": {} }` | 執行遊戲操作               |
+| chat_message    | 雙向            | `{ "user_id": "...", "message": "...", "time": "..." }` | 聊天訊息                   |
+| state_update    | 伺服器 → 客戶端 | `{ "game_state": {}, "timestamp": "..." }`       | 遊戲狀態更新               |
+| player_joined   | 伺服器 → 客戶端 | `{ "user": {}, "station": {} }`                  | 新玩家加入通知             |
+| order_complete  | 伺服器 → 客戶端 | `{ "order_id": "...", "score": "...", "time": "..." }` | 訂單完成通知               |
+| game_over       | 伺服器 → 客戶端 | `{ "results": {}, "rewards": {} }`               | 遊戲結束結算               |
 
 ## 14.3 API文檔生成與維護
 - **使用Swagger/OpenAPI**: 自動生成API文檔
@@ -1722,3 +1723,21 @@ CREATE TABLE cook_ai_levels (
 - **內遊戲反饋**: 遊戲內直接提交意見功能
 - **Beta測試計劃**: 邀請活躍會員參與新功能測試
 - **數據分析**: 建立用戶行為分析系統, 指導開發決策
+
+
+# 19. 近期修復與調整紀錄
+
+### 19.1 使用者介面 (UI) 修正
+
+- **統一的使用者狀態欄**: 在所有遊戲相關頁面 (`cook-lobby.html`, `cook-game-room.html`, `cook-game.html`, `cook-result.html`, `cook-help.html`) 的左上角新增並統一了使用者狀態顯示。此組件顯示玩家頭像和名稱，並採用了適合深色主題的樣式。
+- **修正大廳頁面樣式**: 解決了 `cook-lobby.html` 中使用者狀態顯示異常（顯示為大圖）的問題，確保其樣式與其他頁面一致。
+
+### 19.2 核心功能與流程修復
+
+- **遊戲房間載入問題**: 解決了 `cook-game-room.html` 頁面卡在「載入中」的問題。修復方式為在客戶端發送 `join_room` WebSocket 事件時，明確包含 `userId`，確保伺服器能正確識別玩家身份並回傳房間資料。
+- **房間建立與加入流程**: 修正了 `cook-lobby.html` 中「創建房間」按鈕無響應的問題，並完善了加入房間的流程。
+
+### 19.3 後端與網路通訊
+
+- **WebSocket 連線問題**: 修正了先前 WebSocket 連線端點錯誤的問題，確保所有遊戲頁面都連接到正確的 `/cook-ws` 路徑，並在 `cook-game-room.html` 中完善了重連與錯誤處理機制。
+- **身份驗證流程**: 改善了橫跨主站與遊戲的 `token` 處理邏輯，減少因 `token` 失效或遺失導致的非預期頁面跳轉。
