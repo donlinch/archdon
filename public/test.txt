@@ -17,12 +17,12 @@
    - WebSocket路徑：`/ws`
 
 2. **廚房急先鋒遊戲** (`cook-kitchen-rush.js`):
-   - 運行在端口 3001
+   -  
    - 處理遊戲相關功能和API
    - WebSocket路徑：`/cook-ws`
    - API路徑前綴：`/cook-api`
 
-這兩個服務需要分別啟動，但靜態文件(前端頁面)都由主網站系統提供。
+
 
 ### 3. 安裝步驟
 

@@ -85,6 +85,8 @@ app.use(session({
 // 創建 HTTP 服務器
 const server = http.createServer(app);
 
+const { cookGameApp, initCookGame } = require('./cook-kitchen-rush');
+
 // 創建 WebSocket 服務器
 const wss = new WebSocket.Server({ 
     server,
@@ -93,6 +95,8 @@ const wss = new WebSocket.Server({
 console.log('[WS] WebSocket服務器已初始化');
 
 initCookGame(server);
+
+
 
  // YouTube抽獎系統模組
 const YoutubeLottery = require('./youtubeLottery');
