@@ -615,12 +615,6 @@
             type: 'authenticate',
             token: token
           }));
-          
-          // 發送加入遊戲訊息
-          websocket.send(JSON.stringify({
-            type: 'join_game',
-            roomId: roomId
-          }));
         };
         
         websocket.onmessage = (event) => {
@@ -655,11 +649,22 @@
         console.log('收到訊息:', message);
         
         switch (message.type) {
+          case 'auth_success':
+            console.log('認證成功，正在加入遊戲房間...');
+            // 認證成功後，發送加入房間的請求以獲取遊戲狀態
+            websocket.send(JSON.stringify({
+              type: 'join_room',
+              roomId: roomId
+            }));
+            break;
+
           case 'game_state':
-            updateGameState(message.gameState);
+            // 當重新連線或直接進入遊戲頁面時，伺服器會發送這個
+            startGame(message.gameState);
             break;
             
           case 'game_started':
+            // 當從房間等待頁面正常開始遊戲時，會收到此訊息
             startGame(message.gameState);
             break;
             
@@ -691,7 +696,11 @@
             break;
             
           case 'error':
-            showToast(message.message);
+            showToast(`錯誤: ${message.message}`);
+            if (message.message.includes('找不到房間')) {
+                alert('找不到對應的遊戲房間，將返回大廳。');
+                window.location.href = '/cook-lobby.html';
+            }
             break;
             
           default:

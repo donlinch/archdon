@@ -99,6 +99,21 @@ async function handleAuthenticatedMessage(ws, data, userId, username) {
           ws.send(JSON.stringify({ type: 'error', message: '找不到房間' }));
           return;
         }
+
+        // 如果遊戲已在進行中，直接發送當前遊戲狀態給該玩家
+        if (room.status === 'playing' && room.gameState) {
+            console.log(`[COOK-GAME] 玩家 ${username} 重新加入正在進行的遊戲 ${roomId}`);
+            
+            const player = room.players.find(p => p.id === userId);
+            if (player) {
+                player.ws = ws; // 更新WebSocket實例
+            }
+            ws.currentRoomId = roomId;
+
+            // 只對重新連線的玩家發送完整的遊戲狀態
+            ws.send(JSON.stringify({ type: 'game_state', gameState: room.gameState }));
+            return; // 處理完畢，直接返回
+        }
         
         if (room.players.length >= 4) {
           ws.send(JSON.stringify({ type: 'error', message: '房間已滿' }));

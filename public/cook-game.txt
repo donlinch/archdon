@@ -1741,3 +1741,19 @@ CREATE TABLE cook_ai_levels (
 
 - **WebSocket 連線問題**: 修正了先前 WebSocket 連線端點錯誤的問題，確保所有遊戲頁面都連接到正確的 `/cook-ws` 路徑，並在 `cook-game-room.html` 中完善了重連與錯誤處理機制。
 - **身份驗證流程**: 改善了橫跨主站與遊戲的 `token` 處理邏輯，減少因 `token` 失效或遺失導致的非預期頁面跳轉。
+
+### 19.4 遊戲房間穩定性與後端邏輯重構
+
+- **後端 WebSocket 邏輯重構**:
+  - 全面重寫了 `handleAuthenticatedMessage` 函數，為 `join_room`, `leave_room`, `player_ready`, `chat_message`, `start_game` 等核心房間操作提供了穩定且完整的業務邏輯。
+  - 新增 `broadcastToRoom` 輔助函數，標準化了向房間內所有玩家廣播訊息的流程。
+  - 新增 `handlePlayerLeave` 輔助函數，完整處理玩家離開或斷線時的場景，包括房主轉移和房間狀態更新。
+  - 確保了玩家的 WebSocket 連接實例 (`ws`) 與其在房間內的 `player` 物件正確綁定，解決了之前無法對特定玩家發送訊息的問題。
+
+- **修正房間創建邏輯**:
+  - 修復了創建房間 API 中房主 ID 不正確的問題 (將 `req.user.id` 修正為 `req.user.userId`)。
+  - 擴充了房間物件的結構，明確加入 `creatorId` 和 `creator` 欄位，使房主資訊更清晰。
+
+- **客戶端-伺服器通訊修正**:
+  - 解決了遊戲房間頁面因 WebSocket 連線後立即中斷而無限循環載入的問題。
+  - 透過對後端邏輯的重構和修正前端 `join_room` 事件的發送格式，確保了客戶端加入房間的流程穩定可靠。
