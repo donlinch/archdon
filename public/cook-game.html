@@ -706,6 +706,26 @@
             }));
             break;
 
+          case 'room_info':
+            // 收到房間信息後，自動設置為準備狀態（單人模式）
+            console.log('收到房間信息，自動準備開始遊戲');
+            websocket.send(JSON.stringify({
+              type: 'player_ready',
+              roomId: roomId
+            }));
+            
+            // 如果是房主，自動開始遊戲
+            if (message.room.creatorId === gameState.currentPlayer.user_id) {
+              setTimeout(() => {
+                console.log('自動開始遊戲');
+                websocket.send(JSON.stringify({
+                  type: 'start_game',
+                  roomId: roomId
+                }));
+              }, 1000); // 延遲1秒後自動開始遊戲
+            }
+            break;
+
           case 'game_state':
             // 當重新連線或直接進入遊戲頁面時，伺服器會發送這個
             startGame(message.gameState);
@@ -749,7 +769,8 @@
             console.log(`收到ingredient_picked訊息: 類型=${message.ingredientType}, 槽位=${message.slotIndex}`);
             gameState.inventory[message.slotIndex] = {
               type: message.ingredientType,
-              id: message.itemId
+              id: message.itemId,
+              state: 'raw'
             };
             updateInventory(gameState.inventory);
             updateTaskHint(); // 更新任務提示
@@ -760,6 +781,7 @@
             // 更新庫存中的食材狀態
             if (gameState.inventory[message.slotIndex]) {
               gameState.inventory[message.slotIndex].type = message.resultType;
+              gameState.inventory[message.slotIndex].state = 'cooked';
               updateInventory(gameState.inventory);
               updateTaskHint(); // 更新任務提示
               showToast(`${getItemName(message.resultType)}烹飪完成！`);
@@ -910,6 +932,9 @@
           gameState.orders = [defaultOrder];
           updateOrders(gameState.orders);
         }
+        
+        // 單人模式提示
+        showToast('單人模式已開始，完成訂單獲取分數！');
         
         gameState.isRunning = true;
       }
@@ -1141,6 +1166,8 @@
             }
             
             showToast(`正在烹飪${getItemName(currentItem.type)}...`);
+          } else if (currentItem) {
+            showToast(`${getItemName(currentItem.type)}不可烹飪！`);
           } else {
             showToast('請先拿取可烹飪的食材');
           }
@@ -1492,7 +1519,7 @@
       
       // 判斷食材是否可烹飪
       function isCookable(itemType) {
-        return ['beef_raw', 'lettuce', 'tomato', 'onion', 'bread', 'cheese'].includes(itemType);
+        return ['beef', 'bread', 'onion', 'tomato'].includes(itemType);
       }
       
       // 判斷是否為完成的料理
@@ -1503,7 +1530,7 @@
       // 獲取物品名稱
       function getItemName(type) {
         switch (type) {
-          case 'beef_raw': return '生牛肉';
+          case 'beef': return '牛肉';
           case 'beef_cooked': return '熟牛肉';
           case 'lettuce': return '生菜';
           case 'tomato': return '番茄';

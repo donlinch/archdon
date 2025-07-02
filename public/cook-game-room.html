@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>廚房急先鋒 - 遊戲房間</title>
+  <title>料理急先鋒 - 遊戲房間</title>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#333333">
   <style>
@@ -471,7 +471,7 @@
   </div>
 
   <div class="header">
-    <div class="header-title" id="roomHeaderTitle">廚房急先鋒 - 遊戲房間</div>
+    <div class="header-title" id="roomHeaderTitle">料理急先鋒 - 遊戲房間</div>
   </div>
 
   <div class="main-content">
@@ -731,7 +731,7 @@
       function updateRoomInfo(room) {
         roomData = room;
         roomNameDisplay.textContent = room.name;
-        roomHeaderTitle.textContent = `廚房急先鋒 - ${room.name}`;
+        roomHeaderTitle.textContent = `料理急先鋒 - ${room.name}`;
         roomStatusLabel.textContent = room.status === 'waiting' ? '等待中' : '遊戲中';
         
         let difficultyText = '簡單';

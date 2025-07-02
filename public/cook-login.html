@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>廚房急先鋒 - 會員登入</title>
+    <title>料理急先鋒 - 會員登入</title>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#FFB74D">
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8966114892131293"
@@ -374,7 +374,7 @@
     </div>
 
     <header class="page-header">
-        <h1 class="page-title">廚房急先鋒 - BBS風格協作料理遊戲</h1>
+        <h1 class="page-title">料理急先鋒 - BBS風格協作料理遊戲</h1>
     </header>
 
     <div class="container">
@@ -415,9 +415,9 @@
 
         <!-- 遊戲介紹 -->
         <div class="form-container" style="margin-top: 2rem;">
-            <h2>關於廚房急先鋒</h2>
+            <h2>關於料理急先鋒</h2>
             <div style="margin-bottom: 1.5rem;">
-                <p style="margin-bottom: 1rem;">「廚房急先鋒」是一款多人協作的BBS風格料理遊戲，玩家需要通力合作完成各種料理訂單。</p>
+                <p style="margin-bottom: 1rem;">「料理急先鋒」是一款多人協作的BBS風格料理遊戲，玩家需要通力合作完成各種料理訂單。</p>
                 <p style="margin-bottom: 1rem;">遊戲特色:</p>
                 <ul style="list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem;">
                     <li>復古BBS介面，充滿懷舊氛圍</li>
@@ -504,7 +504,7 @@
                 quickLoginBtn.addEventListener('click', async () => {
                     if (savedUserId && savedUserToken) {
                         try {
-                            // 使用現有token嘗試快速登入廚房急先鋒
+                            // 使用現有token嘗試快速登入料理急先鋒
                             const response = await fetch('/cook-api/auth/quick-login', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
@@ -594,7 +594,7 @@
                             localStorage.setItem('boxCurrentUsername', boxData.user.username);
                             localStorage.setItem('boxCurrentUserAvatar', boxData.user?.profileImageUrl || '/images/a01girlmove.gif');
                             
-                            // 接著登入廚房急先鋒遊戲系統
+                            // 接著登入料理急先鋒遊戲系統
                             try {
                                 const cookResponse = await fetch('/cook-api/auth/login', {
                                     method: 'POST',

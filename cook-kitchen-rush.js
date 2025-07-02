@@ -1,7 +1,7 @@
 // cook-kitchen-rush.js
 
 /**
- * 廚房急先鋒 - 多人協作料理遊戲服務器
+ * 料理急先鋒 - 多人協作料理遊戲服務器
  * 基於BBS風格的會員制文字遊戲
  * 針對行動裝置優化的多人協作料理遊戲
  * 
@@ -1070,13 +1070,13 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
 
 // 輔助函數：判斷食材是否可烹飪
 function isCookable(itemType) {
-    return ['beef_raw', 'bread', 'onion', 'tomato'].includes(itemType);
+    return ['beef', 'bread', 'onion', 'tomato'].includes(itemType);
 }
 
 // 輔助函數：獲取烹飪後的食材類型
 function getCookedType(itemType) {
     switch (itemType) {
-        case 'beef_raw': return 'beef_cooked';
+        case 'beef': return 'beef_cooked';
         case 'bread': return 'bread_toasted';
         case 'onion': return 'onion_grilled';
         case 'tomato': return 'tomato_grilled';
