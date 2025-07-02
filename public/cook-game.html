@@ -112,6 +112,22 @@
       color: var(--secondary-color);
     }
     
+    /* 添加任務提示樣式 */
+    .task-hint {
+      position: absolute;
+      top: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(0, 0, 0, 0.7);
+      color: var(--text-color);
+      padding: 8px 15px;
+      border-radius: 5px;
+      font-size: 1.1em;
+      z-index: 10;
+      text-align: center;
+      max-width: 80%;
+    }
+    
     .game-main {
       flex: 1;
       display: grid;
@@ -471,6 +487,8 @@
       
       <div class="game-main">
         <div class="game-board" id="gameBoard">
+          <!-- 添加任務提示元素 -->
+          <div class="task-hint" id="taskHint">請拿取食材開始製作料理</div>
           <div class="kitchen-area">
             <div class="stations-container" id="stationsContainer">
               <!-- 工作站將由JavaScript動態生成 -->
@@ -699,11 +717,13 @@
           // 新增的消息處理
           case 'ingredient_picked':
             // 更新庫存
+            console.log(`收到ingredient_picked訊息: 類型=${message.ingredientType}, 槽位=${message.slotIndex}`);
             gameState.inventory[message.slotIndex] = {
               type: message.ingredientType,
               id: message.itemId
             };
             updateInventory(gameState.inventory);
+            updateTaskHint(); // 更新任務提示
             showToast(`已拿取${getItemName(message.ingredientType)}`);
             break;
             
@@ -712,6 +732,7 @@
             if (gameState.inventory[message.slotIndex]) {
               gameState.inventory[message.slotIndex].type = message.resultType;
               updateInventory(gameState.inventory);
+              updateTaskHint(); // 更新任務提示
               showToast(`${getItemName(message.resultType)}烹飪完成！`);
             }
             break;
@@ -720,6 +741,7 @@
             // 更新庫存，清空使用的食材，添加組裝結果
             gameState.inventory = message.newInventory;
             updateInventory(gameState.inventory);
+            updateTaskHint(); // 更新任務提示
             showToast(`${getItemName(message.resultType)}組裝完成！`);
             break;
             
@@ -816,6 +838,24 @@
         // 設置定時器更新訂單計時器
         setInterval(updateOrderTimers, 1000);
         
+        // 確保訂單初始化
+        if (initialState.orders && initialState.orders.length > 0) {
+          console.log('初始化訂單:', initialState.orders);
+          updateOrders(initialState.orders);
+        } else {
+          console.log('沒有初始訂單，生成默認訂單');
+          // 生成默認訂單
+          const defaultOrder = {
+            id: `order_${Date.now()}_default`,
+            recipe: 'burger_basic',
+            totalTime: 120,
+            timeRemaining: 120,
+            createdAt: Date.now()
+          };
+          gameState.orders = [defaultOrder];
+          updateOrders(gameState.orders);
+        }
+        
         gameState.isRunning = true;
       }
       
@@ -834,6 +874,9 @@
         
         // 更新庫存
         updateInventory(gameState.inventory);
+        
+        // 更新任務提示
+        updateTaskHint();
       }
       
       // 更新計時器
@@ -882,6 +925,7 @@
       
       // 更新庫存顯示
       function updateInventory(inventory) {
+        console.log('更新物品欄:', inventory);
         const slots = playerInventory.querySelectorAll('.inventory-slot');
         
         inventory.forEach((item, index) => {
@@ -900,6 +944,18 @@
             itemIcon.style.width = '50px';
             itemIcon.style.height = '50px';
             itemIcon.style.backgroundColor = getItemColor(item.type);
+            
+            // 添加物品名稱標籤
+            const itemLabel = document.createElement('div');
+            itemLabel.style.position = 'absolute';
+            itemLabel.style.bottom = '-20px';
+            itemLabel.style.left = '0';
+            itemLabel.style.width = '100%';
+            itemLabel.style.textAlign = 'center';
+            itemLabel.style.fontSize = '0.8em';
+            itemLabel.style.color = '#fff';
+            itemLabel.textContent = getItemName(item.type);
+            itemIcon.appendChild(itemLabel);
             
             slot.appendChild(itemIcon);
           }
@@ -1102,7 +1158,13 @@
       
       // 更新訂單列表
       function updateOrders(orders) {
+        console.log('更新訂單列表:', orders);
         ordersContainer.innerHTML = '';
+        
+        if (!orders || orders.length === 0) {
+          console.log('沒有訂單可顯示');
+          return;
+        }
         
         orders.forEach(order => {
           const orderElement = createOrderElement(order);
@@ -1462,6 +1524,37 @@
         document.getElementById('closeTutorial').addEventListener('click', () => {
           tutorial.remove();
         });
+      }
+      
+      // 添加更新任務提示的函數
+      function updateTaskHint() {
+        const taskHint = document.getElementById('taskHint');
+        
+        // 檢查當前訂單
+        if (gameState.orders && gameState.orders.length > 0) {
+          const currentOrder = gameState.orders[0];
+          const recipeName = getRecipeName(currentOrder.recipe);
+          taskHint.textContent = `當前任務：製作 ${recipeName}`;
+        } else {
+          taskHint.textContent = '等待新的訂單...';
+        }
+        
+        // 根據玩家庫存狀態提供更具體的提示
+        const hasRawIngredients = gameState.inventory.some(item => 
+          item && ['beef_raw', 'lettuce', 'tomato', 'onion', 'bread', 'cheese'].includes(item.type));
+        
+        const hasCookedIngredients = gameState.inventory.some(item => 
+          item && ['beef_cooked', 'bread_toasted', 'tomato_grilled', 'onion_grilled'].includes(item.type));
+        
+        if (hasAssemblableItems()) {
+          taskHint.textContent = '可以組裝漢堡了！前往組裝區';
+        } else if (hasCookedIngredients) {
+          taskHint.textContent = '需要更多食材，繼續拿取或烹飪';
+        } else if (hasRawIngredients) {
+          taskHint.textContent = '前往烹飪區處理食材';
+        } else if (gameState.orders && gameState.orders.length > 0) {
+          taskHint.textContent = '拿取食材開始製作料理';
+        }
       }
     });
   </script>
