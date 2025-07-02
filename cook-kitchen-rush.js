@@ -3,11 +3,10 @@
  * 基於BBS風格的會員制文字遊戲
  * 針對行動裝置優化的多人協作料理遊戲
  * 
- * 注意：此服務與主服務器(server.js)分離運行，使用不同的端口和路徑
+ * 注意：此服務將作為主服務器(server.js)的一部分運行，不再獨立運行
  */
 
 const express = require('express');
-const http = require('http');
 const WebSocket = require('ws');
 const { Pool } = require('pg');
 const jwt = require('jsonwebtoken');
@@ -17,8 +16,7 @@ const path = require('path');
 const db = require('./db'); // Assuming the db module is imported from a file named db.js
 
 // 初始化Express應用
-const app = express();
-const server = http.createServer(app);
+const cookGameApp = express();
 
 // 資料庫連接配置
 const pool = new Pool({
@@ -30,23 +28,11 @@ const pool = new Pool({
 });
 
 // 中間件設置
-app.use(cors());
-app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
-
-// API前綴，避免與主系統路由衝突
-const API_PREFIX = '/cook-api';
+cookGameApp.use(cors());
+cookGameApp.use(express.json());
 
 // JWT密鑰
 const JWT_SECRET = process.env.COOK_JWT_SECRET || 'cook-kitchen-rush-secret-key';
-
-// WebSocket服務器設置 - 使用特定路徑避免衝突
-const wss = new WebSocket.Server({ 
-  server,
-  path: '/cook-ws'  // 使用特定路徑區分遊戲WebSocket
-});
-
-console.log('[COOK-GAME] 遊戲WebSocket服務器已初始化於路徑: /cook-ws');
 
 // 活躍的遊戲房間
 const gameRooms = new Map();
@@ -95,7 +81,7 @@ const authenticateToken = (req, res, next) => {
 };
 
 // 修改登入路由，使用主系統的會員資料表
-app.post(`${API_PREFIX}/auth/login`, async (req, res) => {
+cookGameApp.post(`/auth/login`, async (req, res) => {
   try {
     const { username, password } = req.body;
     
@@ -174,7 +160,7 @@ app.post(`${API_PREFIX}/auth/login`, async (req, res) => {
 });
 
 // 添加一個快速登入路由，使用現有的token進行驗證
-app.post(`${API_PREFIX}/auth/quick-login`, async (req, res) => {
+cookGameApp.post(`/auth/quick-login`, async (req, res) => {
   try {
     const { username, deviceId } = req.body;
     
@@ -246,7 +232,7 @@ app.post(`${API_PREFIX}/auth/quick-login`, async (req, res) => {
 });
 
 // 查詢用戶資料的路由，從box_users獲取基礎資料，從cook_players獲取遊戲資料
-app.get(`${API_PREFIX}/users/profile`, authenticateToken, async (req, res) => {
+cookGameApp.get(`/users/profile`, authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
     
@@ -296,7 +282,7 @@ app.get(`${API_PREFIX}/users/profile`, authenticateToken, async (req, res) => {
 });
 
 // API路由 - 獲取遊戲房間列表
-app.get(`${API_PREFIX}/games/rooms`, authenticateToken, (req, res) => {
+cookGameApp.get(`/games/rooms`, authenticateToken, (req, res) => {
   const rooms = [];
   
   gameRooms.forEach((room, roomId) => {
@@ -314,7 +300,7 @@ app.get(`${API_PREFIX}/games/rooms`, authenticateToken, (req, res) => {
 });
 
 // API路由 - 創建遊戲房間
-app.post(`${API_PREFIX}/games/rooms`, authenticateToken, (req, res) => {
+cookGameApp.post(`/games/rooms`, authenticateToken, (req, res) => {
   try {
     const userId = req.user.id;
     const { name, difficulty } = req.body;
@@ -348,91 +334,7 @@ app.post(`${API_PREFIX}/games/rooms`, authenticateToken, (req, res) => {
   }
 });
 
-// WebSocket連接處理，更新驗證邏輯
-wss.on('connection', (ws, req) => {
-  console.log(`[WebSocket] 新的連接`);
-  
-  let authenticated = false;
-  let userId = null;
-  let username = null;
-  let currentRoomId = null;
-  
-  ws.on('message', async (message) => {
-    try {
-      const data = JSON.parse(message);
-      
-      if (data.type === 'authenticate') {
-        try {
-          // 驗證令牌
-          const decoded = jwt.verify(data.token, JWT_SECRET);
-          userId = decoded.userId;
-          
-          // 查詢用戶資訊
-          const result = await db.query(
-            'SELECT user_id, username, display_name FROM box_users WHERE user_id = $1',
-            [userId]
-          );
-          
-          if (result.rows.length === 0) {
-            ws.send(JSON.stringify({
-              type: 'auth_error',
-              message: '無效的使用者'
-            }));
-            return;
-          }
-          
-          username = result.rows[0].display_name || result.rows[0].username;
-          authenticated = true;
-          
-          // 回傳認證成功的消息
-          ws.send(JSON.stringify({
-            type: 'auth_success',
-            userId,
-            username
-          }));
-          
-          console.log(`[WebSocket] 使用者 ${username} (ID: ${userId}) 認證成功`);
-        } catch (error) {
-          console.error('[WebSocket] 認證錯誤:', error);
-          ws.send(JSON.stringify({
-            type: 'auth_error',
-            message: '無效的令牌'
-          }));
-        }
-        return;
-      }
-      
-      // 其他消息處理需要先認證
-      if (!authenticated) {
-        ws.send(JSON.stringify({
-          type: 'error',
-          message: '未認證，請先進行認證'
-        }));
-        return;
-      }
-      
-      // 處理已認證的消息
-      handleAuthenticatedMessage(ws, data, userId, username, currentRoomId);
-      
-    } catch (error) {
-      console.error('[WebSocket] 處理消息出錯:', error);
-      ws.send(JSON.stringify({
-        type: 'error',
-        message: '處理消息時出錯'
-      }));
-    }
-  });
-  
-  ws.on('close', () => {
-    console.log(`[WebSocket] 連接關閉`);
-    if (authenticated && currentRoomId) {
-      // 處理玩家離開房間的邏輯
-      handlePlayerLeave(currentRoomId, userId);
-    }
-  });
-});
-
-// 處理已認證玩家的WebSocket消息
+// WebSocket連接處理函數 (不再直接綁定，由 initCookGame 處理)
 function handleAuthenticatedMessage(ws, data, userId, username, currentRoomId) {
   // ... 保持現有的WebSocket消息處理邏輯 ...
 }
@@ -757,26 +659,114 @@ function generateOrder(difficulty) {
 }
 
 // 添加健康檢查路由
-app.get(`${API_PREFIX}/health`, (req, res) => {
+cookGameApp.get(`/health`, (req, res) => {
   res.json({ status: 'ok', service: 'cook-kitchen-rush', version: '1.0.0' });
 });
 
 // 修改前端路徑映射，確保使用cook-前綴的頁面可以正確載入
-app.get('/cook-*.html', (req, res) => {
+cookGameApp.get('/cook-*.html', (req, res) => {
   const filename = req.path.substring(1);
   res.sendFile(path.join(__dirname, 'public', filename));
 });
 
-// 啟動服務器 - 使用不同端口以避免與主服務器衝突
-const COOK_PORT = process.env.COOK_PORT || 3001;
-server.listen(COOK_PORT, () => {
-  console.log(`[COOK-GAME] 廚房急先鋒遊戲服務器運行在端口 ${COOK_PORT}`);
-  console.log(`[COOK-GAME] API路徑前綴: ${API_PREFIX}`);
-  console.log(`[COOK-GAME] WebSocket路徑: /cook-ws`);
-});
+// 初始化 WebSocket 伺服器的函數
+function initCookGame(httpServer) {
+  const wss = new WebSocket.Server({ 
+    server: httpServer,
+    path: '/cook-ws'  // 使用特定路徑區分遊戲WebSocket
+  });
 
-// 導出遊戲房間狀態，供其他模塊使用
+  console.log('[COOK-GAME] 遊戲WebSocket服務器已初始化於路徑: /cook-ws');
+
+  wss.on('connection', (ws, req) => {
+    console.log(`[WebSocket] 新的連接`);
+    
+    let authenticated = false;
+    let userId = null;
+    let username = null;
+    let currentRoomId = null;
+    
+    ws.on('message', async (message) => {
+      try {
+        const data = JSON.parse(message);
+        
+        if (data.type === 'authenticate') {
+          try {
+            // 驗證令牌
+            const decoded = jwt.verify(data.token, JWT_SECRET);
+            userId = decoded.userId;
+            
+            // 查詢用戶資訊
+            const result = await db.query(
+              'SELECT user_id, username, display_name FROM box_users WHERE user_id = $1',
+              [userId]
+            );
+            
+            if (result.rows.length === 0) {
+              ws.send(JSON.stringify({
+                type: 'auth_error',
+                message: '無效的使用者'
+              }));
+              return;
+            }
+            
+            username = result.rows[0].display_name || result.rows[0].username;
+            authenticated = true;
+            
+            // 回傳認證成功的消息
+            ws.send(JSON.stringify({
+              type: 'auth_success',
+              userId,
+              username
+            }));
+            
+            console.log(`[WebSocket] 使用者 ${username} (ID: ${userId}) 認證成功`);
+          } catch (error) {
+            console.error('[WebSocket] 認證錯誤:', error);
+            ws.send(JSON.stringify({
+              type: 'auth_error',
+              message: '無效的令牌'
+            }));
+          }
+          return;
+        }
+        
+        // 其他消息處理需要先認證
+        if (!authenticated) {
+          ws.send(JSON.stringify({
+            type: 'error',
+            message: '未認證，請先進行認證'
+          }));
+          return;
+        }
+        
+        // 處理已認證的消息
+        handleAuthenticatedMessage(ws, data, userId, username, currentRoomId);
+        
+      } catch (error) {
+        console.error('[WebSocket] 處理消息出錯:', error);
+        ws.send(JSON.stringify({
+          type: 'error',
+          message: '處理消息時出錯'
+        }));
+      }
+    });
+    
+    ws.on('close', () => {
+      console.log(`[WebSocket] 連接關閉`);
+      if (authenticated && currentRoomId) {
+        // 處理玩家離開房間的邏輯
+        handlePlayerLeave(currentRoomId, userId);
+      }
+    });
+  });
+  console.log(`[COOK-GAME] 遊戲API路由已掛載到 /cook-api`);
+}
+
+// 導出Express應用程式實例和WebSocket初始化函數
 module.exports = {
-  gameRooms,
-  wss
+  cookGameApp,
+  initCookGame,
+  gameRooms, // 保持導出 gameRooms 如果其他模組需要訪問
+  // wss 將不再直接導出，而是通過 initCookGame 函數內部創建
 }; 

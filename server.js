@@ -25,6 +25,10 @@ const createReportRateLimiter = require('./report-ip-limiter');
 const bcrypt = require('bcryptjs'); // 用於密碼哈希
 const jwt = require('jsonwebtoken'); // 用於JWT Token (如果選擇JWT方案)
 
+const { cookGameApp, initCookGame } = require('./cook-kitchen-rush.js');
+
+ 
+
 const adminRouter = express.Router();
 const app = express();
    
@@ -87,6 +91,9 @@ const wss = new WebSocket.Server({
     path: '/ws'  // 指定WebSocket路徑
   });
 console.log('[WS] WebSocket服務器已初始化');
+
+initCookGame(server);
+
  // YouTube抽獎系統模組
 const YoutubeLottery = require('./youtubeLottery');
 const UserProfile = require('./userProfile');
@@ -98,7 +105,7 @@ const userProfile = new UserProfile(pool);
 const chatResponder = new ChatResponder();
 
 
-
+app.use('/cook-api', cookGameApp);
  
 // =================================================================
 // ★★★ 管理後台專用認證中介軟體 (Admin Authentication) ★★★
