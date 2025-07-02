@@ -2265,20 +2265,13 @@
                     setupAnimationView(animationModeEl.value);
                 });
 
-                // 當API請求間隔改變時，如果正在監控中，則重設計時器
-                apiRateInput.addEventListener('change', () => {
-                    if (updateTimer) {
-                        startAutoUpdate();
-                    }
-                });
-
                 // 監控開關的事件處理
                 monitoringToggle.addEventListener('change', async function() {
                     if (this.checked) {
                         // 開始監控
                         const videoId = videoIdEl.value.trim();
                         const keyword = keywordEl.value.trim();
-                        const apiRateLimit = parseInt(apiRateInput.value, 10);
+                        // 使用固定的apiRateLimit值
 
                         if (!videoId || !keyword) {
                             alert('請填寫 Video ID 和關鍵字！');
@@ -2301,7 +2294,6 @@
                             
                             // 根據返回的實際模式設置UI
                             const actualIsLive = result.isLive;
-                            apiRateInput.disabled = !actualIsLive;
 
                             if (actualIsLive) {
                                 // 直播模式
@@ -2330,7 +2322,6 @@
                                 stopAutoUpdate();
                                 monitoringVideoIdEl.textContent = '';
                                 defaultAnimation.textContent = '已停止監控';
-                                apiRateInput.disabled = false; // 重新啟用 API 頻率選項
                             } else {
                                 throw new Error(result.error || '停止監控失敗');
                             }
