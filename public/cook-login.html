@@ -525,10 +525,16 @@
                             } else {
                                 // 登入失敗，顯示錯誤
                                 alert(data.error || '無法登入遊戲，請稍後再試');
+                                // 登入失敗時顯示登入表單
+                                quickLoginContainer.style.display = 'none';
+                                loginFormContainer.style.display = 'block';
                             }
                         } catch (error) {
                             console.error('遊戲登入失敗:', error);
                             alert('無法連接遊戲伺服器，請稍後再試');
+                            // 發生錯誤時顯示登入表單
+                            quickLoginContainer.style.display = 'none';
+                            loginFormContainer.style.display = 'block';
                         }
                     } else {
                         // 登入信息不完整，顯示登入表單

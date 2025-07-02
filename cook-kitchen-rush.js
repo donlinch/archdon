@@ -420,7 +420,7 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
                     const data = JSON.parse(message);
                     if (data.type === 'authenticate') {
                         // 使用 authenticateToken 函數來驗證，但我們需要的是解碼後的使用者資料
-                        const decoded = await jwt.verify(data.token, process.env.JWT_SECRET);
+                        const decoded = await jwt.verify(data.token, JWT_SECRET);
                         if (decoded) {
                             const userId = decoded.userId;
                             ws.userId = userId;
