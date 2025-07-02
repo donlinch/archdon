@@ -10,7 +10,7 @@
 
 const express = require('express');
 const WebSocket = require('ws');
-const jwt = require('jsonwebtoken');
+const jwt =require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const cors = require('cors');
 const path = require('path');
@@ -140,9 +140,10 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
                     type: 'player_left',
                     playerName: leftPlayer.username,
                     newCreator: broadcastNewCreator ? newCreatorName : undefined,
-                    players: gameState.players
                 };
                 broadcastToRoom(roomId, leaveMessage);
+                // After broadcasting leave, broadcast the new player list
+                broadcastToRoom(roomId, { type: 'player_list', players: gameState.players });
             }
             await client.query('COMMIT');
         } catch (error) {
@@ -177,6 +178,7 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
 
                     let room = roomResult.rows[0];
                     let gameState = room.game_state || { players: [], status: 'waiting' };
+                    let playerJustJoined = false;
 
                     if (gameState.players.length >= 4 && !gameState.players.some(p => p.id === userId)) {
                         ws.send(JSON.stringify({ type: 'error', message: '房間已滿' }));
@@ -185,6 +187,7 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
                     }
 
                     if (!gameState.players.some(p => p.id === userId)) {
+                        playerJustJoined = true;
                         const newPlayer = {
                             id: userId,
                             username: userProfile.display_name || username,
@@ -209,14 +212,17 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
                         name: finalRoomData.room_name,
                         status: finalRoomData.status,
                         difficulty: finalRoomData.difficulty,
-                        creatorName: finalRoomData.creator_name,
+                        creator: finalRoomData.creator_name, // Fix key to match client
                         creatorId: finalRoomData.creator_id,
                         players: finalRoomData.game_state.players,
                     };
 
                     ws.send(JSON.stringify({ type: 'room_info', room: roomInfoPayload }));
                     
-                    broadcastToRoom(roomId, { type: 'player_list_update', players: gameState.players });
+                    if (playerJustJoined) {
+                        broadcastToRoom(roomId, { type: 'player_joined', playerName: userProfile.display_name || username }, ws);
+                    }
+                    broadcastToRoom(roomId, { type: 'player_list', players: gameState.players });
                     console.log(`[COOK-GAME] 玩家 ${username} (ID: ${userId}) 已加入房間 ${roomId}`);
 
                 } catch (error) {
@@ -235,55 +241,136 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
                 }
                 break;
             case 'player_ready':
-            case 'player_unready':
-                if (roomId) {
-                    const room = gameRooms.get(roomId);
-                    if (room) {
-                        const player = room.players.find(p => p.id === userId);
-                        if (player) {
-                            player.ready = (type === 'player_ready');
-                            broadcastToRoom(roomId, { type: type, playerName: username });
-                            broadcastToRoom(roomId, { type: 'player_list', players: room.players });
-                        }
+            case 'player_unready': {
+                if (!roomId) {
+                    ws.send(JSON.stringify({ type: 'error', message: '未提供房間ID' }));
+                    return;
+                }
+                const client = await pool.connect();
+                try {
+                    await client.query('BEGIN');
+                    const roomResult = await client.query('SELECT * FROM cook_game_rooms WHERE room_id = $1 FOR UPDATE', [roomId]);
+                    if (roomResult.rows.length === 0) {
+                        ws.send(JSON.stringify({ type: 'error', message: '找不到房間' }));
+                        await client.query('ROLLBACK');
+                        return;
                     }
+
+                    let room = roomResult.rows[0];
+                    let gameState = room.game_state || { players: [] };
+
+                    const player = gameState.players.find(p => p.id === userId);
+                    if (!player) {
+                        ws.send(JSON.stringify({ type: 'error', message: '找不到玩家資料' }));
+                        await client.query('ROLLBACK');
+                        return;
+                    }
+
+                    player.ready = (type === 'player_ready');
+                    
+                    await client.query('UPDATE cook_game_rooms SET game_state = $1 WHERE room_id = $2', [gameState, roomId]);
+                    await client.query('COMMIT');
+                    
+                    broadcastToRoom(roomId, { type: type, playerName: username });
+                    broadcastToRoom(roomId, { type: 'player_list', players: gameState.players });
+                    console.log(`[COOK-GAME] 玩家 ${username} 在房間 ${roomId} 狀態已更新為 ${type}`);
+
+                } catch (error) {
+                    await client.query('ROLLBACK');
+                    console.error(`[COOK-GAME] 更新玩家準備狀態錯誤:`, error);
+                    ws.send(JSON.stringify({ type: 'error', message: '更新準備狀態時發生後端錯誤' }));
+                } finally {
+                    client.release();
                 }
                 break;
-            case 'chat_message':
-                if (roomId) {
-                    const room = gameRooms.get(roomId);
-                    if (room) {
-                        const player = room.players.find(p => p.id === userId);
-                        const avatar = player ? player.username.charAt(0).toUpperCase() : '?';
-                        broadcastToRoom(roomId, {
-                            type: 'chat_message',
-                            sender: username,
-                            text: data.message,
-                            avatar: avatar
-                        });
-                    }
+            }
+            case 'chat_message': {
+                if (!roomId || !data.message) {
+                    ws.send(JSON.stringify({ type: 'error', message: '無效的聊天訊息' }));
+                    return;
+                }
+                
+                try {
+                    const roomResult = await pool.query('SELECT game_state FROM cook_game_rooms WHERE room_id = $1', [roomId]);
+                    if (roomResult.rows.length === 0) return; // Room doesn't exist, do nothing.
+
+                    const gameState = roomResult.rows[0].game_state;
+                    const player = gameState.players.find(p => p.id === userId);
+                    const avatar = player ? (player.username ? player.username.charAt(0).toUpperCase() : '?') : '?';
+
+                    broadcastToRoom(roomId, {
+                        type: 'chat_message',
+                        sender: username,
+                        text: data.message,
+                        avatar: avatar
+                    });
+                } catch (error) {
+                    console.error(`[COOK-GAME] 處理聊天訊息錯誤:`, error);
                 }
                 break;
-            case 'start_game':
-                if (roomId) {
-                    const room = gameRooms.get(roomId);
-                    if (room && room.creatorId === userId) {
-                        // 檢查是否所有玩家都已準備
-                        const allReady = room.players.every(p => p.ready);
-                        if (allReady && room.players.length > 1) { // 至少需要2人
-                            broadcastToRoom(roomId, { type: 'game_starting', countdown: 3 });
-                            setTimeout(() => startGame(roomId), 3000);
-                        } else {
-                            ws.send(JSON.stringify({ type: 'error', message: '所有玩家都必須準備好才能開始遊戲（至少2人）' }));
-                        }
+            }
+            case 'start_game': {
+                if (!roomId) {
+                    ws.send(JSON.stringify({ type: 'error', message: '未提供房間ID' }));
+                    return;
+                }
+                const client = await pool.connect();
+                try {
+                    await client.query('BEGIN');
+                    const roomResult = await client.query('SELECT * FROM cook_game_rooms WHERE room_id = $1 FOR UPDATE', [roomId]);
+
+                    if (roomResult.rows.length === 0) {
+                        ws.send(JSON.stringify({ type: 'error', message: '找不到房間' }));
+                        await client.query('ROLLBACK');
+                        return;
+                    }
+
+                    const room = roomResult.rows[0];
+                    if (room.creator_id !== userId) {
+                         ws.send(JSON.stringify({ type: 'error', message: '只有房主可以開始遊戲' }));
+                         await client.query('ROLLBACK');
+                         return;
+                    }
+                    
+                    const gameState = room.game_state;
+                    const allReady = gameState.players.every(p => p.ready);
+                    // For production, you might want to enforce more players
+                    if (allReady && gameState.players.length >= 1) { 
+                        
+                        // Update room status to 'starting'
+                        await client.query("UPDATE cook_game_rooms SET status = 'starting' WHERE room_id = $1", [roomId]);
+                        await client.query('COMMIT');
+                        
+                        broadcastToRoom(roomId, { type: 'game_starting', countdown: 3 });
+                        
+                        // After countdown, start the game
+                        setTimeout(async () => {
+                            try {
+                                await pool.query("UPDATE cook_game_rooms SET status = 'playing', updated_at = NOW() WHERE room_id = $1", [roomId]);
+                                console.log(`[COOK-GAME] 遊戲 ${roomId} 已正式開始`);
+                                broadcastToRoom(roomId, { type: 'game_started' });
+                            } catch (startError) {
+                                console.error(`[COOK-GAME] 開始遊戲 ${roomId} 失敗:`, startError);
+                            }
+                        }, 3000);
+
                     } else {
-                        ws.send(JSON.stringify({ type: 'error', message: '只有房主可以開始遊戲' }));
+                        ws.send(JSON.stringify({ type: 'error', message: '所有玩家都必須準備好才能開始遊戲' }));
+                        await client.query('ROLLBACK');
                     }
+                } catch (error) {
+                    await client.query('ROLLBACK');
+                    console.error(`[COOK-GAME] 開始遊戲錯誤:`, error);
+                    ws.send(JSON.stringify({ type: 'error', message: '開始遊戲時發生後端錯誤' }));
+                } finally {
+                    client.release();
                 }
                 break;
+            }
         }
     }
     
-    // ... 其他路由和函數 ...
+   
     
     cookGameApp.get(`/games/rooms`, authenticateToken, async (req, res) => {
         try {
@@ -462,7 +549,7 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
       }
     });
     
-    // ... 其他遊戲邏輯函數 ...
+    
 
     function initCookGameWss(wss) { // 參數是 wss
  
