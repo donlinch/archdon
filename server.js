@@ -64,6 +64,11 @@ app.use(session({
     }
 }));
 
+
+ const initializeCookGame = require('./cook-kitchen-rush'); // require() 會得到一個函式
+const { cookGameApp, initCookGameWss } = initializeCookGame(pool); // 呼叫該函式並傳入 pool
+
+
 // =================================================================
 // ★★★ HTTP Server & WebSocket Server Setup ★★★
 // =================================================================
@@ -72,7 +77,7 @@ app.use(session({
 const server = http.createServer(app);
 
 // 將廚房遊戲的 Express 路由掛載到 /cook-api
-app.use('/cook-api', cookGameApp);
+app.use('/cook-api', cookGameApp); // <-- 使用從函式返回的 cookGameApp
 
 // 創建兩個使用 noServer: true 的 WebSocket 服務器實例
 const wssSimpleWalker = new WebSocket.Server({ noServer: true });
