@@ -12,11 +12,11 @@
       --secondary-color: #4CAF50;
       --accent-color: #FF9800;
       --text-color: #f0f0f0;
-      --bg-color: #222222;
+      --bg-color: #2c2c2c;
       --border-color: #444444;
       --success-color: #4CAF50;
       --error-color: #F44336;
-      --card-bg-color: rgba(0, 0, 0, 0.5);
+      --card-bg-color: rgba(0, 0, 0, 0.3);
     }
     
     * {
@@ -25,87 +25,48 @@
       padding: 0;
     }
     
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+    
     body {
-      margin: 0;
-      padding: 0;
+      font-family: monospace, 'Courier New', Courier;
+      background-color: #111;
+      color: var(--text-color);
       display: flex;
-      flex-direction: column;
       align-items: center;
-      min-height: 100vh;
-      background: #1a1a1a;
-      color: #fff;
-      font-family: 'Courier New', monospace;
+      justify-content: center;
+      touch-action: manipulation;
     }
     
-    .game-container {
-      width: 100%;
-      max-width: 480px;
-      margin: 0 auto;
-      padding: 10px;
-      box-sizing: border-box;
-      background: #000;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-    
-    .loading-screen {
-      position: absolute;
-      top: 0;
-      left: 0;
+    .game-wrapper {
       width: 100%;
       height: 100%;
+      max-width: 450px;
+      max-height: 950px;
       background-color: var(--bg-color);
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-    }
-    
-    .loader {
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
-      border: 5px solid var(--border-color);
-      border-top-color: var(--accent-color);
-      animation: spin 1s linear infinite;
-      margin-bottom: 20px;
-    }
-    
-    .loading-text {
-      font-size: 1.2em;
-      color: var(--accent-color);
-    }
-    
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    
-    /* 遊戲界面 */
-    .game-ui {
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      visibility: hidden;
+      position: relative;
+      overflow: hidden;
+      border: 2px solid #555;
+      border-radius: 20px;
+      box-shadow: 0 0 25px rgba(0,0,0,0.6);
     }
     
     .game-header {
-      height: 50px;
-      background-color: rgba(0, 0, 0, 0.7);
+      padding: 10px;
+      background: rgba(0,0,0,0.3);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 0 15px;
       border-bottom: 1px solid var(--border-color);
-      z-index: 10;
     }
     
     .game-timer {
       font-size: 1.2em;
       color: var(--accent-color);
-      font-weight: bold;
     }
     
     .game-score {
@@ -113,296 +74,200 @@
       color: var(--secondary-color);
     }
     
-    /* 添加任務提示樣式 */
-    .task-hint {
-      position: absolute;
-      top: 60px;
-      left: 50%;
-      transform: translateX(-50%);
-      background-color: rgba(0, 0, 0, 0.7);
-      color: var(--text-color);
-      padding: 8px 15px;
-      border-radius: 5px;
-      font-size: 1.1em;
-      z-index: 10;
-      text-align: center;
-      max-width: 80%;
-    }
-    
-    .game-main {
+    .main-area {
       flex: 1;
-      display: grid;
-      grid-template-rows: 2fr 1fr;
+      display: flex;
+      flex-direction: column;
       overflow: hidden;
-    }
-    
-    .game-board {
-      background-color: #333;
-      position: relative;
-      overflow: hidden;
+      padding: 10px;
     }
     
     .orders-container {
-      margin-bottom: 15px;
-      padding: 10px;
-      background: #222;
-      border-radius: 8px;
-    }
-    
-    .order {
-      margin-bottom: 8px;
-      padding: 8px;
-      background: #333;
-      border-radius: 4px;
-    }
-    
-    .kitchen-area {
+      margin-bottom: 10px;
       display: flex;
-      height: 100%;
-      position: relative;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 30vh;
+      overflow-y: auto;
+      padding-right: 5px;
+    }
+    
+    .order-card {
+      background: rgba(0,0,0,0.4);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .order-info {
+      flex: 1;
+    }
+    
+    .order-name {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    
+    .order-timer {
+      height: 3px;
+      background: var(--accent-color);
+      border-radius: 2px;
+      transition: width 0.1s linear;
+    }
+    
+    .order-ingredients {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+    
+    .ingredient-icon {
+      width: 25px;
+      height: 25px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9em;
+    }
+    
+    .game-board {
+      flex: 1;
+      display: flex;
+      gap: 10px;
+      min-height: 0;
     }
     
     .stations-container {
+      width: 120px;
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-      margin-bottom: 15px;
+      grid-auto-rows: 1fr;
+      gap: 8px;
+      align-content: start;
     }
     
     .station {
-      padding: 10px;
-      background: #222;
-      border-radius: 8px;
-      text-align: center;
-    }
-    
-    .player-area {
-      position: fixed;
-      bottom: 10px;
-      left: 0;
-      width: 100%;
-      height: 100px;
-      display: flex;
-      padding: 0 10px;
-      pointer-events: none;
-      z-index: 5;
-    }
-    
-    .player-avatar {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background-color: var(--accent-color);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      color: #333;
-      margin-right: 10px;
-      pointer-events: auto;
-      display: none; /* 隱藏左下角帳號圖示 */
-    }
-    
-    .player-inventory {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      grid-template-rows: repeat(2, 1fr);
-      gap: 8px;
-      padding: 10px;
-      background: #222;
-      border-radius: 8px;
-      margin-top: 10px;
-    }
-    
-    .inventory-slot {
       aspect-ratio: 1;
-      background: #333;
-      border: 2px solid #444;
-      border-radius: 4px;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      font-size: 16px;
+      gap: 5px;
       cursor: pointer;
       transition: all 0.2s ease;
     }
     
-    .inventory-slot.active {
-      border-color: #ffd700;
-      background: #444;
+    .station:hover {
+      background: rgba(255,255,255,0.1);
     }
     
-    /* 添加物品動畫效果 */
-    @keyframes itemAppear {
-      0% { transform: scale(0); opacity: 0; }
-      70% { transform: scale(1.2); opacity: 1; }
-      100% { transform: scale(1); opacity: 1; }
-    }
-
-    .game-item {
-      animation: itemAppear 0.3s ease-out;
-    }
-
-    /* 工作區樣式 */
-    .shared-workspace {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 200px;
-      height: 120px;
-      background-color: rgba(0, 0, 0, 0.3);
-      border: 2px dashed var(--border-color);
-      border-radius: 8px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      padding: 10px;
-      justify-content: center;
-      align-items: center;
-      z-index: 4;
-    }
-
-    .workspace-slot {
-      width: 50px;
-      height: 50px;
-      background-color: rgba(255, 255, 255, 0.1);
-      border: 1px solid var(--border-color);
-      border-radius: 5px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    .station-icon {
+      font-size: 1.5em;
     }
     
-    /* 對話與通知 */
-    .dialog {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0, 0, 0, 0.8);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-    }
-    
-    .dialog-content {
-      background-color: var(--bg-color);
-      border: 1px solid var(--border-color);
-      border-radius: 5px;
-      padding: 20px;
-      width: 90%;
-      max-width: 400px;
+    .station-name {
+      font-size: 0.7em;
       text-align: center;
     }
     
-    .dialog-title {
-      font-size: 1.5em;
-      margin-bottom: 15px;
-      color: var(--secondary-color);
+    .workspace {
+      flex: 1;
+      border: 2px dashed var(--border-color);
+      border-radius: 8px;
+      padding: 10px;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      grid-template-rows: repeat(2, 1fr);
+      gap: 10px;
     }
     
-    .dialog-text {
-      margin-bottom: 20px;
+    .workspace-slot {
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     
-    .dialog-button {
-      background-color: var(--accent-color);
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 5px;
-      font-weight: bold;
+    .player-inventory {
+      padding: 10px;
+      background: rgba(0,0,0,0.3);
+      border-top: 1px solid var(--border-color);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(2, 1fr);
+      gap: 8px;
+      aspect-ratio: 2;
+    }
+    
+    .inventory-slot {
+      background: rgba(0,0,0,0.4);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
       cursor: pointer;
-      margin: 0 10px;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    
+    .inventory-slot.active {
+      border-color: var(--accent-color);
+      transform: scale(1.05);
+    }
+    
+    .item-icon {
+      font-size: 1.5em;
+    }
+    
+    .item-name {
+      font-size: 0.7em;
+      text-align: center;
+    }
+    
+    .hint-text {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.8);
+      padding: 8px 15px;
+      border-radius: 20px;
+      font-size: 0.9em;
+      white-space: nowrap;
+      pointer-events: none;
+      z-index: 100;
     }
     
     .toast {
       position: fixed;
-      top: 60px;
+      top: 50%;
       left: 50%;
-      transform: translateX(-50%);
-      background-color: rgba(0, 0, 0, 0.8);
-      color: white;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.9);
       padding: 10px 20px;
-      border-radius: 20px;
-      z-index: 100;
-      opacity: 0;
-      transition: opacity 0.3s;
+      border-radius: 25px;
+      z-index: 1000;
+      pointer-events: none;
+      animation: fadeInOut 1.5s ease forwards;
     }
     
-    .toast.show {
-      opacity: 1;
-    }
-    
-    /* 動畫 */
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-    
-    @keyframes bounce {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-10px); }
-    }
-    
-    @keyframes shake {
-      0%, 100% { transform: translateX(0); }
-      25% { transform: translateX(-5px); }
-      75% { transform: translateX(5px); }
-    }
-    
-    /* User Status Indicator */
-    .user-status {
-        position: fixed;
-        top: 10px;
-        left: 10px;
-        z-index: 1001;
-        display: flex;
-        align-items: center;
-        background-color: var(--card-bg-color, rgba(0, 0, 0, 0.7));
-        padding: 5px 10px;
-        border-radius: 20px;
-        border: 1px solid var(--border-color, #444);
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
-        transition: all 0.3s ease;
-        cursor: pointer;
-    }
-
-    .user-status:hover {
-        transform: translateY(-2px);
-        background-color: rgba(0, 0, 0, 0.9);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.6);
-    }
-
-    .user-status img {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        border: 2px solid var(--accent-color, #FF9800);
-        object-fit: cover;
-    }
-
-    .user-status .username {
-        margin-left: 8px;
-        font-weight: 600;
-        color: var(--text-color, #f0f0f0);
-        max-width: 120px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    @media (max-width: 767px) {
-        .user-status {
-            padding: 3px;
-        }
-        
-        .user-status .username {
-            display: none;
-        }
+    @keyframes fadeInOut {
+      0% { opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { opacity: 0; }
     }
   </style>
 </head>
@@ -413,64 +278,27 @@
       <span id="userStatusName" class="username"></span>
   </div>
 
-  <div class="game-container" id="gameContainer">
-    <!-- 遊戲載入畫面 -->
-    <div class="loading-screen" id="loadingScreen">
-      <div class="loader"></div>
-      <div class="loading-text">遊戲載入中...</div>
+  <div class="game-wrapper">
+    <div class="game-header">
+      <div class="game-timer">03:00</div>
+      <div class="game-score">分數: 0</div>
     </div>
 
-    <!-- 遊戲UI -->
-    <div class="game-ui" id="gameUI">
-      <div class="game-header">
-        <div class="game-timer" id="gameTimer">03:00</div>
-        <div class="game-score" id="gameScore">分數: 0</div>
-      </div>
+    <div class="main-area">
+      <div class="orders-container" id="ordersContainer"></div>
       
-      <div class="game-main">
-        <div class="game-board" id="gameBoard">
-          <!-- 添加任務提示元素 -->
-          <div class="task-hint" id="taskHint">請拿取食材開始製作料理</div>
-          <div class="kitchen-area">
-            <!-- 添加共享工作區 -->
-            <div class="shared-workspace" id="sharedWorkspace">
-              <div class="workspace-slot"></div>
-              <div class="workspace-slot"></div>
-              <div class="workspace-slot"></div>
-              <div class="workspace-slot"></div>
-            </div>
-            <div class="stations-container" id="stationsContainer">
-              <!-- 工作站將由JavaScript動態生成 -->
-            </div>
-          </div>
-        </div>
-        
-        <div class="orders-container" id="ordersContainer">
-          <!-- 訂單卡片將由JavaScript動態生成 -->
-        </div>
-      </div>
-      
-      <div class="player-area">
-        <div class="player-avatar" id="playerAvatar">C</div>
-        <div class="player-inventory" id="playerInventory">
-          <!-- 庫存槽將由JavaScript動態生成 -->
+      <div class="game-board">
+        <div class="stations-container" id="stationsContainer"></div>
+        <div class="workspace" id="workspace">
+          <div class="workspace-slot"></div>
+          <div class="workspace-slot"></div>
+          <div class="workspace-slot"></div>
+          <div class="workspace-slot"></div>
         </div>
       </div>
     </div>
-    
-    <!-- 結束遊戲對話框 -->
-    <div class="dialog" id="gameOverDialog" style="display: none;">
-      <div class="dialog-content">
-        <div class="dialog-title">遊戲結束</div>
-        <div class="dialog-text" id="gameOverText">
-          你的團隊得分: <span id="finalScore">0</span>
-        </div>
-        <button class="dialog-button" id="returnToLobbyBtn">返回大廳</button>
-      </div>
-    </div>
-    
-    <!-- 提示通知 -->
-    <div class="toast" id="toast"></div>
+
+    <div class="player-inventory" id="playerInventory"></div>
   </div>
 
   <script>
