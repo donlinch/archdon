@@ -55,30 +55,21 @@ DB_PORT=5432
 PORT=3000
 JWT_SECRET=your_main_jwt_secret
 
-# 廚房急先鋒配置
+# 廚房急先鋒配置 (不再需要單獨的資料庫配置，將使用主資料庫)
 COOK_PORT=3001
-COOK_DB_USER=postgres
-COOK_DB_HOST=localhost
-COOK_DB_NAME=cook_game
-COOK_DB_PASSWORD=your_password
-COOK_DB_PORT=5432
 COOK_JWT_SECRET=your_cook_game_jwt_secret
 ```
 
 ### 5. 資料庫設定
 
 ```bash
-# 建立主網站資料庫
+# 建立/更新主網站資料庫並應用所有 schema
 psql -U postgres
-CREATE DATABASE sunnyyummy_db;
+CREATE DATABASE sunnyyummy_db; # 如果已存在會跳過
+\c sunnyyummy_db; # 連接到資料庫
+\i db_schema_main.sql # 應用主網站 schema
+\i db_schema.sql # 應用廚房急先鋒 schema
 \q
-psql -U postgres -d sunnyyummy_db -f db_schema_main.sql
-
-# 建立廚房急先鋒資料庫
-psql -U postgres
-CREATE DATABASE cook_game;
-\q
-psql -U postgres -d cook_game -f db_schema.sql
 ```
 
 ### 6. 啟動服務

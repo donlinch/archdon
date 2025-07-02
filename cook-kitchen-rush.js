@@ -13,18 +13,14 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const cors = require('cors');
 const path = require('path');
-const db = require('./db'); // Assuming the db module is imported from a file named db.js
 
 // 初始化Express應用
 const cookGameApp = express();
 
-// 資料庫連接配置
+// 資料庫連接配置 - 現在使用主系統的資料庫URL
 const pool = new Pool({
-  user: process.env.COOK_DB_USER || 'postgres',
-  host: process.env.COOK_DB_HOST || 'localhost',
-  database: process.env.COOK_DB_NAME || 'cook_game',
-  password: process.env.COOK_DB_PASSWORD || 'postgres',
-  port: process.env.COOK_DB_PORT || 5432,
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 
 // 中間件設置
@@ -57,7 +53,7 @@ const authenticateToken = (req, res, next) => {
 
     try {
       // 檢查使用者是否存在於資料庫中
-      const result = await db.query(
+      const result = await pool.query(
         'SELECT user_id, username FROM box_users WHERE user_id = $1',
         [decoded.userId]
       );
@@ -90,7 +86,7 @@ cookGameApp.post(`/auth/login`, async (req, res) => {
     }
     
     // 從主系統的會員表查詢用戶
-    const result = await db.query(
+    const result = await pool.query(
       'SELECT user_id, username, password_hash FROM box_users WHERE username = $1',
       [username]
     );
@@ -116,25 +112,25 @@ cookGameApp.post(`/auth/login`, async (req, res) => {
     );
     
     // 查詢或創建遊戲玩家資料
-    let playerResult = await db.query(
+    let playerResult = await pool.query(
       'SELECT * FROM cook_players WHERE user_id = $1',
       [user.user_id]
     );
     
     if (playerResult.rows.length === 0) {
       // 創建新的玩家資料
-      await db.query(
+      await pool.query(
         'INSERT INTO cook_players (user_id, username, level, points, created_at, last_login) VALUES ($1, $2, 1, 0, NOW(), NOW())',
         [user.user_id, user.username]
       );
       
-      playerResult = await db.query(
+      playerResult = await pool.query(
         'SELECT * FROM cook_players WHERE user_id = $1',
         [user.user_id]
       );
     } else {
       // 更新玩家最後登入時間
-      await db.query(
+      await pool.query(
         'UPDATE cook_players SET last_login = NOW() WHERE user_id = $1',
         [user.user_id]
       );
@@ -169,7 +165,7 @@ cookGameApp.post(`/auth/quick-login`, async (req, res) => {
     }
     
     // 從主系統的會員表查詢用戶
-    const result = await db.query(
+    const result = await pool.query(
       'SELECT user_id, username FROM box_users WHERE username = $1',
       [username]
     );
@@ -188,25 +184,25 @@ cookGameApp.post(`/auth/quick-login`, async (req, res) => {
     );
     
     // 查詢或創建遊戲玩家資料
-    let playerResult = await db.query(
+    let playerResult = await pool.query(
       'SELECT * FROM cook_players WHERE user_id = $1',
       [user.user_id]
     );
     
     if (playerResult.rows.length === 0) {
       // 創建新的玩家資料
-      await db.query(
+      await pool.query(
         'INSERT INTO cook_players (user_id, username, level, points, created_at, last_login) VALUES ($1, $2, 1, 0, NOW(), NOW())',
         [user.user_id, user.username]
       );
       
-      playerResult = await db.query(
+      playerResult = await pool.query(
         'SELECT * FROM cook_players WHERE user_id = $1',
         [user.user_id]
       );
     } else {
       // 更新玩家最後登入時間
-      await db.query(
+      await pool.query(
         'UPDATE cook_players SET last_login = NOW() WHERE user_id = $1',
         [user.user_id]
       );
@@ -237,7 +233,7 @@ cookGameApp.get(`/users/profile`, authenticateToken, async (req, res) => {
     const userId = req.user.userId;
     
     // 查詢主系統的用戶資料
-    const userResult = await db.query(
+    const userResult = await pool.query(
       'SELECT user_id, username, display_name, user_profile_image_url FROM box_users WHERE user_id = $1',
       [userId]
     );
@@ -247,19 +243,19 @@ cookGameApp.get(`/users/profile`, authenticateToken, async (req, res) => {
     }
     
     // 查詢遊戲系統的用戶資料
-    let playerResult = await db.query(
+    let playerResult = await pool.query(
       'SELECT level, points, achievements FROM cook_players WHERE user_id = $1',
       [userId]
     );
     
     if (playerResult.rows.length === 0) {
       // 創建新的玩家資料
-      await db.query(
+      await pool.query(
         'INSERT INTO cook_players (user_id, username, level, points, created_at, last_login) VALUES ($1, $2, 1, 0, NOW(), NOW())',
         [userId, userResult.rows[0].username]
       );
       
-      playerResult = await db.query(
+      playerResult = await pool.query(
         'SELECT level, points, achievements FROM cook_players WHERE user_id = $1',
         [userId]
       );
@@ -697,7 +693,7 @@ function initCookGame(httpServer) {
             userId = decoded.userId;
             
             // 查詢用戶資訊
-            const result = await db.query(
+            const result = await pool.query(
               'SELECT user_id, username, display_name FROM box_users WHERE user_id = $1',
               [userId]
             );
