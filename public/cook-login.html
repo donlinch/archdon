@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>廚房急先鋒 - 會員登入</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#333333">
+  <style>
+    :root {
+      --primary-color: #32a852;
+      --secondary-color: #4CAF50;
+      --accent-color: #FF9800;
+      --text-color: #f0f0f0;
+      --bg-color: #222222;
+      --border-color: #444444;
+      --success-color: #4CAF50;
+      --error-color: #F44336;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: monospace, 'Courier New', Courier;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      line-height: 1.6;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      font-size: 16px;
+    }
+    
+    .container {
+      max-width: 100%;
+      width: 100%;
+      margin: 0 auto;
+      padding: 15px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    
+    .login-box {
+      border: 2px solid var(--border-color);
+      padding: 20px;
+      border-radius: 5px;
+      background-color: rgba(0,0,0,0.5);
+      margin-bottom: 20px;
+      text-align: center;
+      animation: fadeIn 0.5s ease-in-out;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    h1 {
+      margin-bottom: 20px;
+      text-align: center;
+      font-size: 1.4em;
+      color: var(--secondary-color);
+      text-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 10px;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+      text-align: left;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    
+    input[type="text"],
+    input[type="password"],
+    input[type="email"] {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--border-color);
+      background-color: #111;
+      color: var(--text-color);
+      border-radius: 3px;
+      font-family: monospace;
+      font-size: 16px;
+    }
+    
+    button {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      padding: 12px 0;
+      width: 100%;
+      cursor: pointer;
+      font-weight: bold;
+      border-radius: 3px;
+      font-family: monospace;
+      font-size: 16px;
+      margin-top: 10px;
+      transition: background-color 0.3s;
+    }
+    
+    button:hover {
+      background-color: var(--secondary-color);
+    }
+    
+    .quick-login {
+      background-color: var(--secondary-color);
+      margin-top: 10px;
+      margin-bottom: 20px;
+    }
+    
+    .avatar-login {
+      display: flex;
+      justify-content: center;
+      margin: 20px 0;
+    }
+    
+    .avatar-container {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      border: 2px solid var(--accent-color);
+      overflow: hidden;
+      background-color: #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--accent-color);
+      font-size: 40px;
+      margin: 0 auto;
+    }
+    
+    .links {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 15px;
+    }
+    
+    .links a {
+      color: var(--accent-color);
+      text-decoration: none;
+      font-size: 0.9em;
+    }
+    
+    .status-info {
+      text-align: center;
+      font-size: 0.9em;
+      color: #888;
+      margin-top: 20px;
+      padding-top: 10px;
+      border-top: 1px dashed var(--border-color);
+    }
+    
+    .error-message {
+      color: var(--error-color);
+      margin-top: 15px;
+      padding: 10px;
+      border: 1px solid var(--error-color);
+      border-radius: 3px;
+      display: none;
+    }
+    
+    /* BBS風格打字機效果 */
+    .typewriter {
+      overflow: hidden;
+      white-space: nowrap;
+      margin: 0 auto;
+      letter-spacing: .1em;
+      animation: typing 3.5s steps(40, end),
+                 blink-caret .75s step-end infinite;
+    }
+    
+    @keyframes typing {
+      from { width: 0 }
+      to { width: 100% }
+    }
+    
+    @keyframes blink-caret {
+      from, to { border-color: transparent }
+      50% { border-color: var(--secondary-color); }
+    }
+    
+    .ascii-art {
+      margin: 10px 0;
+      font-size: 14px;
+      line-height: 1.2;
+      white-space: pre;
+      text-align: center;
+      color: var(--accent-color);
+    }
+    
+    /* 轉場效果 */
+    .fade-out {
+      animation: fadeOut 0.5s forwards;
+    }
+    
+    @keyframes fadeOut {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+    
+    /* 響應式設計 */
+    @media (min-width: 600px) {
+      .container {
+        max-width: 450px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="login-box">
+      <h1 class="typewriter">廚房急先鋒 - 會員登入</h1>
+      
+      <div class="ascii-art">
+   _.--._  
+ .'  __  '. 
+/   '  '   \\
+|          |
+\\    __    /
+ '.______.'
+      </div>
+      
+      <div class="avatar-login">
+        <div class="avatar-container" id="avatarContainer">@</div>
+      </div>
+      
+      <button class="quick-login" id="oneClickLogin">一鍵登入</button>
+      
+      <div class="form-group">
+        <label for="username">帳號:</label>
+        <input type="text" id="username" name="username" placeholder="請輸入帳號">
+      </div>
+      
+      <div class="form-group">
+        <label for="password">密碼:</label>
+        <input type="password" id="password" name="password" placeholder="請輸入密碼">
+      </div>
+      
+      <button id="loginBtn">登入</button>
+      
+      <div class="links">
+        <a href="#forgot-password">忘記密碼?</a>
+        <a href="#register">加入會員</a>
+      </div>
+      
+      <div class="error-message" id="errorMessage"></div>
+    </div>
+    
+    <div class="status-info">
+      <p>在線會員: <span id="onlineCount">--</span> 人</p>
+      <p>系統版本: v1.0.0</p>
+    </div>
+  </div>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 取得DOM元素
+      const loginBtn = document.getElementById('loginBtn');
+      const oneClickLoginBtn = document.getElementById('oneClickLogin');
+      const usernameInput = document.getElementById('username');
+      const passwordInput = document.getElementById('password');
+      const errorMessage = document.getElementById('errorMessage');
+      const onlineCount = document.getElementById('onlineCount');
+      
+      // 模擬在線人數
+      onlineCount.textContent = Math.floor(Math.random() * 100) + 20;
+      
+      // 點擊登入按鈕
+      loginBtn.addEventListener('click', async () => {
+        const username = usernameInput.value.trim();
+        const password = passwordInput.value.trim();
+        
+        // 驗證輸入
+        if (!username || !password) {
+          showError('請輸入帳號和密碼');
+          return;
+        }
+        
+        try {
+          loginBtn.disabled = true;
+          loginBtn.textContent = '登入中...';
+          
+          // 發送登入請求
+          const response = await fetch('/cook-api/auth/login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ username, password })
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || '登入失敗');
+          }
+          
+          const data = await response.json();
+          
+          // 保存令牌和用戶信息
+          localStorage.setItem('cookGameToken', data.token);
+          localStorage.setItem('cookUsername', username);
+          
+          // 登入成功，轉向遊戲大廳
+          document.body.classList.add('fade-out');
+          setTimeout(() => {
+            window.location.href = '/cook-lobby.html';
+          }, 500);
+          
+        } catch (error) {
+          showError(error.message || '登入失敗，請稍後再試');
+          loginBtn.disabled = false;
+          loginBtn.textContent = '登入';
+        }
+      });
+      
+      // 一鍵登入
+      oneClickLoginBtn.addEventListener('click', () => {
+        // 檢查是否有儲存的憑證
+        const savedUsername = localStorage.getItem('cookUsername');
+        const deviceId = localStorage.getItem('cookDeviceId');
+        
+        if (savedUsername) {
+          // 使用生物辨識或設備ID進行快速登入
+          fetch('/cook-api/auth/quick-login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              username: savedUsername,
+              deviceId: deviceId
+            }),
+          })
+          .then(response => {
+            if (!response.ok) {
+              throw new Error('快速登入失敗');
+            }
+            return response.json();
+          })
+          .then(data => {
+            localStorage.setItem('cookGameToken', data.token);
+            window.location.href = '/cook-lobby.html';
+          })
+          .catch(error => {
+            showError('快速登入失敗，請使用帳號密碼登入');
+            console.error('快速登入錯誤:', error);
+          });
+        } else {
+          showError('沒有保存的登入資訊');
+        }
+      });
+      
+      // 顯示錯誤訊息
+      function showError(message) {
+        errorMessage.textContent = message;
+        errorMessage.style.display = 'block';
+        setTimeout(() => {
+          errorMessage.style.display = 'none';
+        }, 5000);
+      }
+      
+      // 支援Enter鍵登入
+      passwordInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          loginBtn.click();
+        }
+      });
+      
+      // 檢查是否支援指紋或臉部識別
+      if (window.PublicKeyCredential) {
+        document.getElementById('avatarContainer').style.color = '#4CAF50';
+      }
+    });
+  </script>
+</body>
+</html> 

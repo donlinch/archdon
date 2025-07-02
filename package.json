@@ -1,39 +1,40 @@
 {
   "name": "sunnyyummy-app",
   "version": "1.0.0",
-  "description": "SunnyYummy 官方網站",
+  "description": "多功能會員網站，包含廚房急先鋒遊戲",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "cook-game": "node cook-kitchen-rush.js",
+    "dev-cook-game": "nodemon cook-kitchen-rush.js",
+    "start-all": "concurrently \"npm run dev\" \"npm run dev-cook-game\"",
+    "setup-db": "psql -U postgres -f db_schema.sql"
   },
-  "keywords": [],
+  "keywords": [
+    "game",
+    "cooking",
+    "multiplayer",
+    "websocket",
+    "bbs"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@google-cloud/translate": "^8.5.1",
-    "@google-cloud/vision": "^4.x.x",
-    "@google/generative-ai": "^0.7.0",
-    "axios": "^1.6.5",
-    "bcryptjs": "^2.4.3",
-    "canvas-confetti": "^1.9.3",
-    "connect-pg-simple": "^9.0.1",
-    "dotenv": "^16.3.1",
+    "bcrypt": "^5.1.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
     "express": "^4.18.2",
-    "express-rate-limit": "^7.1.5",
     "express-session": "^1.17.3",
-    "jsonwebtoken": "^9.0.2",
-    "multer": "^1.4.5-lts.1",
-    "node-cache": "^5.1.2",
-    "pg": "^8.11.3",
-    "sharp": "^0.33.2",
-    "uuid": "^9.0.1",
-    "ws": "^8.16.0"
+    "jsonwebtoken": "^9.0.0",
+    "pg": "^8.10.0",
+    "ws": "^8.13.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.3"
+    "concurrently": "^8.0.1",
+    "nodemon": "^2.0.22"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=14.0.0"
   }
 }

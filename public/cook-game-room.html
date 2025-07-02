@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>廚房急先鋒 - 遊戲房間</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#333333">
+  <style>
+    :root {
+      --primary-color: #32a852;
+      --secondary-color: #4CAF50;
+      --accent-color: #FF9800;
+      --text-color: #f0f0f0;
+      --bg-color: #222222;
+      --border-color: #444444;
+      --success-color: #4CAF50;
+      --error-color: #F44336;
+      --card-bg-color: rgba(0, 0, 0, 0.5);
+      --ready-color: #FFC107;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: monospace, 'Courier New', Courier;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      line-height: 1.6;
+      padding: 0;
+      margin: 0;
+      min-height: 100vh;
+      font-size: 16px;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .header {
+      background-color: rgba(0, 0, 0, 0.7);
+      padding: 10px 15px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    
+    .header-title {
+      font-size: 1.2em;
+      color: var(--secondary-color);
+      text-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+      flex-grow: 1;
+      text-align: center;
+    }
+    
+    .room-info {
+      background-color: var(--card-bg-color);
+      border: 1px solid var(--border-color);
+      border-radius: 5px;
+      padding: 15px;
+      margin: 15px;
+      position: relative;
+      animation: fadeIn 0.5s ease-in-out;
+    }
+    
+    .room-status {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      padding: 3px 8px;
+      border-radius: 10px;
+      font-size: 0.8em;
+      background-color: var(--accent-color);
+    }
+    
+    .room-name {
+      font-size: 1.3em;
+      font-weight: bold;
+      color: var(--secondary-color);
+      margin-bottom: 10px;
+      padding-right: 80px;
+    }
+    
+    .room-detail {
+      display: flex;
+      justify-content: space-between;
+      color: #aaa;
+      font-size: 0.9em;
+      border-top: 1px dashed var(--border-color);
+      padding-top: 10px;
+      margin-top: 10px;
+    }
+    
+    .main-content {
+      flex: 1;
+      padding: 0 15px 15px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .player-list {
+      background-color: var(--card-bg-color);
+      border: 1px solid var(--border-color);
+      border-radius: 5px;
+      margin-bottom: 20px;
+      animation: fadeIn 0.5s ease-in-out;
+    }
+    
+    .player-list-header {
+      padding: 10px 15px;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 1.1em;
+      color: var(--secondary-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .player-count {
+      font-size: 0.8em;
+      color: #aaa;
+    }
+    
+    .player-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      padding: 15px;
+    }
+    
+    .player-card {
+      background-color: rgba(50, 50, 50, 0.5);
+      border: 1px solid var(--border-color);
+      border-radius: 5px;
+      padding: 10px;
+      display: flex;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .player-card.current {
+      border-color: var(--primary-color);
+      background-color: rgba(50, 168, 82, 0.1);
+    }
+    
+    .player-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background-color: var(--accent-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      margin-right: 10px;
+      color: #333;
+      flex-shrink: 0;
+    }
+    
+    .player-info {
+      flex-grow: 1;
+      overflow: hidden;
+    }
+    
+    .player-name {
+      font-weight: bold;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .player-level {
+      font-size: 0.8em;
+      color: #aaa;
+    }
+    
+    .player-status {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background-color: #aaa;
+    }
+    
+    .status-ready {
+      background-color: var(--ready-color);
+      box-shadow: 0 0 5px var(--ready-color);
+    }
+    
+    .chat-box {
+      background-color: var(--card-bg-color);
+      border: 1px solid var(--border-color);
+      border-radius: 5px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+      min-height: 200px;
+      animation: fadeIn 0.5s ease-in-out;
+    }
+    
+    .chat-header {
+      padding: 10px 15px;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 1.1em;
+      color: var(--secondary-color);
+    }
+    
+    .chat-messages {
+      flex-grow: 1;
+      padding: 15px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .chat-message {
+      display: flex;
+      margin-bottom: 8px;
+    }
+    
+    .chat-avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background-color: #555;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      margin-right: 10px;
+      flex-shrink: 0;
+      color: #fff;
+      font-size: 0.8em;
+    }
+    
+    .message-content {
+      background-color: #333;
+      border-radius: 5px;
+      padding: 8px 12px;
+      max-width: 80%;
+    }
+    
+    .message-sender {
+      font-size: 0.8em;
+      color: var(--accent-color);
+      margin-bottom: 2px;
+    }
+    
+    .message-text {
+      word-break: break-word;
+    }
+    
+    .system-message {
+      text-align: center;
+      color: #aaa;
+      font-style: italic;
+      padding: 5px 0;
+    }
+    
+    .chat-input-container {
+      display: flex;
+      padding: 10px;
+      border-top: 1px solid var(--border-color);
+    }
+    
+    .chat-input {
+      flex-grow: 1;
+      padding: 8px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      background-color: #333;
+      color: var(--text-color);
+      font-family: inherit;
+      margin-right: 10px;
+    }
+    
+    .chat-send {
+      background-color: var(--secondary-color);
+      color: white;
+      border: none;
+      border-radius: 20px;
+      padding: 8px 15px;
+      cursor: pointer;
+    }
+    
+    .action-buttons {
+      padding: 0 15px 20px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+    
+    .ready-btn, .leave-btn {
+      padding: 15px 0;
+      border: none;
+      border-radius: 5px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 1em;
+      transition: all 0.3s ease;
+    }
+    
+    .ready-btn {
+      background-color: var(--ready-color);
+      color: #333;
+    }
+    
+    .ready-btn.active {
+      background-color: var(--success-color);
+      color: white;
+    }
+    
+    .leave-btn {
+      background-color: #555;
+      color: white;
+    }
+    
+    .leave-btn:hover {
+      background-color: var(--error-color);
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+    
+    .countdown {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      flex-direction: column;
+      color: var(--accent-color);
+      font-size: 6em;
+      font-weight: bold;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+    
+    .countdown.show {
+      opacity: 1;
+      visibility: visible;
+      animation: pulse 1s infinite;
+    }
+    
+    .countdown-text {
+      font-size: 0.3em;
+      color: var(--text-color);
+      margin-top: 20px;
+    }
+    
+    .start-game-btn {
+      background-color: var(--success-color);
+      color: white;
+      border: none;
+      padding: 15px 0;
+      width: 100%;
+      cursor: pointer;
+      font-weight: bold;
+      border-radius: 5px;
+      font-size: 1.1em;
+      margin: 20px 15px;
+      transition: background-color 0.3s;
+      animation: pulse 2s infinite;
+    }
+    
+    .hidden {
+      display: none;
+    }
+    
+    @media (min-width: 768px) {
+      .player-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+      
+      .action-buttons {
+        grid-template-columns: 1fr 1fr 2fr;
+      }
+      
+      .start-game-btn {
+        grid-column: 3;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-title" id="roomHeaderTitle">廚房急先鋒 - 遊戲房間</div>
+  </div>
+
+  <div class="main-content">
+    <div class="room-info">
+      <div class="room-status" id="roomStatusLabel">等待中</div>
+      <h2 class="room-name" id="roomNameDisplay">加載中...</h2>
+      <div class="room-detail">
+        <span id="roomDifficultyDisplay">難度: 加載中...</span>
+        <span id="roomCreatorDisplay">房主: 加載中...</span>
+      </div>
+    </div>
+
+    <div class="player-list">
+      <div class="player-list-header">
+        玩家列表
+        <span class="player-count" id="playerCountDisplay">0/4</span>
+      </div>
+      <div class="player-grid" id="playerContainer">
+        <!-- 玩家卡片將透過JavaScript動態生成 -->
+      </div>
+    </div>
+
+    <div class="chat-box">
+      <div class="chat-header">聊天室</div>
+      <div class="chat-messages" id="chatMessages">
+        <div class="system-message">歡迎來到遊戲房間，準備好開始烹飪挑戰了嗎？</div>
+      </div>
+      <div class="chat-input-container">
+        <input type="text" class="chat-input" id="chatInput" placeholder="輸入聊天訊息...">
+        <button class="chat-send" id="sendChatBtn">送出</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="action-buttons">
+    <button class="ready-btn" id="readyBtn">準備就緒</button>
+    <button class="leave-btn" id="leaveBtn">離開房間</button>
+    <button class="start-game-btn hidden" id="startGameBtn">開始遊戲</button>
+  </div>
+
+  <!-- 倒計時覆蓋層 -->
+  <div class="countdown" id="countdown">
+    3
+    <div class="countdown-text">遊戲即將開始...</div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 檢查是否有登入令牌，若無則導回登入頁
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        window.location.href = '/cook-login.html';
+        return;
+      }
+      
+      // 獲取房間ID (從URL參數)
+      const urlParams = new URLSearchParams(window.location.search);
+      const roomId = urlParams.get('id');
+      
+      if (!roomId) {
+        alert('找不到房間ID，將返回遊戲大廳');
+        window.location.href = '/cook-lobby.html';
+        return;
+      }
+      
+      // 從本地存儲中獲取用戶信息
+      let currentUser = null;
+      const userJson = localStorage.getItem('user');
+      if (userJson) {
+        try {
+          currentUser = JSON.parse(userJson);
+        } catch (error) {
+          console.error('解析用戶信息出錯:', error);
+        }
+      }
+      
+      // DOM元素
+      const roomNameDisplay = document.getElementById('roomNameDisplay');
+      const roomHeaderTitle = document.getElementById('roomHeaderTitle');
+      const roomStatusLabel = document.getElementById('roomStatusLabel');
+      const roomDifficultyDisplay = document.getElementById('roomDifficultyDisplay');
+      const roomCreatorDisplay = document.getElementById('roomCreatorDisplay');
+      const playerCountDisplay = document.getElementById('playerCountDisplay');
+      const playerContainer = document.getElementById('playerContainer');
+      const chatMessages = document.getElementById('chatMessages');
+      const chatInput = document.getElementById('chatInput');
+      const sendChatBtn = document.getElementById('sendChatBtn');
+      const readyBtn = document.getElementById('readyBtn');
+      const leaveBtn = document.getElementById('leaveBtn');
+      const startGameBtn = document.getElementById('startGameBtn');
+      const countdown = document.getElementById('countdown');
+      
+      // 狀態變量
+      let roomData = null;
+      let isReady = false;
+      let isHost = false;
+      let websocket = null;
+      let reconnectAttempts = 0;
+      const maxReconnectAttempts = 5;
+      const reconnectDelay = 3000;
+      
+      // 連接WebSocket
+      function connectWebsocket() {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws`;
+        
+        websocket = new WebSocket(wsUrl);
+        
+        websocket.onopen = () => {
+          console.log('WebSocket連接已建立');
+          reconnectAttempts = 0;
+          
+          // 發送認證訊息
+          websocket.send(JSON.stringify({
+            type: 'authenticate',
+            token: token
+          }));
+          
+          // 發送加入房間訊息
+          websocket.send(JSON.stringify({
+            type: 'join_room',
+            roomId: roomId
+          }));
+          
+          addSystemMessage('已連接到伺服器');
+        };
+        
+        websocket.onmessage = (event) => {
+          try {
+            const message = JSON.parse(event.data);
+            handleWebsocketMessage(message);
+          } catch (error) {
+            console.error('解析WebSocket訊息出錯:', error);
+          }
+        };
+        
+        websocket.onclose = (event) => {
+          console.log('WebSocket連接已關閉', event.code, event.reason);
+          addSystemMessage('與伺服器的連接已斷開，嘗試重新連接...');
+          
+          // 嘗試重新連接
+          if (reconnectAttempts < maxReconnectAttempts) {
+            reconnectAttempts++;
+            setTimeout(connectWebsocket, reconnectDelay);
+          } else {
+            addSystemMessage('無法連接到伺服器，請刷新頁面重試');
+          }
+        };
+        
+        websocket.onerror = (error) => {
+          console.error('WebSocket錯誤:', error);
+          addSystemMessage('連接錯誤，請檢查網絡狀態');
+        };
+      }
+      
+      // 處理WebSocket訊息
+      function handleWebsocketMessage(message) {
+        console.log('收到訊息:', message);
+        
+        switch (message.type) {
+          case 'room_info':
+            updateRoomInfo(message.room);
+            break;
+            
+          case 'player_list':
+            updatePlayerList(message.players);
+            break;
+            
+          case 'player_joined':
+            addSystemMessage(`${message.playerName} 加入了房間`);
+            break;
+            
+          case 'player_left':
+            addSystemMessage(`${message.playerName} 離開了房間`);
+            break;
+            
+          case 'player_ready':
+            addSystemMessage(`${message.playerName} 已準備就緒`);
+            break;
+            
+          case 'player_unready':
+            addSystemMessage(`${message.playerName} 取消準備`);
+            break;
+            
+          case 'chat_message':
+            addChatMessage(message.sender, message.text, message.avatar);
+            break;
+            
+          case 'game_starting':
+            startCountdown(message.countdown);
+            break;
+            
+          case 'game_started':
+            window.location.href = `/cook-game.html?id=${roomId}`;
+            break;
+            
+          case 'error':
+            addSystemMessage(`錯誤: ${message.message}`);
+            break;
+            
+          default:
+            console.log('未處理的訊息類型:', message.type);
+        }
+      }
+      
+      // 更新房間信息
+      function updateRoomInfo(room) {
+        roomData = room;
+        roomNameDisplay.textContent = room.name;
+        roomHeaderTitle.textContent = `廚房急先鋒 - ${room.name}`;
+        roomStatusLabel.textContent = room.status === 'waiting' ? '等待中' : '遊戲中';
+        
+        let difficultyText = '簡單';
+        if (room.difficulty === 'normal') difficultyText = '普通';
+        if (room.difficulty === 'hard') difficultyText = '困難';
+        
+        roomDifficultyDisplay.textContent = `難度: ${difficultyText}`;
+        roomCreatorDisplay.textContent = `房主: ${room.creator}`;
+        
+        // 檢查當前用戶是否為房主
+        isHost = currentUser && room.creatorId === currentUser.id;
+        
+        if (isHost) {
+          startGameBtn.classList.remove('hidden');
+        } else {
+          startGameBtn.classList.add('hidden');
+        }
+      }
+      
+      // 更新玩家列表
+      function updatePlayerList(players) {
+        playerContainer.innerHTML = '';
+        playerCountDisplay.textContent = `${players.length}/4`;
+        
+        players.forEach(player => {
+          const playerCard = document.createElement('div');
+          playerCard.className = 'player-card';
+          
+          if (currentUser && player.id === currentUser.id) {
+            playerCard.classList.add('current');
+          }
+          
+          const statusClass = player.ready ? 'status-ready' : '';
+          
+          playerCard.innerHTML = `
+            <div class="player-avatar">${player.username.charAt(0).toUpperCase()}</div>
+            <div class="player-info">
+              <div class="player-name">${player.username}</div>
+              <div class="player-level">Lv.${player.level}</div>
+            </div>
+            <div class="player-status ${statusClass}"></div>
+          `;
+          
+          playerContainer.appendChild(playerCard);
+          
+          // 如果當前用戶已準備，更新按鈕狀態
+          if (currentUser && player.id === currentUser.id && player.ready) {
+            isReady = true;
+            readyBtn.classList.add('active');
+            readyBtn.textContent = '取消準備';
+          }
+        });
+      }
+      
+      // 添加系統消息
+      function addSystemMessage(text) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'system-message';
+        messageDiv.textContent = text;
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+      
+      // 添加聊天消息
+      function addChatMessage(sender, text, avatar) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'chat-message';
+        
+        messageDiv.innerHTML = `
+          <div class="chat-avatar">${avatar || sender.charAt(0).toUpperCase()}</div>
+          <div class="message-content">
+            <div class="message-sender">${sender}</div>
+            <div class="message-text">${text}</div>
+          </div>
+        `;
+        
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+      
+      // 開始倒計時
+      function startCountdown(seconds) {
+        countdown.textContent = seconds;
+        countdown.classList.add('show');
+        
+        let remainingSeconds = seconds;
+        const interval = setInterval(() => {
+          remainingSeconds--;
+          
+          if (remainingSeconds <= 0) {
+            clearInterval(interval);
+            countdown.classList.remove('show');
+          } else {
+            countdown.textContent = remainingSeconds;
+          }
+        }, 1000);
+      }
+      
+      // 發送聊天訊息
+      function sendChatMessage() {
+        const text = chatInput.value.trim();
+        if (!text) return;
+        
+        if (websocket && websocket.readyState === WebSocket.OPEN) {
+          websocket.send(JSON.stringify({
+            type: 'chat_message',
+            roomId: roomId,
+            text: text
+          }));
+          
+          chatInput.value = '';
+        } else {
+          addSystemMessage('無法發送訊息，連接已斷開');
+        }
+      }
+      
+      // 切換準備狀態
+      function toggleReady() {
+        if (websocket && websocket.readyState === WebSocket.OPEN) {
+          isReady = !isReady;
+          
+          websocket.send(JSON.stringify({
+            type: isReady ? 'player_ready' : 'player_unready',
+            roomId: roomId
+          }));
+          
+          readyBtn.classList.toggle('active', isReady);
+          readyBtn.textContent = isReady ? '取消準備' : '準備就緒';
+        } else {
+          addSystemMessage('無法更改狀態，連接已斷開');
+        }
+      }
+      
+      // 離開房間
+      function leaveRoom() {
+        if (websocket && websocket.readyState === WebSocket.OPEN) {
+          websocket.send(JSON.stringify({
+            type: 'leave_room',
+            roomId: roomId
+          }));
+        }
+        
+        window.location.href = '/cook-lobby.html';
+      }
+      
+      // 開始遊戲
+      function startGame() {
+        if (!isHost) {
+          addSystemMessage('只有房主可以開始遊戲');
+          return;
+        }
+        
+        if (websocket && websocket.readyState === WebSocket.OPEN) {
+          websocket.send(JSON.stringify({
+            type: 'start_game',
+            roomId: roomId
+          }));
+        } else {
+          addSystemMessage('無法開始遊戲，連接已斷開');
+        }
+      }
+      
+      // 註冊事件監聽器
+      sendChatBtn.addEventListener('click', sendChatMessage);
+      
+      chatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          sendChatMessage();
+        }
+      });
+      
+      readyBtn.addEventListener('click', toggleReady);
+      leaveBtn.addEventListener('click', leaveRoom);
+      startGameBtn.addEventListener('click', startGame);
+      
+      // 連接WebSocket並加入房間
+      connectWebsocket();
+      
+      // 頁面離開時關閉WebSocket連接
+      window.addEventListener('beforeunload', () => {
+        if (websocket) {
+          websocket.close();
+        }
+      });
+    });
+  </script>
+</body>
+</html> 

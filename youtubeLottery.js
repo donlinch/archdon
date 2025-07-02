@@ -68,12 +68,12 @@ class YoutubeLottery {
         if (!hasLiveChatId) {
           console.warn('警告：該影片不是直播或沒有活躍的聊天室，但仍按照直播模式處理');
         } else {
-          this.liveChatId = video.liveStreamingDetails.activeLiveChatId;
+        this.liveChatId = video.liveStreamingDetails.activeLiveChatId;
         }
         
         if (this.liveChatId) {
           console.log(`開始監控直播聊天室: "${videoTitle}"...`);
-          this.startChatPolling(this.liveChatId);
+        this.startChatPolling(this.liveChatId);
         } else {
           throw new Error('直播模式錯誤：找不到聊天室ID');
         }
