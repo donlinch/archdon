@@ -10,10 +10,13 @@
 
 const express = require('express');
 const WebSocket = require('ws');
-const jwt =require('jsonwebtoken');
+const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const cors = require('cors');
 const path = require('path');
+
+// ★ 新增：用於管理斷線計時器
+const disconnectionTimers = new Map();
 
 module.exports = function(pool) { // <-- 接收傳入的 pool
     const cookGameApp = express();
@@ -164,12 +167,18 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
                     ws.send(JSON.stringify({ type: 'error', message: '未提供房間ID' }));
                     return;
                 }
+
+                // ★ 修改：檢查並清除斷線計時器
+                if (disconnectionTimers.has(userId)) {
+                    console.log(`[COOK-GAME] 玩家 ${username} (ID: ${userId}) 在緩衝時間內重新連線，取消離開操作。`);
+                    clearTimeout(disconnectionTimers.get(userId));
+                    disconnectionTimers.delete(userId);
+                }
+
                 const client = await pool.connect();
                 try {
                     await client.query('BEGIN');
-
                     const roomResult = await client.query('SELECT * FROM cook_game_rooms WHERE room_id = $1 FOR UPDATE', [roomId]);
-
                     if (roomResult.rows.length === 0) {
                         ws.send(JSON.stringify({ type: 'error', message: '找不到對應的遊戲房間，將返回大廳。' }));
                         await client.query('ROLLBACK');
@@ -180,7 +189,14 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
                     let gameState = room.game_state || { players: [], status: 'waiting' };
                     let playerJustJoined = false;
 
-                    if (gameState.players.length >= 4 && !gameState.players.some(p => p.id === userId)) {
+                    // 當遊戲已經開始時，允許已在房間列表中的玩家重新加入
+                    if (room.status === 'playing' && !gameState.players.some(p => p.id === userId)) {
+                         ws.send(JSON.stringify({ type: 'error', message: '遊戲已經開始，無法加入。' }));
+                         await client.query('ROLLBACK');
+                         return;
+                    }
+
+                    if (room.status === 'waiting' && gameState.players.length >= 4 && !gameState.players.some(p => p.id === userId)) {
                         ws.send(JSON.stringify({ type: 'error', message: '房間已滿' }));
                         await client.query('ROLLBACK');
                         return;
@@ -196,35 +212,43 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
                             ready: false
                         };
                         gameState.players.push(newPlayer);
-                        await client.query('UPDATE cook_game_rooms SET game_state = $1 WHERE room_id = $2', [gameState, roomId]);
                     }
-
+                    
+                    // 無論是新加入還是重連，都更新遊戲狀態和連線資訊
                     ws.currentRoomId = roomId;
                     ws.userId = userId;
-
+                    
+                    await client.query('UPDATE cook_game_rooms SET game_state = $1, updated_at = NOW() WHERE room_id = $2', [gameState, roomId]);
                     await client.query('COMMIT');
-                    
-                    const finalRoomDataResult = await pool.query('SELECT * FROM cook_game_rooms WHERE room_id = $1', [roomId]);
-                    const finalRoomData = finalRoomDataResult.rows[0];
 
-                    const roomInfoPayload = {
-                        id: finalRoomData.room_id,
-                        name: finalRoomData.room_name,
-                        status: finalRoomData.status,
-                        difficulty: finalRoomData.difficulty,
-                        creator: finalRoomData.creator_name, // Fix key to match client
-                        creatorId: finalRoomData.creator_id,
-                        players: finalRoomData.game_state.players,
-                    };
-
-                    ws.send(JSON.stringify({ type: 'room_info', room: roomInfoPayload }));
+                    console.log(`[COOK-GAME] 玩家 ${username} (ID: ${userId}) 已成功加入/重連至房間 ${roomId}`);
                     
-                    if (playerJustJoined) {
-                        broadcastToRoom(roomId, { type: 'player_joined', playerName: userProfile.display_name || username }, ws);
+                    // 如果是從遊戲中頁面加入，伺服器應發送完整的遊戲狀態
+                    if (room.status === 'playing') {
+                        // 這裡應該發送 'game_state' 而非 'room_info'
+                        ws.send(JSON.stringify({ type: 'game_state', gameState: gameState }));
+                        console.log(`[COOK-GAME] 向重連玩家 ${username} 發送完整遊戲狀態。`);
+                    } else {
+                        // 否則，正常發送房間資訊
+                        const finalRoomDataResult = await pool.query('SELECT * FROM cook_game_rooms WHERE room_id = $1', [roomId]);
+                        const finalRoomData = finalRoomDataResult.rows[0];
+
+                        const roomInfoPayload = {
+                            id: finalRoomData.room_id,
+                            name: finalRoomData.room_name,
+                            status: finalRoomData.status,
+                            difficulty: finalRoomData.difficulty,
+                            creator: finalRoomData.creator_name,
+                            creatorId: finalRoomData.creator_id,
+                            players: finalRoomData.game_state.players,
+                        };
+                        ws.send(JSON.stringify({ type: 'room_info', room: roomInfoPayload }));
+
+                        if (playerJustJoined) {
+                           broadcastToRoom(roomId, { type: 'player_joined', playerName: userProfile.display_name || username }, ws);
+                        }
+                        broadcastToRoom(roomId, { type: 'player_list', players: gameState.players });
                     }
-                    broadcastToRoom(roomId, { type: 'player_list', players: gameState.players });
-                    console.log(`[COOK-GAME] 玩家 ${username} (ID: ${userId}) 已加入房間 ${roomId}`);
-
                 } catch (error) {
                     await client.query('ROLLBACK');
                     console.error(`[COOK-GAME] 加入房間錯誤:`, error);
@@ -310,7 +334,7 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
                 break;
             }
             case 'start_game': {
-                if (!roomId) {
+                 if (!roomId) {
                     ws.send(JSON.stringify({ type: 'error', message: '未提供房間ID' }));
                     return;
                 }
@@ -334,21 +358,27 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
                     
                     const gameState = room.game_state;
                     const allReady = gameState.players.every(p => p.ready);
-                    // For production, you might want to enforce more players
+                    
                     if (allReady && gameState.players.length >= 1) { 
                         
-                        // Update room status to 'starting'
                         await client.query("UPDATE cook_game_rooms SET status = 'starting' WHERE room_id = $1", [roomId]);
                         await client.query('COMMIT');
                         
                         broadcastToRoom(roomId, { type: 'game_starting', countdown: 3 });
                         
-                        // After countdown, start the game
                         setTimeout(async () => {
                             try {
-                                await pool.query("UPDATE cook_game_rooms SET status = 'playing', updated_at = NOW() WHERE room_id = $1", [roomId]);
+                                const initialGameState = { // 這裡應該從一個範本或生成器函數來創建
+                                    timeRemaining: 180, // 3 minutes
+                                    score: 0,
+                                    orders: [],
+                                    stations: {}, // 初始化工作站狀態
+                                    players: gameState.players.map(p => ({ ...p, inventory: Array(5).fill(null), activeSlot: 0 }))
+                                };
+
+                                await pool.query("UPDATE cook_game_rooms SET status = 'playing', game_state = $2, updated_at = NOW() WHERE room_id = $1", [roomId, initialGameState]);
                                 console.log(`[COOK-GAME] 遊戲 ${roomId} 已正式開始`);
-                                broadcastToRoom(roomId, { type: 'game_started' });
+                                broadcastToRoom(roomId, { type: 'game_started', gameState: initialGameState });
                             } catch (startError) {
                                 console.error(`[COOK-GAME] 開始遊戲 ${roomId} 失敗:`, startError);
                             }
@@ -370,7 +400,7 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
         }
     }
     
-   
+    // ... 其他路由和函數 ...
     
     cookGameApp.get(`/games/rooms`, authenticateToken, async (req, res) => {
         try {
@@ -549,7 +579,7 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
       }
     });
     
-    
+    // ... 其他遊戲邏輯函數 ...
 
     function initCookGameWss(wss) { // 參數是 wss
  
@@ -602,9 +632,26 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
             });
 
             ws.on('close', () => {
-                console.log('[COOK-GAME WS] 連接關閉');
+                console.log(`[COOK-GAME WS] 連接關閉，使用者 ID: ${ws.userId}`);
+                // ★ 修改：不要立即移除玩家，而是啟動一個計時器
+                if (ws.userId && ws.currentRoomId) {
+                    // 如果此玩家已有計時器，先清除
+                    if (disconnectionTimers.has(ws.userId)) {
+                        clearTimeout(disconnectionTimers.get(ws.userId));
+                    }
+
+                    console.log(`[COOK-GAME] 玩家 ${ws.userProfile ? ws.userProfile.username : ws.userId} 斷線，啟動 10 秒緩衝計時器。`);
+                    
+                    const timerId = setTimeout(() => {
+                        console.log(`[COOK-GAME] 玩家 ${ws.userProfile ? ws.userProfile.username : ws.userId} 斷線緩衝時間到，執行離開房間操作。`);
+                        handlePlayerLeave(ws.currentRoomId, ws.userId);
+                        disconnectionTimers.delete(ws.userId);
+                    }, 10000); // 10 秒緩衝時間
+
+                    disconnectionTimers.set(ws.userId, timerId);
+                }
+                
                 if (ws.userId) {
-                    handlePlayerLeave(ws.currentRoomId, ws.userId);
                     activeConnections.delete(ws.userId);
                 }
             });
