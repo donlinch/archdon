@@ -1,3 +1,6 @@
+
+
+
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -5,70 +8,56 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>料理急先鋒 - 遊戲進行中</title>
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#333333">
+  <meta name="theme-color" content="#1c1c1c">
   <style>
     :root {
       --primary-color: #32a852;
       --secondary-color: #4CAF50;
       --accent-color: #FF9800;
       --text-color: #f0f0f0;
-      --bg-color: #222222;
-      --border-color: #444444;
-      --success-color: #4CAF50;
-      --error-color: #F44336;
-      --card-bg-color: rgba(0, 0, 0, 0.5);
-      --button-gray: #c7c3c0;
-      --button-dark: #545251;
-      --button-red: #d42a02;
+      --bg-color: #1c1c1c;
+      --border-color: #444;
+      --card-bg-color: #2a2a2a;
+      --btn-cook-bg: #d42a02;
+      --btn-assemble-bg: #545251;
+      --btn-serve-bg: #c7c3c0;
     }
     
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     
+    html, body { height: 100%; overflow: hidden; }
+
     body {
-      margin: 0;
-      padding: 0;
+      font-family: monospace, 'Courier New', Courier;
+      background-color: #111;
+      color: var(--text-color);
       display: flex;
-      flex-direction: column;
       align-items: center;
-      min-height: 100vh;
-      background: #1a1a1a;
-      color: #fff;
-      font-family: 'Courier New', monospace;
+      justify-content: center;
+      touch-action: manipulation;
     }
     
-    .game-container {
-      width: 100%;
-      max-width: 480px; /* 手機版面最大寬度 */
-      min-height: 100vh;
-      margin: 0 auto;
-      background: #0d1117; /* 深色背景 */
-      display: flex;
-      flex-direction: column;
-      box-shadow: 0 0 20px rgba(0,0,0,0.5);
-      position: relative;
+    .game-wrapper {
+        width: 100%; height: 100%;
+        max-width: 450px; max-height: 950px;
+        background-color: var(--bg-color);
+        display: flex; flex-direction: column;
+        position: relative; overflow: hidden;
+        border: 2px solid #555; border-radius: 20px;
+        box-shadow: 0 0 25px rgba(0,0,0,0.6);
     }
     
     .loading-screen {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%;
       background-color: var(--bg-color);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
       z-index: 1000;
     }
     
     .loader {
-      width: 60px;
-      height: 60px;
+      width: 60px; height: 60px;
       border-radius: 50%;
       border: 5px solid var(--border-color);
       border-top-color: var(--accent-color);
@@ -76,45 +65,102 @@
       margin-bottom: 20px;
     }
     
-    .loading-text {
-      font-size: 1.2em;
-      color: var(--accent-color);
-    }
+    .loading-text { font-size: 1.2em; color: var(--accent-color); }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    
-    /* 遊戲界面 */
     .game-ui {
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-      flex-grow: 1;
+      display: flex; flex-direction: column;
+      height: 100%; flex-grow: 1;
+      visibility: hidden; /* 默認隱藏，由JS控制顯示 */
     }
     
     .game-header {
-      height: 60px;
-      background-color: rgba(0, 0, 0, 0.7);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      flex-shrink: 0; height: 50px;
+      background-color: rgba(0, 0, 0, 0.4);
+      display: flex; justify-content: space-between; align-items: center;
       padding: 0 15px;
       border-bottom: 1px solid var(--border-color);
-      z-index: 10;
     }
     
-    .game-timer {
-      font-size: 1.4em;
-      color: var(--accent-color);
-      font-weight: bold;
+    .game-timer { font-size: 1.2em; color: var(--accent-color); font-weight: bold; }
+    .game-score { font-size: 1.2em; color: var(--secondary-color); }
+
+    .main-area {
+        flex: 1;
+        display: flex; flex-direction: column;
+        overflow-y: auto; padding: 15px;
+        gap: 15px;
+    }
+
+    .orders-container { display: flex; flex-direction: column; gap: 10px; }
+    .order-card {
+      background-color: var(--card-bg-color);
+      border: 1px solid var(--border-color);
+      border-radius: 8px; padding: 12px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .order-details { display: flex; justify-content: space-between; align-items: center; }
+    .order-name { font-size: 1.1em; font-weight: bold; }
+    .order-ingredients { display: flex; gap: 5px; }
+    .ingredient-icon { font-size: 1.2em; }
+    .order-timer-text { font-size: 0.8em; color: #aaa; margin-bottom: 4px; text-align: right; }
+    .order-timer { width: 100%; height: 6px; background-color: #444; border-radius: 3px; overflow: hidden; }
+    .order-timer-fill { height: 100%; background-color: var(--secondary-color); border-radius: 3px; transition: width 0.5s linear; }
+
+    .ingredients-container {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr); gap: 10px;
     }
     
-    .game-score {
-      font-size: 1.2em;
-      color: var(--secondary-color);
+    .ingredient-button {
+      width: 100%; aspect-ratio: 1;
+      border-radius: 10px; border: none; outline: none;
+      background-color: var(--button-gray);
+      box-shadow: rgba(0, 0, 0, 0.4) 5px 5px 8px, #fff 1.5px 1.5px 2px 0px inset, var(--button-gray) -3.2px -3.2px 8px 0px inset;
+      cursor: pointer; transition: 0.1s ease-in-out;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
     }
+    .ingredient-button:active {
+      box-shadow: rgba(0, 0, 0, 0.4) 0px 0px 0px, inset 0.5px 0.5px 4px #000, var(--button-gray) -3.2px -3.2px 8px 0px inset;
+      transform: translateY(2px);
+    }
+    .ingredient-icon-large { font-size: 2em; margin-bottom: 5px; }
+    .ingredient-label { font-size: 0.8em; color: #333; text-align: center; }
+    
+    .actions-container { display: flex; justify-content: space-between; gap: 10px; }
+    .action-button {
+        flex: 1; height: 5em; border-radius: 10px; border: none; outline: none;
+        cursor: pointer; transition: 0.1s ease-in-out;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    .action-button:active { transform: translateY(2px); }
+    .cook-button { background-color: var(--btn-cook-bg); box-shadow: rgba(0, 0, 0, 0.4) 5px 5px 8px, #fb702c 2px 2px 10px 0px inset, var(--btn-cook-bg) -4px -4px 1px 0px inset; }
+    .cook-button:active { box-shadow: rgba(0, 0, 0, 0.4) 0px 0px 0px, inset 0.5px 0.5px 4px #000, var(--btn-cook-bg) -3.2px -3.2px 8px 0px inset; }
+    .assemble-button { background-color: var(--btn-assemble-bg); box-shadow: rgba(0, 0, 0, 0.4) 5px 5px 8px, #a8a6a4 1.5px 1.5px 1px 0px inset, var(--btn-assemble-bg) -3.2px -3.2px 8px 0px inset; }
+    .assemble-button:active { box-shadow: rgba(0, 0, 0, 0.4) 0px 0px 0px, inset 0.5px 0.5px 4px #000, var(--btn-assemble-bg) -3.2px -3.2px 8px 0px inset; }
+    .serve-button { background-color: var(--btn-serve-bg); box-shadow: rgba(0, 0, 0, 0.4) 5px 5px 8px, #fff 1.5px 1.5px 2px 0px inset, var(--btn-serve-bg) -3.2px -3.2px 8px 0px inset; }
+    .serve-button:active { box-shadow: rgba(0, 0, 0, 0.4) 0px 0px 0px, inset 0.5px 0.5px 4px #000, var(--btn-serve-bg) -3.2px -3.2px 8px 0px inset; }
+    .action-icon { font-size: 1.8em; color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
+    .action-label { font-size: 0.8em; color: white; font-weight: bold; margin-top: 5px; }
+
+    .player-inventory {
+      flex-shrink: 0; display: grid;
+      grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(2, 1fr);
+      gap: 8px; padding: 15px;
+      background: rgba(0,0,0,0.2); border-top: 1px solid var(--border-color);
+    }
+    .inventory-slot {
+      aspect-ratio: 1; background: rgba(0,0,0,0.4);
+      border: 1px solid var(--border-color); border-radius: 8px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      cursor: pointer; position: relative; transition: all 0.2s ease;
+      color: rgba(255,255,255,0.3); font-size: 0.8em;
+    }
+    .inventory-slot.active { border-color: var(--accent-color); transform: scale(1.05); }
+    .game-item { font-size: 1.8em; }
+    .item-label { font-size: 0.7em; color: #ccc; position: absolute; bottom: 5px; }
+
+
     
     .task-hint {
       background-color: rgba(0, 0, 0, 0.7);
@@ -501,86 +547,50 @@
   </style>
 </head>
 <body>
-  <!-- 用戶狀態指示器 -->
-  <div id="userStatus" class="user-status" style="display: none;">
-      <img id="userStatusAvatar" src="/images/a01girlmove.gif" alt="User">
-      <span id="userStatusName" class="username"></span>
-  </div>
-
-  <div class="game-container" id="gameContainer">
-    <!-- 遊戲載入畫面 -->
+  <div class="game-wrapper">
     <div class="loading-screen" id="loadingScreen">
       <div class="loader"></div>
       <div class="loading-text">遊戲載入中...</div>
     </div>
 
-    <!-- 遊戲UI -->
     <div class="game-ui" id="gameUI">
       <div class="game-header">
         <div class="game-timer" id="gameTimer">03:00</div>
         <div class="game-score" id="gameScore">分數: 0</div>
       </div>
       
-      <div class="task-hint" id="taskHint">請拿取食材開始製作料理</div>
-      
-      <div class="game-main">
-        <div class="orders-container" id="ordersContainer">
-          <!-- 訂單卡片將由JavaScript動態生成 -->
-        </div>
-        
-        <!-- 食材站區域 - 網格佈局 -->
-        <div class="ingredients-container" id="ingredientsContainer">
-          <!-- 食材按鈕將由JavaScript動態生成 -->
-        </div>
-        
-        <!-- 動作站區域 - 大按鈕 -->
-        <div class="actions-container" id="actionsContainer">
-          <button class="action-button cook-button" id="cookButton">
-            <span class="action-icon">🔥</span>
-            <span class="action-label">烹飪</span>
-          </button>
-          <button class="action-button assemble-button" id="assembleButton">
-            <span class="action-icon">🔨</span>
-            <span class="action-label">組裝</span>
-          </button>
-          <button class="action-button serve-button" id="serveButton">
-            <span class="action-icon">🍽️</span>
-            <span class="action-label">上菜</span>
-          </button>
+      <div class="main-area">
+        <div class="orders-container" id="ordersContainer"></div>
+        <div class="kitchen-area">
+          <div class="task-hint" id="taskHint"></div>
+          <div class="ingredients-container" id="ingredientsContainer"></div>
+          <div class="actions-container">
+            <button class="action-button cook-button" id="cookButton">
+              <span class="action-icon">🔥</span><span class="action-label">烹飪</span>
+            </button>
+            <button class="action-button assemble-button" id="assembleButton">
+              <span class="action-icon">🔨</span><span class="action-label">組裝</span>
+            </button>
+            <button class="action-button serve-button" id="serveButton">
+              <span class="action-icon">🍽️</span><span class="action-label">上菜</span>
+            </button>
+          </div>
         </div>
       </div>
       
-      <div class="player-area">
-        <div class="player-inventory" id="playerInventory">
-          <!-- 庫存槽將由JavaScript動態生成 -->
-        </div>
-      </div>
+      <div class="player-inventory" id="playerInventory"></div>
     </div>
-    
-    <!-- 結束遊戲對話框 -->
-    <div class="dialog" id="gameOverDialog" style="display: none;">
-      <div class="dialog-content">
-        <div class="dialog-title">遊戲結束</div>
-        <div class="dialog-text" id="gameOverText">
-          你的團隊得分: <span id="finalScore">0</span>
-        </div>
-        <button class="dialog-button" id="returnToLobbyBtn">返回大廳</button>
-      </div>
-    </div>
-    
-    <!-- 提示通知 -->
-    <div class="toast" id="toast"></div>
   </div>
 
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
+     document.addEventListener('DOMContentLoaded', () => {
       // 檢查是否有登入令牌，若無則導回登入頁
       const token = localStorage.getItem('cookGameToken');
       if (!token) {
         window.location.href = '/cook-login.html';
         return;
       }
-      
+  
       // 獲取房間ID (從URL參數)
       const urlParams = new URLSearchParams(window.location.search);
       const roomId = urlParams.get('id');
@@ -687,29 +697,24 @@
             
             // 處理不同類型的消息
             switch (message.type) {
+              // ★ 關鍵修改：移除room_info處理，只接受 game_state 和 game_started
               case 'game_state':
-                // 更新整個遊戲狀態
-                updateGameState(message.gameState);
-                break;
-              
-              case 'player_action':
-                // 其他玩家的動作
-                handlePlayerAction(message.playerId, message.action, message.data);
-                break;
-              
-              case 'dish_served':
-                // 上菜成功
-                if (message.success) {
-                  showToast(`上菜成功！獲得 ${message.points} 分`);
-                  // 更新分數
-                  if (message.newScore !== undefined) {
-                    gameState.score = message.newScore;
-                    updateScoreDisplay();
-                  }
-                } else {
-                  showToast('上菜失敗：' + message.reason);
-                }
-                break;
+                case 'game_started':
+                    startGame(message.gameState);
+                    break;
+
+                // ★ 關鍵修改：在 ingredient_picked 中加入自動選擇空槽的邏輯
+                case 'ingredient_picked':
+                    gameState.inventory[message.slotIndex] = {
+                        type: message.ingredientType,
+                        id: message.itemId,
+                        state: 'raw'
+                    };
+                    updateInventory();
+                    selectNextEmptySlot(); // ★ 自動選擇下一個空槽
+                    updateTaskHint();
+                    showToast(`已拿取 ${getItemName(message.ingredientType)}`);
+                    break;
               
               case 'order_completed':
                 // 訂單完成
@@ -1222,6 +1227,38 @@
         return orderCard;
       }
       
+
+ // ★ 新增：自動選擇下一個空槽的函數
+ function selectNextEmptySlot() {
+            // 從0開始找到第一個空槽位
+            const nextEmptyIndex = gameState.inventory.findIndex(slot => slot === null);
+            if (nextEmptyIndex !== -1) {
+                setActiveSlot(nextEmptyIndex);
+            } else {
+                showToast("庫存已滿！");
+            }
+        }
+
+        // ★ 新增：集中設定活動槽的函數
+        function setActiveSlot(index) {
+            if (index < 0 || index >= gameState.inventory.length) return;
+            
+            document.querySelectorAll('.inventory-slot').forEach((s, i) => {
+                s.classList.toggle('active', i === index);
+            });
+            gameState.activeSlot = index;
+            // 靜默通知伺服器，不期待回覆
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                websocket.send(JSON.stringify({
+                    type: 'player_action',
+                    action: 'select_slot',
+                    data: { slotIndex: index },
+                    roomId: roomId
+                }));
+            }
+        }
+
+
       // 獲取食譜名稱
       function getRecipeName(recipe) {
         switch (recipe) {
