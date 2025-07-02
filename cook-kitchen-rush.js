@@ -465,8 +465,7 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
     // ... 其他遊戲邏輯函數 ...
 
     function initCookGameWss(server) {
-        const wssCookGame = new WebSocket.Server({ noServer: true });
-
+ 
         wssCookGame.on('connection', (ws, req) => {
             console.log('[COOK-GAME WS] 收到一個新連接');
             ws.isAlive = true;
@@ -529,7 +528,7 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
         });
       
         const interval = setInterval(() => {
-            wssCookGame.clients.forEach(ws => {
+            wss.clients.forEach(ws => { // <-- 使用 wss.clients
                 if (ws.isAlive === false) {
                     console.log('[COOK-GAME WS] 心跳超時，終止連接');
                     return ws.terminate();
@@ -539,12 +538,11 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
             });
         }, 30000);
 
-        wssCookGame.on('close', () => {
+        wss.on('close', () => { // <-- 使用 wss
             clearInterval(interval);
         });
 
-        return wssCookGame;
-    }
+     }
 
     return {
         cookGameApp,
