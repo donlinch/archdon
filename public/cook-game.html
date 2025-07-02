@@ -1,6 +1,3 @@
-
-
-
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -8,56 +5,67 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>料理急先鋒 - 遊戲進行中</title>
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1c1c1c">
+  <meta name="theme-color" content="#333333">
   <style>
     :root {
       --primary-color: #32a852;
       --secondary-color: #4CAF50;
       --accent-color: #FF9800;
       --text-color: #f0f0f0;
-      --bg-color: #1c1c1c;
-      --border-color: #444;
-      --card-bg-color: #2a2a2a;
-      --btn-cook-bg: #d42a02;
-      --btn-assemble-bg: #545251;
-      --btn-serve-bg: #c7c3c0;
+      --bg-color: #222222;
+      --border-color: #444444;
+      --success-color: #4CAF50;
+      --error-color: #F44336;
+      --card-bg-color: rgba(0, 0, 0, 0.5);
     }
     
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
     
-    html, body { height: 100%; overflow: hidden; }
-
     body {
-      font-family: monospace, 'Courier New', Courier;
-      background-color: #111;
-      color: var(--text-color);
+      margin: 0;
+      padding: 0;
       display: flex;
+      flex-direction: column;
       align-items: center;
-      justify-content: center;
-      touch-action: manipulation;
+      min-height: 100vh;
+      background: #1a1a1a;
+      color: #fff;
+      font-family: 'Courier New', monospace;
     }
     
-    .game-wrapper {
-        width: 100%; height: 100%;
-        max-width: 450px; max-height: 950px;
-        background-color: var(--bg-color);
-        display: flex; flex-direction: column;
-        position: relative; overflow: hidden;
-        border: 2px solid #555; border-radius: 20px;
-        box-shadow: 0 0 25px rgba(0,0,0,0.6);
+    .game-container {
+      width: 100%;
+      max-width: 480px; /* 手機版面最大寬度 */
+      min-height: 100vh;
+      margin: 0 auto;
+      background: #0d1117; /* 深色背景 */
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+      position: relative;
     }
     
     .loading-screen {
-      position: absolute; top: 0; left: 0;
-      width: 100%; height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
       background-color: var(--bg-color);
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       z-index: 1000;
     }
     
     .loader {
-      width: 60px; height: 60px;
+      width: 60px;
+      height: 60px;
       border-radius: 50%;
       border: 5px solid var(--border-color);
       border-top-color: var(--accent-color);
@@ -65,121 +73,68 @@
       margin-bottom: 20px;
     }
     
-    .loading-text { font-size: 1.2em; color: var(--accent-color); }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .loading-text {
+      font-size: 1.2em;
+      color: var(--accent-color);
+    }
     
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    /* 遊戲界面 */
     .game-ui {
-      display: flex; flex-direction: column;
-      height: 100%; flex-grow: 1;
-      visibility: hidden; /* 默認隱藏，由JS控制顯示 */
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      flex-grow: 1;
     }
     
     .game-header {
-      flex-shrink: 0; height: 50px;
-      background-color: rgba(0, 0, 0, 0.4);
-      display: flex; justify-content: space-between; align-items: center;
+      height: 50px;
+      background-color: rgba(0, 0, 0, 0.7);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       padding: 0 15px;
       border-bottom: 1px solid var(--border-color);
+      z-index: 10;
     }
     
-    .game-timer { font-size: 1.2em; color: var(--accent-color); font-weight: bold; }
-    .game-score { font-size: 1.2em; color: var(--secondary-color); }
-
-    .main-area {
-        flex: 1;
-        display: flex; flex-direction: column;
-        overflow-y: auto; padding: 15px;
-        gap: 15px;
-    }
-
-    .orders-container { display: flex; flex-direction: column; gap: 10px; }
-    .order-card {
-      background-color: var(--card-bg-color);
-      border: 1px solid var(--border-color);
-      border-radius: 8px; padding: 12px;
-      display: flex; flex-direction: column; gap: 8px;
-    }
-    .order-details { display: flex; justify-content: space-between; align-items: center; }
-    .order-name { font-size: 1.1em; font-weight: bold; }
-    .order-ingredients { display: flex; gap: 5px; }
-    .ingredient-icon { font-size: 1.2em; }
-    .order-timer-text { font-size: 0.8em; color: #aaa; margin-bottom: 4px; text-align: right; }
-    .order-timer { width: 100%; height: 6px; background-color: #444; border-radius: 3px; overflow: hidden; }
-    .order-timer-fill { height: 100%; background-color: var(--secondary-color); border-radius: 3px; transition: width 0.5s linear; }
-
-    .ingredients-container {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr); gap: 10px;
+    .game-timer {
+      font-size: 1.2em;
+      color: var(--accent-color);
+      font-weight: bold;
     }
     
-    .ingredient-button {
-      width: 100%; aspect-ratio: 1;
-      border-radius: 10px; border: none; outline: none;
-      background-color: var(--button-gray);
-      box-shadow: rgba(0, 0, 0, 0.4) 5px 5px 8px, #fff 1.5px 1.5px 2px 0px inset, var(--button-gray) -3.2px -3.2px 8px 0px inset;
-      cursor: pointer; transition: 0.1s ease-in-out;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    .game-score {
+      font-size: 1.2em;
+      color: var(--secondary-color);
     }
-    .ingredient-button:active {
-      box-shadow: rgba(0, 0, 0, 0.4) 0px 0px 0px, inset 0.5px 0.5px 4px #000, var(--button-gray) -3.2px -3.2px 8px 0px inset;
-      transform: translateY(2px);
-    }
-    .ingredient-icon-large { font-size: 2em; margin-bottom: 5px; }
-    .ingredient-label { font-size: 0.8em; color: #333; text-align: center; }
     
-    .actions-container { display: flex; justify-content: space-between; gap: 10px; }
-    .action-button {
-        flex: 1; height: 5em; border-radius: 10px; border: none; outline: none;
-        cursor: pointer; transition: 0.1s ease-in-out;
-        display: flex; flex-direction: column; align-items: center; justify-content: center;
-    }
-    .action-button:active { transform: translateY(2px); }
-    .cook-button { background-color: var(--btn-cook-bg); box-shadow: rgba(0, 0, 0, 0.4) 5px 5px 8px, #fb702c 2px 2px 10px 0px inset, var(--btn-cook-bg) -4px -4px 1px 0px inset; }
-    .cook-button:active { box-shadow: rgba(0, 0, 0, 0.4) 0px 0px 0px, inset 0.5px 0.5px 4px #000, var(--btn-cook-bg) -3.2px -3.2px 8px 0px inset; }
-    .assemble-button { background-color: var(--btn-assemble-bg); box-shadow: rgba(0, 0, 0, 0.4) 5px 5px 8px, #a8a6a4 1.5px 1.5px 1px 0px inset, var(--btn-assemble-bg) -3.2px -3.2px 8px 0px inset; }
-    .assemble-button:active { box-shadow: rgba(0, 0, 0, 0.4) 0px 0px 0px, inset 0.5px 0.5px 4px #000, var(--btn-assemble-bg) -3.2px -3.2px 8px 0px inset; }
-    .serve-button { background-color: var(--btn-serve-bg); box-shadow: rgba(0, 0, 0, 0.4) 5px 5px 8px, #fff 1.5px 1.5px 2px 0px inset, var(--btn-serve-bg) -3.2px -3.2px 8px 0px inset; }
-    .serve-button:active { box-shadow: rgba(0, 0, 0, 0.4) 0px 0px 0px, inset 0.5px 0.5px 4px #000, var(--btn-serve-bg) -3.2px -3.2px 8px 0px inset; }
-    .action-icon { font-size: 1.8em; color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
-    .action-label { font-size: 0.8em; color: white; font-weight: bold; margin-top: 5px; }
-
-    .player-inventory {
-      flex-shrink: 0; display: grid;
-      grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(2, 1fr);
-      gap: 8px; padding: 15px;
-      background: rgba(0,0,0,0.2); border-top: 1px solid var(--border-color);
-    }
-    .inventory-slot {
-      aspect-ratio: 1; background: rgba(0,0,0,0.4);
-      border: 1px solid var(--border-color); border-radius: 8px;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      cursor: pointer; position: relative; transition: all 0.2s ease;
-      color: rgba(255,255,255,0.3); font-size: 0.8em;
-    }
-    .inventory-slot.active { border-color: var(--accent-color); transform: scale(1.05); }
-    .game-item { font-size: 1.8em; }
-    .item-label { font-size: 0.7em; color: #ccc; position: absolute; bottom: 5px; }
-
-
-    
+    /* 添加任務提示樣式 */
     .task-hint {
+      position: absolute;
+      top: 60px;
+      left: 50%;
+      transform: translateX(-50%);
       background-color: rgba(0, 0, 0, 0.7);
       color: var(--text-color);
-      padding: 12px 15px;
+      padding: 8px 15px;
+      border-radius: 5px;
       font-size: 1.1em;
+      z-index: 10;
       text-align: center;
-      border-bottom: 1px solid var(--border-color);
+      max-width: 80%;
     }
     
     .game-main {
       flex-grow: 1;
       overflow-y: auto; /* 主要內容區域可滾動 */
       padding: 10px;
-      display: flex;
-      flex-direction: column;
     }
     
-    /* 訂單區域 */
     .orders-container {
       margin-bottom: 15px;
       display: flex;
@@ -223,10 +178,10 @@
     }
 
     .order-timer-text {
-      font-size: 0.9em;
-      color: #8b949e;
-      margin-bottom: 4px;
-      text-align: right;
+        font-size: 0.9em;
+        color: #8b949e;
+        margin-bottom: 4px;
+        text-align: right;
     }
     
     .order-timer {
@@ -238,142 +193,62 @@
     }
 
     .order-timer-fill {
-      height: 100%;
-      background-color: var(--success-color);
-      border-radius: 3px;
-      transition: width 0.5s linear;
+        height: 100%;
+        background-color: var(--success-color);
+        border-radius: 3px;
+        transition: width 0.5s linear;
     }
 
-    /* 食材站區域 - 網格佈局 */
-    .ingredients-container {
+    .stations-container {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(2, 1fr);
       gap: 10px;
-      margin-bottom: 20px;
+      margin-bottom: 15px;
     }
     
-    .ingredient-button {
-      width: 100%;
-      aspect-ratio: 1;
-      border-radius: 10px;
-      border: none;
-      outline: none;
-      background-color: var(--button-gray);
-      box-shadow: rgba(0, 0, 0, 0.377) 5px 5px 8px,
-                  #ffffff 1.5px 1.5px 2px 0px inset, 
-                  #c7c3c0 -3.2px -3.2px 8px 0px inset;
-      cursor: pointer;
-      transition: 0.1s ease-in-out;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    }
-    
-    .ingredient-button:active {
-      box-shadow: rgba(0, 0, 0, 0.377) 0px 0px 0px, 
-                  inset 0.5px 0.5px 4px #000000,
-                  #c7c3c0 -3.2px -3.2px 8px 0px inset;
-      transform: translateY(2px);
-    }
-    
-    .ingredient-icon-large {
-      font-size: 2em;
-      margin-bottom: 5px;
-    }
-    
-    .ingredient-label {
-      font-size: 0.8em;
-      color: #333;
+    .station {
+      background-color: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 15px;
       text-align: center;
-    }
-    
-    /* 動作站區域 - 大按鈕 */
-    .actions-container {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-    
-    .action-button {
-      flex: 1;
-      aspect-ratio: 1;
-      border-radius: 10px;
-      border: none;
-      outline: none;
       cursor: pointer;
-      transition: 0.1s ease-in-out;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
+      transition: background-color 0.2s ease;
     }
     
-    .cook-button {
-      background-color: var(--button-red);
-      box-shadow: rgba(0, 0, 0, 0.377) 5px 5px 8px, 
-                  #fb702c 2px 2px 10px 0px inset,
-                  #d42a02 -4px -4px 1px 0px inset;
-    }
-    
-    .cook-button:active {
-      box-shadow: rgba(0, 0, 0, 0.377) 0px 0px 0px, 
-                  inset 0.5px 0.5px 4px #000000,
-                  #d42a02 -3.2px -3.2px 8px 0px inset;
-      transform: translateY(2px);
-    }
-    
-    .assemble-button {
-      background-color: var(--button-dark);
-      box-shadow: rgba(0, 0, 0, 0.377) 5px 5px 8px,
-                  #a8a6a4 1.5px 1.5px 1px 0px inset, 
-                  #545251 -3.2px -3.2px 8px 0px inset;
-    }
-    
-    .assemble-button:active {
-      box-shadow: rgba(0, 0, 0, 0.377) 0px 0px 0px, 
-                  inset 0.5px 0.5px 4px #000000,
-                  #545251 -3.2px -3.2px 8px 0px inset;
-      transform: translateY(2px);
-    }
-    
-    .serve-button {
-      background-color: var(--button-gray);
-      box-shadow: rgba(0, 0, 0, 0.377) 5px 5px 8px,
-                  #ffffff 1.5px 1.5px 2px 0px inset, 
-                  #c7c3c0 -3.2px -3.2px 8px 0px inset;
-    }
-    
-    .serve-button:active {
-      box-shadow: rgba(0, 0, 0, 0.377) 0px 0px 0px, 
-                  inset 0.5px 0.5px 4px #000000,
-                  #c7c3c0 -3.2px -3.2px 8px 0px inset;
-      transform: translateY(2px);
-    }
-    
-    .action-icon {
-      font-size: 2em;
-      margin-bottom: 5px;
-      color: white;
-    }
-    
-    .action-label {
-      font-size: 0.9em;
-      color: white;
-      text-align: center;
+    .station:hover {
+        background-color: #30363d;
     }
 
-    /* 玩家物品欄 */
-    .player-area {
+    .station-label {
+        margin-top: 5px;
+        color: #8b949e;
+    }
+
+    .player-area { /* 取代 .game-footer */
       position: sticky;
       bottom: 0;
       left: 0;
       width: 100%;
-      background: rgba(13, 17, 23, 0.95);
+      background: rgba(13, 17, 23, 0.8);
       backdrop-filter: blur(5px);
       padding: 10px;
       border-top: 1px solid #30363d;
+    }
+
+    .player-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background-color: var(--accent-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: #333;
+      margin-right: 10px;
+      pointer-events: auto;
+      display: none; /* 隱藏左下角帳號圖示 */
     }
 
     .player-inventory {
@@ -394,16 +269,14 @@
       font-size: 24px;
       cursor: pointer;
       transition: all 0.2s ease;
-      position: relative;
-    }
-
-    .inventory-slot.active {
-      border-color: #ffd700;
-      background: #1c1f23;
-      box-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
     }
     
-    /* 物品動畫效果 */
+    .inventory-slot.active {
+      border-color: #ffd700;
+      background: #444;
+    }
+    
+    /* 添加物品動畫效果 */
     @keyframes itemAppear {
       0% { transform: scale(0); opacity: 0; }
       70% { transform: scale(1.2); opacity: 1; }
@@ -414,6 +287,37 @@
       animation: itemAppear 0.3s ease-out;
     }
 
+    /* 工作區樣式 */
+    .shared-workspace {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 200px;
+      height: 120px;
+      background-color: rgba(0, 0, 0, 0.3);
+      border: 2px dashed var(--border-color);
+      border-radius: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 10px;
+      justify-content: center;
+      align-items: center;
+      z-index: 4;
+    }
+
+    .workspace-slot {
+      width: 50px;
+      height: 50px;
+      background-color: rgba(255, 255, 255, 0.1);
+      border: 1px solid var(--border-color);
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
     /* 對話與通知 */
     .dialog {
       position: fixed;
@@ -547,50 +451,68 @@
   </style>
 </head>
 <body>
-  <div class="game-wrapper">
+  <!-- 用戶狀態指示器 -->
+  <div id="userStatus" class="user-status" style="display: none;">
+      <img id="userStatusAvatar" src="/images/a01girlmove.gif" alt="User">
+      <span id="userStatusName" class="username"></span>
+  </div>
+
+  <div class="game-container" id="gameContainer">
+    <!-- 遊戲載入畫面 -->
     <div class="loading-screen" id="loadingScreen">
       <div class="loader"></div>
       <div class="loading-text">遊戲載入中...</div>
     </div>
 
+    <!-- 遊戲UI -->
     <div class="game-ui" id="gameUI">
       <div class="game-header">
         <div class="game-timer" id="gameTimer">03:00</div>
         <div class="game-score" id="gameScore">分數: 0</div>
       </div>
       
-      <div class="main-area">
-        <div class="orders-container" id="ordersContainer"></div>
-        <div class="kitchen-area">
-          <div class="task-hint" id="taskHint"></div>
-          <div class="ingredients-container" id="ingredientsContainer"></div>
-          <div class="actions-container">
-            <button class="action-button cook-button" id="cookButton">
-              <span class="action-icon">🔥</span><span class="action-label">烹飪</span>
-            </button>
-            <button class="action-button assemble-button" id="assembleButton">
-              <span class="action-icon">🔨</span><span class="action-label">組裝</span>
-            </button>
-            <button class="action-button serve-button" id="serveButton">
-              <span class="action-icon">🍽️</span><span class="action-label">上菜</span>
-            </button>
-          </div>
+      <div class="game-main">
+        <div class="task-hint" id="taskHint">請拿取食材開始製作料理</div>
+        <div class="orders-container" id="ordersContainer">
+          <!-- 訂單卡片將由JavaScript動態生成 -->
+        </div>
+        <div class="stations-container" id="stationsContainer">
+          <!-- 工作站將由JavaScript動態生成 -->
         </div>
       </div>
       
-      <div class="player-inventory" id="playerInventory"></div>
+      <div class="player-area">
+        <div class="player-avatar" id="playerAvatar">C</div>
+        <div class="player-inventory" id="playerInventory">
+          <!-- 庫存槽將由JavaScript動態生成 -->
+        </div>
+      </div>
     </div>
+    
+    <!-- 結束遊戲對話框 -->
+    <div class="dialog" id="gameOverDialog" style="display: none;">
+      <div class="dialog-content">
+        <div class="dialog-title">遊戲結束</div>
+        <div class="dialog-text" id="gameOverText">
+          你的團隊得分: <span id="finalScore">0</span>
+        </div>
+        <button class="dialog-button" id="returnToLobbyBtn">返回大廳</button>
+      </div>
+    </div>
+    
+    <!-- 提示通知 -->
+    <div class="toast" id="toast"></div>
   </div>
 
   <script>
-     document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', () => {
       // 檢查是否有登入令牌，若無則導回登入頁
       const token = localStorage.getItem('cookGameToken');
       if (!token) {
         window.location.href = '/cook-login.html';
         return;
       }
-  
+      
       // 獲取房間ID (從URL參數)
       const urlParams = new URLSearchParams(window.location.search);
       const roomId = urlParams.get('id');
@@ -693,59 +615,9 @@
         websocket.onmessage = (event) => {
           try {
             const message = JSON.parse(event.data);
-            console.log('Received message:', message);
-            
-            // 處理不同類型的消息
-            switch (message.type) {
-              // ★ 關鍵修改：移除room_info處理，只接受 game_state 和 game_started
-              case 'game_state':
-                case 'game_started':
-                    startGame(message.gameState);
-                    break;
-
-                // ★ 關鍵修改：在 ingredient_picked 中加入自動選擇空槽的邏輯
-                case 'ingredient_picked':
-                    gameState.inventory[message.slotIndex] = {
-                        type: message.ingredientType,
-                        id: message.itemId,
-                        state: 'raw'
-                    };
-                    updateInventory();
-                    selectNextEmptySlot(); // ★ 自動選擇下一個空槽
-                    updateTaskHint();
-                    showToast(`已拿取 ${getItemName(message.ingredientType)}`);
-                    break;
-              
-              case 'order_completed':
-                // 訂單完成
-                showToast(`訂單完成！獲得 ${message.points} 分`);
-                // 更新分數
-                if (message.newScore !== undefined) {
-                  gameState.score = message.newScore;
-                  updateScoreDisplay();
-                }
-                break;
-              
-              case 'new_order':
-                // 新訂單
-                if (message.order) {
-                  gameState.orders.push(message.order);
-                  updateOrdersDisplay();
-                }
-                break;
-              
-              case 'game_over':
-                // 遊戲結束
-                handleGameOver(message.results, message.rewards);
-                break;
-              
-              case 'error':
-                // 錯誤訊息
-                showToast('錯誤：' + message.message);
-                break;
-            }
+            handleWebsocketMessage(message);
           } catch (error) {
-            console.error('Error handling message:', error);
+            console.error('解析WebSocket訊息出錯:', error);
           }
         };
         
@@ -765,6 +637,222 @@
           console.error('WebSocket錯誤:', error);
           showToast('連接錯誤，請檢查網絡狀態');
         };
+      }
+      
+      // 處理WebSocket訊息
+      function handleWebsocketMessage(message) {
+        console.log('收到訊息:', message);
+        
+        switch (message.type) {
+          case 'auth_success':
+            console.log('認證成功，正在加入遊戲房間...');
+            // 認證成功後，發送加入房間的請求以獲取遊戲狀態
+            websocket.send(JSON.stringify({
+              type: 'join_room',
+              roomId: roomId,
+              userId: gameState.currentPlayer.user_id
+            }));
+            break;
+
+          case 'room_info':
+            // 收到房間信息後，自動設置為準備狀態（單人模式）
+            console.log('收到房間信息，自動準備開始遊戲');
+            websocket.send(JSON.stringify({
+              type: 'player_ready',
+              roomId: roomId
+            }));
+            
+            // 如果是房主，自動開始遊戲
+            if (message.room.creatorId === gameState.currentPlayer.user_id) {
+              setTimeout(() => {
+                console.log('自動開始遊戲');
+                websocket.send(JSON.stringify({
+                  type: 'start_game',
+                  roomId: roomId
+                }));
+              }, 1000); // 延遲1秒後自動開始遊戲
+            }
+            break;
+
+          case 'game_state':
+            // 當重新連線或直接進入遊戲頁面時，伺服器會發送這個
+            startGame(message.gameState);
+            break;
+            
+          case 'game_started':
+            // 當從房間等待頁面正常開始遊戲時，會收到此訊息
+            startGame(message.gameState);
+            break;
+            
+          case 'game_tick':
+            updateTimer(message.timeRemaining);
+            break;
+            
+          case 'new_order':
+            addOrder(message.order);
+            updateTaskHint(); // 更新任務提示
+            showToast('收到新訂單!');
+            break;
+            
+          case 'order_completed':
+            removeOrder(message.orderId);
+            updateScore(message.newScore);
+            showToast('訂單完成! +' + message.points + ' 分');
+            updateTaskHint(); // 更新任務提示
+            break;
+            
+          case 'order_failed':
+            removeOrder(message.orderId);
+            showToast('訂單失敗! 客人不滿意');
+            updateTaskHint(); // 更新任務提示
+            break;
+            
+          case 'player_action':
+            handlePlayerAction(message.playerId, message.action, message.data);
+            break;
+            
+          case 'game_over':
+            endGame(message.finalScore, message.teamScore);
+            break;
+            
+          // 新增的消息處理
+          case 'ingredient_picked':
+            // 更新庫存
+            console.log(`收到ingredient_picked訊息: 類型=${message.ingredientType}, 槽位=${message.slotIndex}`);
+            gameState.inventory[message.slotIndex] = {
+              type: message.ingredientType,
+              id: message.itemId,
+              state: 'raw'
+            };
+            updateInventory(gameState.inventory);
+            updateTaskHint(); // 更新任務提示
+            showToast(`已拿取${getItemName(message.ingredientType)}`);
+
+            // ★ 新增: 自動選擇下一個空槽
+            const nextEmptySlot = gameState.inventory.findIndex(item => item === null);
+            if (nextEmptySlot !== -1) {
+              gameState.activeSlot = nextEmptySlot;
+              
+              // 更新UI
+              document.querySelectorAll('.inventory-slot').forEach((s, index) => {
+                s.classList.toggle('active', index === nextEmptySlot);
+              });
+              
+              // 通知服務器
+              sendAction('select_slot', { slotIndex: nextEmptySlot });
+              console.log(`自動選擇下一個空槽: ${nextEmptySlot}`);
+            }
+            break;
+            
+          case 'item_cooked':
+            // 更新庫存中的食材狀態
+            if (gameState.inventory[message.slotIndex]) {
+              gameState.inventory[message.slotIndex].type = message.resultType;
+              gameState.inventory[message.slotIndex].state = 'cooked';
+              updateInventory(gameState.inventory);
+              updateTaskHint(); // 更新任務提示
+              showToast(`${getItemName(message.resultType)}烹飪完成！`);
+            }
+            break;
+            
+          case 'items_assembled':
+            // 更新庫存，清空使用的食材，添加組裝結果
+            gameState.inventory = message.newInventory;
+            updateInventory(gameState.inventory);
+            updateTaskHint(); // 更新任務提示
+            showToast(`${getItemName(message.resultType)}組裝完成！`);
+            break;
+            
+          case 'dish_served':
+            // 處理上菜結果
+            if (message.success) {
+              // 清空對應的庫存槽
+              gameState.inventory[message.slotIndex] = null;
+              updateInventory(gameState.inventory);
+              updateScore(message.newScore);
+              showToast(`訂單完成！獲得 ${message.points} 分`);
+              updateTaskHint(); // 更新任務提示
+            } else {
+              showToast('沒有匹配的訂單，料理被退回');
+            }
+            break;
+            
+          case 'cooking_progress':
+            // 顯示烹飪進度
+            showCookingProgress(message.slotIndex, message.progress);
+            break;
+            
+          case 'item_transferred':
+            // 處理物品傳遞
+            if (message.success) {
+              // 如果是當前玩家傳出的物品
+              if (message.fromPlayerId === gameState.currentPlayer.user_id) {
+                gameState.inventory[message.fromSlot] = null;
+                updateInventory(gameState.inventory);
+                showToast(`物品已傳遞給 ${message.toPlayerName}`);
+              } 
+              // 如果是接收到其他玩家的物品
+              else if (message.toPlayerId === gameState.currentPlayer.user_id) {
+                gameState.inventory[message.toSlot] = {
+                  type: message.itemType,
+                  id: message.itemId
+                };
+                updateInventory(gameState.inventory);
+                showToast(`收到來自 ${message.fromPlayerName} 的 ${getItemName(message.itemType)}`);
+              }
+            }
+            break;
+            
+          case 'slot_selected':
+            // 更新選中的槽位
+            gameState.activeSlot = message.slotIndex;
+            // 更新UI
+            document.querySelectorAll('.inventory-slot').forEach((slot, index) => {
+              if (index === message.slotIndex) {
+                slot.classList.add('active');
+              } else {
+                slot.classList.remove('active');
+              }
+            });
+            break;
+            
+          case 'error':
+            showToast(`錯誤: ${message.message}`);
+            if (message.message.includes('找不到房間')) {
+                alert('找不到對應的遊戲房間，將返回大廳。');
+                window.location.href = '/cook-lobby.html';
+            }
+            break;
+            
+          case 'workspace_update':
+            // 更新工作區
+            if (message.workspaceSlot !== undefined && message.itemType) {
+              const workspaceSlots = document.querySelectorAll('.workspace-slot');
+              const slot = workspaceSlots[message.workspaceSlot];
+              
+              if (slot) {
+                // 清空槽位
+                slot.innerHTML = '';
+                
+                if (message.itemType !== null) {
+                  // 創建物品圖標
+                  const itemIcon = document.createElement('div');
+                  itemIcon.className = 'game-item';
+                  itemIcon.textContent = getItemSymbol(message.itemType);
+                  itemIcon.style.position = 'relative';
+                  itemIcon.style.width = '40px';
+                  itemIcon.style.height = '40px';
+                  itemIcon.style.backgroundColor = getItemColor(message.itemType);
+                  
+                  slot.appendChild(itemIcon);
+                }
+              }
+            }
+            break;
+            
+          default:
+            console.log('未處理的訊息類型:', message.type);
+        }
       }
       
       // 開始遊戲
@@ -934,56 +1022,76 @@
       
       // 初始化工作站
       function initStations() {
-        // 初始化食材站
-        const ingredientsContainer = document.getElementById('ingredientsContainer');
-        ingredientsContainer.innerHTML = '';
+        stationsContainer.innerHTML = '';
         
-        const ingredientTypes = [
-          { type: 'beef', name: '牛肉', icon: '🥩' },
-          { type: 'lettuce', name: '生菜', icon: '🥬' },
-          { type: 'tomato', name: '番茄', icon: '🍅' },
-          { type: 'onion', name: '洋蔥', icon: '🧅' },
-          { type: 'bread', name: '麵包', icon: '🍞' },
-          { type: 'cheese', name: '起司', icon: '🧀' }
-        ];
-        
-        ingredientTypes.forEach(ingredient => {
-          const button = document.createElement('button');
-          button.className = 'ingredient-button';
-          button.dataset.type = ingredient.type;
-          
-          const icon = document.createElement('span');
-          icon.className = 'ingredient-icon-large';
-          icon.textContent = ingredient.icon;
-          
-          const label = document.createElement('span');
-          label.className = 'ingredient-label';
-          label.textContent = ingredient.name;
-          
-          button.appendChild(icon);
-          button.appendChild(label);
-          
-          button.addEventListener('click', () => {
-            // 檢查當前選中的庫存槽是否為空
-            if (gameState.inventory[gameState.activeSlot] === null) {
-              // 發送拿取食材的動作
-              sendAction('pick_ingredient', { 
-                ingredientType: ingredient.type,
-                slotIndex: gameState.activeSlot 
-              });
-              
-              // 顯示提示
-              showToast(`正在拿取${ingredient.name}...`);
-            } else {
-              showToast('庫存槽已有物品，請先清空或選擇其他槽位');
-            }
-          });
-          
-          ingredientsContainer.appendChild(button);
+        // 食材站
+        const ingredientTypes = ['beef', 'lettuce', 'tomato', 'onion', 'bread', 'cheese'];
+        ingredientTypes.forEach(type => {
+          const station = createStation('ingredient', type);
+          stationsContainer.appendChild(station);
         });
         
-        // 初始化動作按鈕事件
-        document.getElementById('cookButton').addEventListener('click', () => {
+        // 烹飪站
+        const cookingStation = createStation('cooking', 'grill');
+        stationsContainer.appendChild(cookingStation);
+        
+        // 組裝站
+        const assemblyStation = createStation('assembly', 'assembly');
+        stationsContainer.appendChild(assemblyStation);
+        
+        // 盤子站
+        const plateStation = createStation('plate', 'plate');
+        stationsContainer.appendChild(plateStation);
+      }
+      
+      // 創建工作站
+      function createStation(type, subtype) {
+        const station = document.createElement('div');
+        station.className = `station ${type}-station`;
+        station.dataset.type = type;
+        station.dataset.subtype = subtype;
+        
+        // 顯示圖標
+        const icon = document.createElement('div');
+        icon.textContent = getStationSymbol(type, subtype);
+        station.appendChild(icon);
+        
+        // 顯示標籤
+        const label = document.createElement('div');
+        label.className = 'station-label';
+        label.textContent = getStationName(type, subtype);
+        station.appendChild(label);
+        
+        // 添加點擊事件
+        station.addEventListener('click', () => {
+          interactWithStation(type, subtype);
+        });
+        
+        return station;
+      }
+      
+      // 與工作站互動
+      function interactWithStation(type, subtype) {
+        if (!gameState.isRunning) return;
+        
+        // 食材站互動 - 拿取食材
+        if (type === 'ingredient') {
+          // 檢查當前選中的庫存槽是否為空
+          if (gameState.inventory[gameState.activeSlot] === null) {
+            // 發送拿取食材的動作
+            sendAction('pick_ingredient', { 
+              ingredientType: subtype,
+              slotIndex: gameState.activeSlot 
+            });
+            
+            // 顯示提示
+            showToast(`正在拿取${getStationName(type, subtype)}...`);
+          } else {
+            showToast('庫存槽已有物品，請先清空或選擇其他槽位');
+          }
+        }
+        // 烹飪站互動
+        else if (type === 'cooking') {
           // 檢查當前選中的庫存槽是否有可烹飪的食材
           const currentItem = gameState.inventory[gameState.activeSlot];
           if (currentItem && isCookable(currentItem.type)) {
@@ -1031,9 +1139,9 @@
           } else {
             showToast('請先拿取可烹飪的食材');
           }
-        });
-        
-        document.getElementById('assembleButton').addEventListener('click', () => {
+        }
+        // 組裝站互動
+        else if (type === 'assembly') {
           // 檢查是否有足夠的食材可以組裝
           if (hasAssemblableItems()) {
             sendAction('assemble_items', {});
@@ -1051,9 +1159,9 @@
           } else {
             showToast('需要更多處理好的食材才能組裝');
           }
-        });
-        
-        document.getElementById('serveButton').addEventListener('click', () => {
+        }
+        // 盤子站互動 - 上菜
+        else if (type === 'plate') {
           // 檢查當前選中的庫存槽是否有完整料理
           const currentItem = gameState.inventory[gameState.activeSlot];
           if (currentItem && isCompleteDish(currentItem.type)) {
@@ -1077,7 +1185,7 @@
           } else {
             showToast('請先準備完整的料理');
           }
-        });
+        }
       }
       
       // 獲取工作站圖標
@@ -1227,38 +1335,6 @@
         return orderCard;
       }
       
-
- // ★ 新增：自動選擇下一個空槽的函數
- function selectNextEmptySlot() {
-            // 從0開始找到第一個空槽位
-            const nextEmptyIndex = gameState.inventory.findIndex(slot => slot === null);
-            if (nextEmptyIndex !== -1) {
-                setActiveSlot(nextEmptyIndex);
-            } else {
-                showToast("庫存已滿！");
-            }
-        }
-
-        // ★ 新增：集中設定活動槽的函數
-        function setActiveSlot(index) {
-            if (index < 0 || index >= gameState.inventory.length) return;
-            
-            document.querySelectorAll('.inventory-slot').forEach((s, i) => {
-                s.classList.toggle('active', i === index);
-            });
-            gameState.activeSlot = index;
-            // 靜默通知伺服器，不期待回覆
-            if (websocket && websocket.readyState === WebSocket.OPEN) {
-                websocket.send(JSON.stringify({
-                    type: 'player_action',
-                    action: 'select_slot',
-                    data: { slotIndex: index },
-                    roomId: roomId
-                }));
-            }
-        }
-
-
       // 獲取食譜名稱
       function getRecipeName(recipe) {
         switch (recipe) {
@@ -1304,21 +1380,22 @@
       }
       
       // 處理玩家動作
-      function handlePlayerAction(playerId, action, actionData) {
-        // 如果是自己的動作，且是成功的拿取食材動作
-        if (playerId === gameState.currentPlayer.id && action === 'pick_ingredient' && actionData.success) {
-          // 更新庫存
-          if (actionData.slotIndex !== undefined && actionData.itemType !== undefined) {
-            gameState.inventory[actionData.slotIndex] = { type: actionData.itemType };
-            
-            // 自動選擇下一個空槽位
-            selectNextEmptySlot();
+      function handlePlayerAction(playerId, action, data) {
+        // 若是當前玩家的動作，不需額外處理，因為已經透過updateGameState處理過
+        // 若是其他玩家的動作，則需要視覺化表現
+        const isCurrentPlayer = gameState.currentPlayer && gameState.currentPlayer.id === playerId;
+        
+        if (!isCurrentPlayer) {
+          // 其他玩家的動作，可以添加視覺效果
+          switch (action) {
+            case 'pick_item':
+            case 'drop_item':
+            case 'interact_station':
+              // 可以創建一個效果顯示其他玩家的操作
+              showPlayerActionEffect(action, data);
+              break;
           }
         }
-        
-        // 更新遊戲界面
-        updateInventory(gameState.inventory);
-        updateTaskHint();
       }
       
       // 顯示玩家動作效果
@@ -1335,17 +1412,17 @@
       }
       
       // 發送玩家動作
-      function sendAction(action, data = {}) {
-        if (!websocket || websocket.readyState !== WebSocket.OPEN) {
-          showToast('連線中斷，請重新整理頁面');
-          return;
+      function sendAction(action, data) {
+        if (websocket && websocket.readyState === WebSocket.OPEN) {
+          websocket.send(JSON.stringify({
+            type: 'player_action',
+            action: action,
+            data: data,
+            roomId: roomId
+          }));
+        } else {
+          showToast('無法發送操作，連接已斷開');
         }
-        
-        websocket.send(JSON.stringify({
-          type: 'player_action',
-          action: action,
-          data: data
-        }));
       }
       
       // 顯示提示訊息
@@ -1679,16 +1756,6 @@
       function updateTaskHint() {
         const taskHint = document.getElementById('taskHint');
         
-        // 檢查庫存是否已滿
-        const isInventoryFull = !gameState.inventory.some(item => item === null);
-        if (isInventoryFull) {
-          taskHint.textContent = '庫存已滿！請烹飪或組裝食材以清出空間';
-          taskHint.style.color = 'var(--error-color)';
-          return;
-        } else {
-          taskHint.style.color = 'var(--text-color)';
-        }
-        
         // 檢查當前訂單
         if (gameState.orders && gameState.orders.length > 0) {
           const currentOrder = gameState.orders[0];
@@ -1709,37 +1776,16 @@
           item && isCompleteDish(item.type));
         
         if (hasCompleteDish) {
-          taskHint.textContent = '料理已完成！點擊「上菜」按鈕送餐';
+          taskHint.textContent = '料理已完成！前往上菜區送餐';
         } else if (hasAssemblableItems()) {
-          taskHint.textContent = '可以組裝漢堡了！點擊「組裝」按鈕';
+          taskHint.textContent = '可以組裝漢堡了！前往組裝區';
         } else if (hasCookedIngredients) {
           taskHint.textContent = '需要更多食材，繼續拿取或烹飪';
         } else if (hasRawIngredients) {
-          taskHint.textContent = '點擊「烹飪」按鈕處理食材';
+          taskHint.textContent = '前往烹飪區處理食材';
         } else if (gameState.orders && gameState.orders.length > 0) {
           taskHint.textContent = '拿取食材開始製作料理';
         }
-      }
-
-      // 添加自動選擇下一個空槽位的功能
-      function selectNextEmptySlot() {
-        // 從當前槽位開始，尋找下一個空槽位
-        let nextSlot = (gameState.activeSlot + 1) % 8;
-        const startSlot = gameState.activeSlot;
-        
-        // 循環查找直到找到空槽位或回到起點
-        while (nextSlot !== startSlot) {
-          if (gameState.inventory[nextSlot] === null) {
-            // 找到空槽位，更新活動槽位
-            gameState.activeSlot = nextSlot;
-            updateInventory(gameState.inventory);
-            return true;
-          }
-          nextSlot = (nextSlot + 1) % 8;
-        }
-        
-        // 如果沒有找到空槽位，返回false
-        return false;
       }
     });
   </script>
