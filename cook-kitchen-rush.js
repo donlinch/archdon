@@ -350,7 +350,7 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
             // 從主表獲取用戶基本資料
             const userQuery = `
                 SELECT u.user_id, u.username, u.display_name, u.email, u.user_profile_image_url, 
-                       u.created_at, u.last_login_at, u.user_status, u.user_level, u.user_points
+                       u.created_at, u.default_role_id
                 FROM box_users u
                 WHERE u.user_id = $1
             `;
