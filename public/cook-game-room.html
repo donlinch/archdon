@@ -656,9 +656,12 @@
             addSystemMessage('認證成功，正在加入房間...');
             // 發送加入房間訊息
             if (currentUser) {
+                // 確保 roomId 是字符串格式，並且前面加上 "room_" 前綴
+                const formattedRoomId = roomId.startsWith('room_') ? roomId : `room_${roomId}`;
+                
                 console.log('嘗試加入房間，發送數據:', {
                     type: 'join_room',
-                    roomId: roomId,
+                    roomId: formattedRoomId,
                     userId: currentUser.user_id
                 });
                 
@@ -666,7 +669,7 @@
                 setTimeout(() => {
                     websocket.send(JSON.stringify({
                         type: 'join_room',
-                        roomId: roomId,
+                        roomId: formattedRoomId,
                         userId: currentUser.user_id
                     }));
                 }, 500);
