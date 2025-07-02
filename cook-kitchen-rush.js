@@ -365,11 +365,14 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
             
             // 從遊戲玩家表獲取遊戲相關資料
             const playerQuery = `
-                SELECT cp.player_id, cp.player_level, cp.player_experience, cp.player_rank,
-                       cp.games_played, cp.games_won, cp.total_score, cp.best_score,
-                       cp.favorite_station, cp.achievements_json
-                FROM cook_players cp
-                WHERE cp.user_id = $1
+                SELECT
+                    player_id,
+                    level,
+                    points,
+                    achievements,
+                    last_login
+                FROM cook_players
+                WHERE user_id = $1
             `;
             
             const playerResult = await pool.query(playerQuery, [req.user.userId]);
@@ -378,15 +381,17 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
             let user = { ...userData };
             
             if (playerResult.rows.length > 0) {
-                user = { ...user, ...playerResult.rows[0] };
+                const playerData = playerResult.rows[0];
+                // 使用您資料庫中實際的欄位名稱
+                user.player_level = playerData.level;
+                user.player_points = playerData.points;
+                user.achievements = playerData.achievements;
+                user.player_last_login = playerData.last_login;
             } else {
                 // 如果用戶沒有遊戲資料，提供默認值
                 user.player_level = 1;
-                user.player_experience = 0;
-                user.games_played = 0;
-                user.games_won = 0;
-                user.total_score = 0;
-                user.best_score = 0;
+                user.player_points = 0;
+                user.achievements = [];
             }
             
             res.json({ success: true, user });
