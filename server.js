@@ -28,8 +28,7 @@ const unboxingAiRouter = express.Router();
 const boxRoutes = require('./boxRoutes');
 const youtubeLotteryRouter = express.Router();
 
-// 導入廚房急先鋒遊戲模塊
-const { cookGameApp, initCookGameWss } = require('./cook-kitchen-rush');
+ 
 
 if (process.env.NODE_ENV === 'production') {
     app.set('trust proxy', 1);
