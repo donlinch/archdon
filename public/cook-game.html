@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>廚房急先鋒 - 遊戲進行中</title>
+  <title>料理急先鋒 - 遊戲進行中</title>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#333333">
   <style>
@@ -696,6 +696,85 @@
             endGame(message.finalScore, message.teamScore);
             break;
             
+          // 新增的消息處理
+          case 'ingredient_picked':
+            // 更新庫存
+            gameState.inventory[message.slotIndex] = {
+              type: message.ingredientType,
+              id: message.itemId
+            };
+            updateInventory(gameState.inventory);
+            showToast(`已拿取${getItemName(message.ingredientType)}`);
+            break;
+            
+          case 'item_cooked':
+            // 更新庫存中的食材狀態
+            if (gameState.inventory[message.slotIndex]) {
+              gameState.inventory[message.slotIndex].type = message.resultType;
+              updateInventory(gameState.inventory);
+              showToast(`${getItemName(message.resultType)}烹飪完成！`);
+            }
+            break;
+            
+          case 'items_assembled':
+            // 更新庫存，清空使用的食材，添加組裝結果
+            gameState.inventory = message.newInventory;
+            updateInventory(gameState.inventory);
+            showToast(`${getItemName(message.resultType)}組裝完成！`);
+            break;
+            
+          case 'dish_served':
+            // 處理上菜結果
+            if (message.success) {
+              // 清空對應的庫存槽
+              gameState.inventory[message.slotIndex] = null;
+              updateInventory(gameState.inventory);
+              updateScore(message.newScore);
+              showToast(`訂單完成！獲得 ${message.points} 分`);
+            } else {
+              showToast('沒有匹配的訂單，料理被退回');
+            }
+            break;
+            
+          case 'cooking_progress':
+            // 顯示烹飪進度
+            showCookingProgress(message.slotIndex, message.progress);
+            break;
+            
+          case 'item_transferred':
+            // 處理物品傳遞
+            if (message.success) {
+              // 如果是當前玩家傳出的物品
+              if (message.fromPlayerId === gameState.currentPlayer.user_id) {
+                gameState.inventory[message.fromSlot] = null;
+                updateInventory(gameState.inventory);
+                showToast(`物品已傳遞給 ${message.toPlayerName}`);
+              } 
+              // 如果是接收到其他玩家的物品
+              else if (message.toPlayerId === gameState.currentPlayer.user_id) {
+                gameState.inventory[message.toSlot] = {
+                  type: message.itemType,
+                  id: message.itemId
+                };
+                updateInventory(gameState.inventory);
+                showToast(`收到來自 ${message.fromPlayerName} 的 ${getItemName(message.itemType)}`);
+              }
+            }
+            break;
+            
+          case 'slot_selected':
+            // 更新選中的槽位
+            gameState.activeSlot = message.slotIndex;
+            // 更新UI
+            document.querySelectorAll('.inventory-slot').forEach((slot, index) => {
+              if (index === message.slotIndex) {
+                slot.classList.add('active');
+              } else {
+                slot.classList.remove('active');
+              }
+            });
+            break;
+            
           case 'error':
             showToast(`錯誤: ${message.message}`);
             if (message.message.includes('找不到房間')) {
@@ -727,6 +806,15 @@
         
         // 初始化工作站
         initStations();
+        
+        // 添加傳遞按鈕
+        addTransferButtons();
+        
+        // 顯示教學
+        showTutorial();
+        
+        // 設置定時器更新訂單計時器
+        setInterval(updateOrderTimers, 1000);
         
         gameState.isRunning = true;
       }
@@ -872,7 +960,68 @@
       function interactWithStation(type, subtype) {
         if (!gameState.isRunning) return;
         
-        sendAction('interact_station', { stationType: type, stationSubtype: subtype });
+        // 食材站互動 - 拿取食材
+        if (type === 'ingredient') {
+          // 檢查當前選中的庫存槽是否為空
+          if (gameState.inventory[gameState.activeSlot] === null) {
+            // 發送拿取食材的動作
+            sendAction('pick_ingredient', { 
+              ingredientType: subtype,
+              slotIndex: gameState.activeSlot 
+            });
+            
+            // 顯示提示
+            showToast(`正在拿取${getStationName(type, subtype)}...`);
+          } else {
+            showToast('庫存槽已有物品，請先清空或選擇其他槽位');
+          }
+        }
+        // 烹飪站互動
+        else if (type === 'cooking') {
+          // 檢查當前選中的庫存槽是否有可烹飪的食材
+          const currentItem = gameState.inventory[gameState.activeSlot];
+          if (currentItem && isCookable(currentItem.type)) {
+            // 發送烹飪食材的動作
+            sendAction('cook_item', {
+              slotIndex: gameState.activeSlot,
+              cookingMethod: 'grill' // 預設烹飪方法
+            });
+            
+            showToast(`正在烹飪${getItemName(currentItem.type)}...`);
+          } else {
+            showToast('請先拿取可烹飪的食材');
+          }
+        }
+        // 組裝站互動
+        else if (type === 'assembly') {
+          // 檢查是否有足夠的食材可以組裝
+          if (hasAssemblableItems()) {
+            sendAction('assemble_items', {});
+            showToast('正在組裝食材...');
+          } else {
+            showToast('需要更多處理好的食材才能組裝');
+          }
+        }
+        // 盤子站互動
+        else if (type === 'plate') {
+          // 檢查當前選中的庫存槽是否為空
+          if (gameState.inventory[gameState.activeSlot] === null) {
+            sendAction('pick_plate', { slotIndex: gameState.activeSlot });
+            showToast('拿取了一個盤子');
+          } else {
+            // 如果庫存槽有完成的料理，嘗試配對訂單
+            const currentItem = gameState.inventory[gameState.activeSlot];
+            if (currentItem && isCompleteDish(currentItem.type)) {
+              sendAction('serve_dish', { 
+                slotIndex: gameState.activeSlot,
+                dishType: currentItem.type
+              });
+              showToast('正在上菜...');
+            } else {
+              showToast('請先拿取盤子或準備好完整的料理');
+            }
+          }
+        }
       }
       
       // 獲取工作站圖標
@@ -1146,6 +1295,174 @@
           sendAction('select_slot', { slotIndex });
         }
       });
+      
+      // 顯示烹飪進度
+      function showCookingProgress(slotIndex, progress) {
+        const slots = playerInventory.querySelectorAll('.inventory-slot');
+        const slot = slots[slotIndex];
+        
+        if (!slot) return;
+        
+        // 檢查是否已有進度條
+        let progressBar = slot.querySelector('.cooking-progress');
+        if (!progressBar) {
+          progressBar = document.createElement('div');
+          progressBar.className = 'cooking-progress';
+          progressBar.style.position = 'absolute';
+          progressBar.style.bottom = '0';
+          progressBar.style.left = '0';
+          progressBar.style.height = '5px';
+          progressBar.style.backgroundColor = '#FF9800';
+          progressBar.style.transition = 'width 0.3s';
+          slot.style.position = 'relative';
+          slot.appendChild(progressBar);
+        }
+        
+        // 更新進度條
+        progressBar.style.width = `${progress}%`;
+        
+        // 進度完成時移除進度條
+        if (progress >= 100) {
+          setTimeout(() => {
+            if (progressBar.parentNode) {
+              progressBar.parentNode.removeChild(progressBar);
+            }
+          }, 500);
+        }
+      }
+      
+      // 判斷食材是否可烹飪
+      function isCookable(itemType) {
+        return ['beef_raw', 'lettuce', 'tomato', 'onion', 'bread', 'cheese'].includes(itemType);
+      }
+      
+      // 判斷是否為完成的料理
+      function isCompleteDish(itemType) {
+        return ['burger_basic', 'burger_cheese', 'burger_deluxe'].includes(itemType);
+      }
+      
+      // 獲取物品名稱
+      function getItemName(type) {
+        switch (type) {
+          case 'beef_raw': return '生牛肉';
+          case 'beef_cooked': return '熟牛肉';
+          case 'lettuce': return '生菜';
+          case 'tomato': return '番茄';
+          case 'tomato_grilled': return '烤番茄';
+          case 'onion': return '洋蔥';
+          case 'onion_grilled': return '烤洋蔥';
+          case 'bread': return '麵包';
+          case 'bread_toasted': return '烤麵包';
+          case 'cheese': return '起司';
+          case 'plate': return '盤子';
+          case 'burger_basic': return '經典漢堡';
+          case 'burger_cheese': return '起司漢堡';
+          case 'burger_deluxe': return '豪華漢堡';
+          default: return '未知物品';
+        }
+      }
+      
+      // 檢查是否有可組裝的食材
+      function hasAssemblableItems() {
+        // 檢查是否有足夠的材料做基本漢堡
+        const hasBread = gameState.inventory.some(item => item && (item.type === 'bread' || item.type === 'bread_toasted'));
+        const hasCookedBeef = gameState.inventory.some(item => item && item.type === 'beef_cooked');
+        
+        return hasBread && hasCookedBeef;
+      }
+      
+      // 添加傳遞按鈕到界面
+      function addTransferButtons() {
+        const transferContainer = document.createElement('div');
+        transferContainer.className = 'transfer-container';
+        transferContainer.style.position = 'fixed';
+        transferContainer.style.bottom = '120px';
+        transferContainer.style.right = '10px';
+        transferContainer.style.display = 'flex';
+        transferContainer.style.flexDirection = 'column';
+        transferContainer.style.gap = '10px';
+        
+        // 為每個其他玩家創建傳遞按鈕
+        gameState.players.forEach(player => {
+          if (player.id !== gameState.currentPlayer.user_id) {
+            const transferBtn = document.createElement('button');
+            transferBtn.className = 'transfer-btn';
+            transferBtn.textContent = `傳給 ${player.username}`;
+            transferBtn.style.padding = '8px 15px';
+            transferBtn.style.backgroundColor = '#4CAF50';
+            transferBtn.style.border = 'none';
+            transferBtn.style.borderRadius = '5px';
+            transferBtn.style.color = 'white';
+            transferBtn.style.cursor = 'pointer';
+            
+            transferBtn.addEventListener('click', () => {
+              // 檢查是否有選中的物品
+              if (gameState.inventory[gameState.activeSlot]) {
+                sendAction('transfer_item', {
+                  toPlayerId: player.id,
+                  fromSlot: gameState.activeSlot
+                });
+              } else {
+                showToast('請先選擇要傳遞的物品');
+              }
+            });
+            
+            transferContainer.appendChild(transferBtn);
+          }
+        });
+        
+        document.body.appendChild(transferContainer);
+      }
+      
+      // 更新訂單計時器
+      function updateOrderTimers() {
+        gameState.orders.forEach(order => {
+          const orderElement = document.querySelector(`.order-card[data-id="${order.id}"]`);
+          if (orderElement) {
+            const timer = orderElement.querySelector('.order-timer');
+            if (timer) {
+              const timePercent = (order.timeRemaining / order.totalTime) * 100;
+              timer.style.width = `${timePercent}%`;
+              
+              // 如果時間少於30%，添加警告樣式
+              if (timePercent < 30) {
+                timer.classList.add('warning');
+              } else {
+                timer.classList.remove('warning');
+              }
+            }
+          }
+        });
+      }
+      
+      // 顯示遊戲教學
+      function showTutorial() {
+        const tutorial = document.createElement('div');
+        tutorial.className = 'dialog';
+        tutorial.innerHTML = `
+          <div class="dialog-content">
+            <div class="dialog-title">料理急先鋒 - 遊戲教學</div>
+            <div class="dialog-text">
+              <p>歡迎來到料理急先鋒！在這裡你將與其他玩家合作完成料理訂單。</p>
+              <p><strong>基本操作：</strong></p>
+              <ul style="text-align: left; margin-left: 20px;">
+                <li>點擊食材站拿取食材</li>
+                <li>點擊烹飪站處理食材</li>
+                <li>點擊組裝站組合食材</li>
+                <li>點擊盤子站拿取盤子並上菜</li>
+              </ul>
+              <p>與隊友合作，傳遞食材以高效完成訂單！</p>
+            </div>
+            <button class="dialog-button" id="closeTutorial">開始遊戲</button>
+          </div>
+        `;
+        
+        document.body.appendChild(tutorial);
+        
+        document.getElementById('closeTutorial').addEventListener('click', () => {
+          tutorial.remove();
+        });
+      }
     });
   </script>
 </body>
