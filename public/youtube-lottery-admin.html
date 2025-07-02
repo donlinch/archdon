@@ -1095,8 +1095,7 @@
                 </select>
             </div>
             <div class="form-group">
-                <label for="animation-duration">動畫時長 (分鐘)</label>
-                <input type="number" id="animation-duration" value="0" min="0">
+                 <input type="number" id="animation-duration" value="0" min="0">
             </div>
              <button id="draw-winner-btn" class="animated-button">
                 <svg viewBox="0 0 24 24" class="arr-2" xmlns="http://www.w3.org/2000/svg">
@@ -1264,7 +1263,7 @@
                 const punchHoleAnimationEl = document.getElementById('punch-hole-animation');
                 const punchHoleWinnerDisplayEl = document.getElementById('punch-hole-winner-display');
                 const monitoringToggle = document.getElementById('checkbox');
-                const toggleStatusEl = document.querySelector('.toggle-status');
+                const toggleStatusEl = null; // 不再使用toggleStatusEl
                 const modeToggle = document.getElementById('mode-toggle');
                 let isLiveMode = true; // 默認為直播模式
 
@@ -1725,9 +1724,7 @@
                     const interval = parseInt(apiRateInput.value, 10) * 1000;
                     updateTimer = setInterval(fetchParticipants, interval);
 
-                    // 更新狀態顯示
-                    toggleStatusEl.textContent = '系統狀態: 監控中';
-                    toggleStatusEl.style.color = '#50fa7b'; // 綠色
+                    // 不再需要更新UI狀態
                 }
 
                 function stopAutoUpdate() {
@@ -1736,8 +1733,7 @@
                         updateTimer = null;
                     }
 
-                    // 移除系統狀態顯示
-                    toggleStatusEl.textContent = '';
+                    // 不再需要更新UI狀態
                 }
 
                 function updateParticipantsList(participantsData) {
@@ -2286,11 +2282,9 @@
 
                             if (actualIsLive) {
                                 // 直播模式
-                                toggleStatusEl.textContent = '';
                                 startAutoUpdate();
                             } else {
                                 // 影片留言模式
-                                toggleStatusEl.textContent = '';
                                 stopAutoUpdate(); // 確保沒有舊的計時器在跑
                                 // 後端已返回參與者數量，可以直接更新，並手動抓取一次列表
                                 participantsCountEl.textContent = `目前參與人數：${result.participantCount} 人`;
@@ -2314,7 +2308,6 @@
                                 monitoringVideoIdEl.textContent = '';
                                 defaultAnimation.textContent = '已停止監控';
                                 apiRateInput.disabled = false; // 重新啟用 API 頻率選項
-                                toggleStatusEl.textContent = '';
                             } else {
                                 throw new Error(result.error || '停止監控失敗');
                             }
