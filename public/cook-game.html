@@ -654,7 +654,8 @@
             // 認證成功後，發送加入房間的請求以獲取遊戲狀態
             websocket.send(JSON.stringify({
               type: 'join_room',
-              roomId: roomId
+              roomId: roomId,
+              userId: gameState.currentPlayer.user_id
             }));
             break;
 
