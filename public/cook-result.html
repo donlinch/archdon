@@ -27,15 +27,29 @@
     
     body {
       font-family: monospace, 'Courier New', Courier;
-      background-color: var(--bg-color);
+      background-color: #111; /* 背景色改為更深的，凸顯手機框 */
       color: var(--text-color);
-      line-height: 1.6;
-      padding: 0;
-      margin: 0;
       min-height: 100vh;
-      font-size: 16px;
+      display: flex; /* 新增：使用Flex佈局來置中 */
+      align-items: center; /* 新增：垂直置中 */
+      justify-content: center; /* 新增：水平置中 */
+      overflow-y: auto; /* 允許滾動 */
+    }
+
+    /* 新增：手機版面模擬容器 */
+    .game-wrapper {
+      width: 100%;
+      height: 100%;
+      max-width: 414px; /* iPhone 11 Pro Max 寬度 */
+      max-height: 896px; /* iPhone 11 Pro Max 高度 */
+      background-color: var(--bg-color);
       display: flex;
       flex-direction: column;
+      position: relative;
+      overflow-y: auto; /* 允許內容滾動 */
+      border: 2px solid #555;
+      border-radius: 20px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
     }
     
     .header {
@@ -333,101 +347,49 @@
       <span id="userStatusName" class="username"></span>
   </div>
 
-  <div class="header">
-    <div class="header-title">料理急先鋒 - 遊戲結果</div>
-  </div>
-
-  <div class="main-content">
-    <div class="result-card">
-      <h2 class="result-title">遊戲總結</h2>
-      
-      <div class="ascii-art">
-  .-"""-.
- /      o\
-|    o   0).-.
-|       .-;(_/     .-.
- \     /  /)).---._|  `\   ,
-  '.  '  /((       `'-./ _/|
-    \  .'  )        .-.;`  /
-     '.             |  `\-'
-       '._        -'    /
-          ``""--`------`
-      </div>
-      
-      <div class="total-score" id="totalScore">0</div>
-      
-      <div class="rating" id="ratingStars">
-        <div class="star">★</div>
-        <div class="star">★</div>
-        <div class="star">★</div>
-        <div class="star">★</div>
-        <div class="star">★</div>
-      </div>
-      
-      <div class="result-summary" id="resultSummary">載入中...</div>
-      
-      <div class="stats-container">
-        <div class="stat-item">
-          <div class="stat-value" id="ordersCompleted">0</div>
-          <div class="stat-label">訂單完成數</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-value" id="perfectOrders">0</div>
-          <div class="stat-label">完美訂單</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-value" id="failedOrders">0</div>
-          <div class="stat-label">失敗訂單</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-value" id="gameTime">0:00</div>
-          <div class="stat-label">遊戲時間</div>
-        </div>
-      </div>
+  <!-- 新增：手機版面容器 -->
+  <div class="game-wrapper">
+    <div class="header">
+      <h1>遊戲結束</h1>
     </div>
-
-    <div class="result-card">
-      <h2 class="result-title">隊伍表現</h2>
-      
-      <div class="player-list">
-        <div class="player-list-header">
-          <div>玩家</div>
-          <div>完成訂單</div>
-          <div>得分</div>
-        </div>
-        <div id="playerListContainer">
-          <!-- 玩家列表將由JavaScript動態生成 -->
-          <div class="player-row">
-            <div class="player-name">
-              <div class="player-avatar">L</div>
-              林小廚
-            </div>
-            <div>5</div>
-            <div class="points-earned">320</div>
+    
+    <div class="main-content">
+      <div class="result-summary">
+        <div class="game-stats">
+          <div class="stat">
+            <div class="stat-label">總得分</div>
+            <div class="stat-value" id="totalScore">0</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">完成訂單</div>
+            <div class="stat-value" id="ordersCompleted">0</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">遊戲時長</div>
+            <div class="stat-value" id="gameTime">00:00</div>
           </div>
         </div>
       </div>
-    </div>
-
-    <div class="result-card">
-      <h2 class="result-title">獲得成就</h2>
       
-      <div id="achievementsContainer">
-        <!-- 成就將由JavaScript動態生成 -->
-        <div class="achievement">
-          <div class="achievement-icon">🔥</div>
-          <div class="achievement-details">
-            <div class="achievement-name">快手廚師</div>
-            <div class="achievement-desc">在一局遊戲中完成5個訂單</div>
-          </div>
-          <div class="points-earned">+50</div>
+      <div class="player-results">
+        <h2>玩家排名</h2>
+        <div class="player-list" id="playerRankings">
+          <!-- 玩家排名會由JS動態生成 -->
+          <div class="loading-text">載入中...</div>
+        </div>
+      </div>
+      
+      <div class="game-achievements">
+        <h2>成就解鎖</h2>
+        <div id="achievements" class="achievements-grid">
+          <!-- 成就會由JS動態生成 -->
         </div>
       </div>
     </div>
-
-    <div class="action-buttons">
-      <button class="action-button secondary-btn" id="returnLobbyBtn">返回大廳</button>
-      <button class="action-button primary-btn" id="playAgainBtn">再玩一次</button>
+    
+    <div class="actions">
+      <button id="playAgainBtn" class="btn btn-primary">再來一局</button>
+      <button id="returnLobbyBtn" class="btn">返回大廳</button>
     </div>
   </div>
 

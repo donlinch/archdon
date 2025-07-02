@@ -374,7 +374,7 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
                                     score: 0,
                                     orders: [generateOrder(), generateOrder()], // 產生2個初始訂單
                                     stations: {}, 
-                                    players: gameState.players.map(p => ({ ...p, inventory: Array(5).fill(null), activeSlot: 0 }))
+                                    players: gameState.players.map(p => ({ ...p, inventory: Array(8).fill(null), activeSlot: 0 }))
                                 };
 
                                 await pool.query("UPDATE cook_game_rooms SET status = 'playing', game_state = $2, updated_at = NOW() WHERE room_id = $1", [roomId, initialGameState]);

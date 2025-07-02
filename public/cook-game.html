@@ -27,17 +27,30 @@
     
     body {
       font-family: monospace, 'Courier New', Courier;
-      background-color: var(--bg-color);
+      background-color: #111; /* 背景色改為更深的，凸顯手機框 */
       color: var(--text-color);
-      line-height: 1.6;
-      padding: 0;
-      margin: 0;
       min-height: 100vh;
-      font-size: 16px;
-      display: flex;
-      flex-direction: column;
+      display: flex; /* 新增：使用Flex佈局來置中 */
+      align-items: center; /* 新增：垂直置中 */
+      justify-content: center; /* 新增：水平置中 */
       overflow: hidden;
       touch-action: manipulation;
+    }
+
+    /* 新增：手機版面模擬容器 */
+    .game-wrapper {
+      width: 100%;
+      height: 100%;
+      max-width: 414px; /* iPhone 11 Pro Max 寬度 */
+      max-height: 896px; /* iPhone 11 Pro Max 高度 */
+      background-color: var(--bg-color);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      border: 2px solid #555;
+      border-radius: 20px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
     }
     
     .game-container {
@@ -259,7 +272,7 @@
     }
     
     .player-area {
-      position: fixed;
+      position: absolute; /* 修改：從 fixed 改為 absolute，相對於 game-wrapper 定位 */
       bottom: 10px;
       left: 0;
       width: 100%;
@@ -487,70 +500,73 @@
   </style>
 </head>
 <body>
-  <!-- 用戶狀態指示器 -->
-  <div id="userStatus" class="user-status" style="display: none;">
-      <img id="userStatusAvatar" src="/images/a01girlmove.gif" alt="User">
-      <span id="userStatusName" class="username"></span>
-  </div>
-
-  <div class="game-container" id="gameContainer">
-    <!-- 遊戲載入畫面 -->
-    <div class="loading-screen" id="loadingScreen">
-      <div class="loader"></div>
-      <div class="loading-text">遊戲載入中...</div>
+  <!-- 新增：手機版面容器 -->
+  <div class="game-wrapper">
+    <!-- 用戶狀態指示器移到 wrapper 內 -->
+    <div id="userStatus" class="user-status" style="display: none;">
+        <img id="userStatusAvatar" src="/images/a01girlmove.gif" alt="User">
+        <span id="userStatusName" class="username"></span>
     </div>
 
-    <!-- 遊戲UI -->
-    <div class="game-ui" id="gameUI">
-      <div class="game-header">
-        <div class="game-timer" id="gameTimer">03:00</div>
-        <div class="game-score" id="gameScore">分數: 0</div>
+    <div class="game-container" id="gameContainer">
+      <!-- 遊戲載入畫面 -->
+      <div class="loading-screen" id="loadingScreen">
+        <div class="loader"></div>
+        <div class="loading-text">遊戲載入中...</div>
       </div>
-      
-      <div class="game-main">
-        <div class="game-board" id="gameBoard">
-          <!-- 添加任務提示元素 -->
-          <div class="task-hint" id="taskHint">請拿取食材開始製作料理</div>
-          <div class="kitchen-area">
-            <!-- 添加共享工作區 -->
-            <div class="shared-workspace" id="sharedWorkspace">
-              <div class="workspace-slot"></div>
-              <div class="workspace-slot"></div>
-              <div class="workspace-slot"></div>
-              <div class="workspace-slot"></div>
+
+      <!-- 遊戲UI -->
+      <div class="game-ui" id="gameUI">
+        <div class="game-header">
+          <div class="game-timer" id="gameTimer">03:00</div>
+          <div class="game-score" id="gameScore">分數: 0</div>
+        </div>
+        
+        <div class="game-main">
+          <div class="game-board" id="gameBoard">
+            <!-- 添加任務提示元素 -->
+            <div class="task-hint" id="taskHint">請拿取食材開始製作料理</div>
+            <div class="kitchen-area">
+              <!-- 添加共享工作區 -->
+              <div class="shared-workspace" id="sharedWorkspace">
+                <div class="workspace-slot"></div>
+                <div class="workspace-slot"></div>
+                <div class="workspace-slot"></div>
+                <div class="workspace-slot"></div>
+              </div>
+              <div class="stations-container" id="stationsContainer">
+                <!-- 工作站將由JavaScript動態生成 -->
+              </div>
             </div>
-            <div class="stations-container" id="stationsContainer">
-              <!-- 工作站將由JavaScript動態生成 -->
-            </div>
+          </div>
+          
+          <div class="orders-container" id="ordersContainer">
+            <!-- 訂單卡片將由JavaScript動態生成 -->
           </div>
         </div>
         
-        <div class="orders-container" id="ordersContainer">
-          <!-- 訂單卡片將由JavaScript動態生成 -->
+        <div class="player-area">
+          <div class="player-avatar" id="playerAvatar">C</div>
+          <div class="player-inventory" id="playerInventory">
+            <!-- 庫存槽將由JavaScript動態生成 -->
+          </div>
         </div>
       </div>
       
-      <div class="player-area">
-        <div class="player-avatar" id="playerAvatar">C</div>
-        <div class="player-inventory" id="playerInventory">
-          <!-- 庫存槽將由JavaScript動態生成 -->
+      <!-- 結束遊戲對話框 -->
+      <div class="dialog" id="gameOverDialog" style="display: none;">
+        <div class="dialog-content">
+          <div class="dialog-title">遊戲結束</div>
+          <div class="dialog-text" id="gameOverText">
+            你的團隊得分: <span id="finalScore">0</span>
+          </div>
+          <button class="dialog-button" id="returnToLobbyBtn">返回大廳</button>
         </div>
       </div>
+      
+      <!-- 提示通知 -->
+      <div class="toast" id="toast"></div>
     </div>
-    
-    <!-- 結束遊戲對話框 -->
-    <div class="dialog" id="gameOverDialog" style="display: none;">
-      <div class="dialog-content">
-        <div class="dialog-title">遊戲結束</div>
-        <div class="dialog-text" id="gameOverText">
-          你的團隊得分: <span id="finalScore">0</span>
-        </div>
-        <button class="dialog-button" id="returnToLobbyBtn">返回大廳</button>
-      </div>
-    </div>
-    
-    <!-- 提示通知 -->
-    <div class="toast" id="toast"></div>
   </div>
 
   <script>
@@ -602,7 +618,7 @@
         currentPlayer: null,
         orders: [],
         stations: [],
-        inventory: Array(5).fill(null), // 5個庫存槽
+        inventory: Array(8).fill(null), // 8個庫存槽
         activeSlot: 0
       };
       
@@ -982,7 +998,7 @@
       function initInventory() {
         playerInventory.innerHTML = '';
         
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 8; i++) {
           const slot = document.createElement('div');
           slot.className = 'inventory-slot';
           if (i === gameState.activeSlot) {
@@ -1491,8 +1507,8 @@
       document.addEventListener('keydown', (e) => {
         if (!gameState.isRunning) return;
         
-        // 數字鍵1-5切換庫存槽
-        if (e.key >= '1' && e.key <= '5') {
+        // 數字鍵1-8切換庫存槽
+        if (e.key >= '1' && e.key <= '8') {
           const slotIndex = parseInt(e.key) - 1;
           document.querySelectorAll('.inventory-slot').forEach(s => s.classList.remove('active'));
           document.querySelectorAll('.inventory-slot')[slotIndex].classList.add('active');

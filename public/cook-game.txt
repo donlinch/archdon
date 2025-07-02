@@ -117,22 +117,19 @@ sunnyyummy-app/
 # 2. 系統架構與資料表設計
 
 ## 2.1 資料表設計
-- **cook_users**: 會員資訊與遊戲相關數據
-  - user_id, username, password_hash, email, level, points
+- **box_users / cook_players**: 會員資訊與遊戲相關數據。核心會員資料（如帳號、密碼）儲存於主系統的 `box_users` 表。遊戲相關的延伸資料（如等級 `level`、點數 `points`、成就 `achievements`）則儲存在 `cook_players` 表，並透過 `user_id` 與主表關聯。
 - **cook_roles**: 會員角色與權限
   - role_id, role_name, role_description, permission_level  
-- **cook_recipes**: 遊戲內可製作的料理配方
+- **cook_recipes**: 遊戲內可製作的料理配方。**注意：目前版本中，料理配方邏輯（如漢堡組合）是直接在後端程式碼中實現 (hardcoded)，此資料表為未來擴展所設計。**
   - recipe_id, recipe_name, recipe_description, difficulty, ingredients_json
-- **cook_ingredients**: 遊戲內可用的食材
+- **cook_ingredients**: 遊戲內可用的食材。**注意：同上，食材屬性目前在後端程式碼中定義。**
   - ingredient_id, ingredient_name, ingredient_type, ascii_symbol
 - **cook_achievements**: 會員可解鎖的成就
   - achievement_id, achievement_name, description, condition_json
 - **cook_user_achievements**: 會員已獲得的成就關聯表
   - user_id, achievement_id, unlock_date, display_status
-- **cook_game_sessions**: 遊戲對局記錄
-  - session_id, start_time, end_time, player_count, difficulty_level
-- **cook_session_players**: 對局中的玩家記錄
-  - session_id, user_id, player_position, performance_score
+- **cook_game_rooms**: 遊戲對局記錄。此表取代了原有的 `cook_game_sessions` 和 `cook_session_players`。它不僅記錄房間基本資訊，還透過一個 `game_state` (JSONB) 欄位儲存了遊戲進行中的所有動態資料，包括玩家列表、庫存、訂單、分數等。
+  - room_id, room_name, status, creator_id, game_state
 - **cook_user_devices**: 使用者裝置資訊
   - user_id, device_type, screen_size, last_login_device
 
@@ -1430,16 +1427,25 @@ app.post('/api/generate-level', async (req, res) => {
 ### 13.3.1 關聯式資料模型
 
 ```sql
--- 會員基本資訊表
-CREATE TABLE cook_users (
+-- 會員基本資訊表 (此為示意，實際使用主系統的 `box_users` 表)
+/*
+CREATE TABLE box_users (
   user_id SERIAL PRIMARY KEY,
   username VARCHAR(50) NOT NULL UNIQUE,
-  password_hash VARCHAR(255) NOT NULL,
-  email VARCHAR(255) NOT NULL UNIQUE,
+  ...
+);
+*/
+
+-- 遊戲玩家資料表
+CREATE TABLE cook_players (
+  player_id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES box_users(user_id) ON DELETE CASCADE UNIQUE,
+  username VARCHAR(50) NOT NULL, -- 為方便查詢而冗餘的欄位
   level INTEGER DEFAULT 1,
   points INTEGER DEFAULT 0,
+  achievements JSONB DEFAULT '[]'::jsonb,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  last_login TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+  last_login TIMESTAMP WITH TIME ZONE
 );
 
 -- 會員角色表
@@ -1452,12 +1458,12 @@ CREATE TABLE cook_roles (
 
 -- 會員角色關聯表
 CREATE TABLE cook_user_roles (
-  user_id INTEGER REFERENCES cook_users(user_id),
+  user_id INTEGER REFERENCES cook_players(player_id),
   role_id INTEGER REFERENCES cook_roles(role_id),
   PRIMARY KEY (user_id, role_id)
 );
 
--- 料理配方表
+-- 料理配方表 (注意: 目前為硬編碼實現，此表為未來規劃)
 CREATE TABLE cook_recipes (
   recipe_id SERIAL PRIMARY KEY,
   recipe_name VARCHAR(100) NOT NULL,
@@ -1468,7 +1474,7 @@ CREATE TABLE cook_recipes (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 遊戲食材表
+-- 遊戲食材表 (注意: 目前為硬編碼實現，此表為未來規劃)
 CREATE TABLE cook_ingredients (
   ingredient_id SERIAL PRIMARY KEY,
   ingredient_name VARCHAR(50) NOT NULL,
@@ -1488,39 +1494,70 @@ CREATE TABLE cook_achievements (
 
 -- 會員成就關聯表
 CREATE TABLE cook_user_achievements (
-  user_id INTEGER REFERENCES cook_users(user_id),
+  user_id INTEGER REFERENCES cook_players(player_id),
   achievement_id INTEGER REFERENCES cook_achievements(achievement_id),
   unlock_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   display_status BOOLEAN DEFAULT TRUE,
   PRIMARY KEY (user_id, achievement_id)
 );
 
--- 遊戲對局表
-CREATE TABLE cook_game_sessions (
-  session_id SERIAL PRIMARY KEY,
-  start_time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  end_time TIMESTAMP WITH TIME ZONE,
-  player_count INTEGER NOT NULL,
-  difficulty_level INTEGER NOT NULL,
-  room_code VARCHAR(10) UNIQUE,
-  status VARCHAR(20) DEFAULT 'active'
+-- 遊戲房間表 (取代原有的 sessions 和 session_players)
+CREATE TABLE cook_game_rooms (
+  room_id VARCHAR(255) PRIMARY KEY,
+  room_name VARCHAR(100) NOT NULL,
+  difficulty VARCHAR(50) DEFAULT 'normal',
+  status VARCHAR(20) DEFAULT 'waiting', -- e.g., 'waiting', 'starting', 'playing', 'finished'
+  creator_id INTEGER REFERENCES box_users(user_id) ON DELETE SET NULL,
+  creator_name VARCHAR(50),
+  game_state JSONB NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+/*
+-- game_state JSONB 結構範例:
+{
+  "players": [
+    {
+      "id": 1,
+      "username": "廚師A",
+      "level": 5,
+      "avatar": "/images/avatar.png",
+      "ready": true,
+      "inventory": [
+        {"id": "item1", "type": "beef_cooked", "state": "cooked"},
+        null,
+        null,
+        null,
+        null
+      ],
+      "activeSlot": 0
+    }
+  ],
+  "score": 50,
+  "timeRemaining": 180,
+  "orders": [
+    {
+      "id": "order123",
+      "recipe": "burger_basic",
+      "totalTime": 90,
+      "timeRemaining": 75,
+      "createdAt": 1629878400000
+    }
+  ],
+  "status": "playing"
+}
+*/
 
--- 對局玩家表
-CREATE TABLE cook_session_players (
-  session_id INTEGER REFERENCES cook_game_sessions(session_id),
-  user_id INTEGER REFERENCES cook_users(user_id),
-  player_position INTEGER NOT NULL,
-  performance_score INTEGER,
-  joined_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  left_at TIMESTAMP WITH TIME ZONE,
-  PRIMARY KEY (session_id, user_id)
-);
+-- 遊戲對局表 (已棄用, 功能整合至 cook_game_rooms.game_state)
+-- CREATE TABLE cook_game_sessions (...);
+
+-- 對局玩家表 (已棄用, 功能整合至 cook_game_rooms.game_state)
+-- CREATE TABLE cook_session_players (...);
 
 -- 使用者裝置資訊表
 CREATE TABLE cook_user_devices (
   device_id SERIAL PRIMARY KEY,
-  user_id INTEGER REFERENCES cook_users(user_id),
+  user_id INTEGER REFERENCES cook_players(player_id),
   device_type VARCHAR(50),
   screen_size VARCHAR(30),
   last_login_device BOOLEAN DEFAULT FALSE,
@@ -1536,7 +1573,7 @@ CREATE TABLE cook_ai_levels (
   theme VARCHAR(50),
   content_json JSONB NOT NULL, -- 使用JSONB儲存關卡內容
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  created_by INTEGER REFERENCES cook_users(user_id),
+  created_by INTEGER REFERENCES cook_players(player_id),
   is_approved BOOLEAN DEFAULT FALSE
 );
 ```
@@ -1578,15 +1615,35 @@ CREATE TABLE cook_ai_levels (
 
 | 事件類型        | 方向            | 資料結構                                         | 描述                       |
 |-----------------|-----------------|--------------------------------------------------|----------------------------|
-| authenticate    | 客戶端 → 伺服器 | `{ "type": "authenticate", "token": "..." }`     | 使用JWT進行WebSocket連接認證 |
-| join_room       | 客戶端 → 伺服器 | `{ "type": "join_room", "roomId": "...", "userId": "..." }` | 玩家加入房間               |
-| player_ready    | 客戶端 → 伺服器 | `{ "user_id": "...", "station_id": "..." }`      | 玩家準備開始並選擇工作站   |
-| game_action     | 客戶端 → 伺服器 | `{ "action": "...", "target": "...", "params": {} }` | 執行遊戲操作               |
-| chat_message    | 雙向            | `{ "user_id": "...", "message": "...", "time": "..." }` | 聊天訊息                   |
-| state_update    | 伺服器 → 客戶端 | `{ "game_state": {}, "timestamp": "..." }`       | 遊戲狀態更新               |
-| player_joined   | 伺服器 → 客戶端 | `{ "user": {}, "station": {} }`                  | 新玩家加入通知             |
-| order_complete  | 伺服器 → 客戶端 | `{ "order_id": "...", "score": "...", "time": "..." }` | 訂單完成通知               |
-| game_over       | 伺服器 → 客戶端 | `{ "results": {}, "rewards": {} }`               | 遊戲結束結算               |
+| `authenticate`    | C → S | `{ "type": "authenticate", "token": "..." }`     | 使用JWT進行WebSocket連接認證 |
+| `auth_success`  | S → C | `{ "type": "auth_success" }`                     | 認證成功                   |
+| `join_room`       | C → S | `{ "type": "join_room", "roomId": "..." }`       | 玩家請求加入房間           |
+| `leave_room`      | C → S | `{ "type": "leave_room", "roomId": "..." }`      | 玩家請求離開房間           |
+| `player_ready`    | C → S | `{ "type": "player_ready" }`                     | 玩家設定為準備狀態         |
+| `player_unready`  | C → S | `{ "type": "player_unready" }`                   | 玩家取消準備狀態           |
+| `start_game`      | C → S | `{ "type": "start_game" }`                       | 房主請求開始遊戲           |
+| `chat_message`    | C → S | `{ "text": "..." }`                              | 發送聊天訊息               |
+| `player_action`   | C → S | `{ "action": "...", "data": {} }`                | 執行遊戲中的核心操作       |
+| ` ` - `pick_ingredient` | | `data: {"ingredientType": "...", "slotIndex": ...}` | 從食材站拿取食材           |
+| ` ` - `cook_item`   | | `data: {"slotIndex": ...}`                       | 在烹飪站烹飪物品           |
+| ` ` - `assemble_items`| | `data: {}`                                       | 在組裝站組合料理           |
+| ` ` - `serve_dish`  | | `data: {"slotIndex": ...}`                       | 在上菜站上菜               |
+| ` ` - `transfer_item`| | `data: {"fromSlot": ..., "toPlayerId": ...}`      | 將物品傳給其他玩家         |
+| ` ` - `select_slot` | | `data: {"slotIndex": ...}`                       | 選擇庫存中的作用中物品     |
+| `room_info`       | S → C | `{ "room": { ... } }`                            | 伺服器發送房間詳細資訊     |
+| `player_list`     | S → C | `{ "players": [ ... ] }`                         | 廣播更新後的玩家列表       |
+| `player_joined`   | S → C | `{ "playerName": "..." }`                        | 廣播有新玩家加入           |
+| `player_left`     | S → C | `{ "playerName": "...", "newCreator": "..." }`   | 廣播有玩家離開，可能含新房主 |
+| `chat_message`    | S → C | `{ "sender": "...", "text": "...", "avatar": "..." }` | 廣播聊天訊息               |
+| `game_starting`   | S → C | `{ "countdown": 3 }`                             | 廣播遊戲開始倒數           |
+| `game_started`    | S → C | `{ "gameState": { ... } }`                       | 廣播遊戲正式開始及初始狀態 |
+| `game_state`      | S → C | `{ "gameState": { ... } }`                       | (重連時)發送完整遊戲狀態   |
+| `order_completed` | S → C | `{ "orderId": ..., "points": ..., "newScore": ... }` | 廣播訂單完成               |
+| `new_order`       | S → C | `{ "order": { ... } }`                           | 廣播新訂單生成             |
+| `player_action`   | S → C | `{ "playerId": ..., "action": ..., "data": {} }`  | 廣播其他玩家的動作         |
+| `dish_served`     | S → C | `{ "success": true, "orderId": ..., "newScore": ... }` | (對操作者)確認上菜成功     |
+| `error`           | S → C | `{ "message": "..." }`                           | 發送錯誤訊息               |
+| `game_over`       | S → C | `{ "results": {}, "rewards": {} }`               | 遊戲結束結算               |
 
 ## 14.3 API文檔生成與維護
 - **使用Swagger/OpenAPI**: 自動生成API文檔
@@ -1776,3 +1833,43 @@ CREATE TABLE cook_ai_levels (
 - **關卡生成系統**: 實現基於 Google AI API 的動態關卡生成系統，提供無限遊戲內容。
 - **性能監控**: 添加系統性能監控，及時發現並解決可能的瓶頸問題。
 - **用戶體驗優化**: 基於初期用戶反饋，進一步優化遊戲界面和操作流程。
+
+### 19.8 完整遊戲循環與核心機制實現
+
+- **後端核心邏輯 (Backend Core Logic)**:
+    - **玩家動作實現**: 在 `cook-kitchen-rush.js` 中實現了完整的玩家動作處理，包括 `pick_ingredient`, `cook_item`, `assemble_items`, `serve_dish`, 和 `transfer_item`。所有動作都與資料庫中的 `game_state` 進行事務性同步，確保資料一致性。
+    - **訂單與計分系統**: 開發了 `generateOrder` 函數，可根據預設權重隨機生成不同難度的訂單。同時，`calculateOrderPoints` 函數根據訂單完成速度和料理複雜度計算分數。
+    - **食譜邏輯**: 實現了 `canAssembleRecipe` 函數，用於檢查玩家庫存並判斷可組裝的料理。目前食譜（如基本漢堡、起司漢堡、豪華漢堡）為硬編碼實現，為未來資料庫驅動的食譜系統奠定基礎。
+    - **遊戲狀態管理**: 遊戲開始後，所有遊戲進程（如計時、分數、訂單、玩家庫存）都集中在 `cook_game_rooms` 表的 `game_state` 欄位中進行管理。
+
+- **前端互動流程 (Frontend Interaction Flow)**:
+    - **工作站互動**: 前端 UI (`cook-game.html`) 現已支持與各個工作站（食材站、烹飪站、組裝站、上菜站）的互動，玩家操作會觸發對應的 WebSocket `player_action` 事件。
+    - **即時狀態更新**: 前端能接收並處理來自後端的各種狀態更新，如 `order_completed`, `new_order`, `player_list` 等，並即時呈現在介面上。
+    - **動態提示系統**: 增強了任務提示功能，能根據玩家當前庫存和訂單需求，提供更精準的操作指引。
+
+- **連線穩定性增強**:
+    - **斷線重連機制**: 實作了斷線緩衝機制。玩家短時間內斷線後（10秒內）可重新連線回到遊戲中，不會立刻被踢出房間，提升了在不穩定網路環境下的遊戲體驗。
+
+# 更新記錄
+
+## 2023-07-31 系統上線
+- 完成基本遊戲功能
+- 實現了多人在線協作機制
+- 添加基本食材和菜單系統
+
+## 2023-08-15 功能擴充
+- 新增10種食材和15種菜單
+- 優化廚房工作流程
+- 修復已知錯誤
+
+## 2023-09-08 版面更新
+- 改進UI界面，提高易用性
+- 優化手機端顯示
+- 添加遊戲教學功能
+
+## 2024-07-01 系統優化
+- 增加玩家庫存槽位從5個到8個，以支持更複雜的菜品製作（如豪華漢堡）
+- 統一所有頁面的手機版面，添加.game-wrapper容器模擬手機尺寸
+- 優化CSS，使遊戲在各種裝置上保持一致的垂直布局
+- 修復庫存顯示和切換問題
+- 改進UI互動體驗
