@@ -464,9 +464,9 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
     
     // ... 其他遊戲邏輯函數 ...
 
-    function initCookGameWss(server) {
+    function initCookGameWss(wss) { // 參數是 wss
  
-        wssCookGame.on('connection', (ws, req) => {
+        wss.on('connection', (ws, req) => { // <-- 從 wssCookGame.on 改為 wss.on
             console.log('[COOK-GAME WS] 收到一個新連接');
             ws.isAlive = true;
 
@@ -528,7 +528,7 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
         });
       
         const interval = setInterval(() => {
-            wss.clients.forEach(ws => { // <-- 使用 wss.clients
+            wss.clients.forEach(ws => { // <-- 從 wssCookGame.clients 改為 wss.clients
                 if (ws.isAlive === false) {
                     console.log('[COOK-GAME WS] 心跳超時，終止連接');
                     return ws.terminate();
@@ -538,7 +538,7 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
             });
         }, 30000);
 
-        wss.on('close', () => { // <-- 使用 wss
+        wss.on('close', () => { // <-- 從 wssCookGame.on 改為 wss.on
             clearInterval(interval);
         });
 
