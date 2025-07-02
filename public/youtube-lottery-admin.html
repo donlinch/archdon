@@ -2152,11 +2152,11 @@
 
                             if (result.isLive) {
                                 // 直播模式
-                                toggleStatusEl.textContent = '系統狀態: 監控中';
+                                toggleStatusEl.textContent = '系統狀態: 監控中（直播）';
                                 startAutoUpdate();
                             } else {
                                 // 影片留言模式
-                                toggleStatusEl.textContent = `系統狀態: 留言已載入`;
+                                toggleStatusEl.textContent = `系統狀態: 留言已載入（影片）`;
                                 stopAutoUpdate(); // 確保沒有舊的計時器在跑
                                 // 後端已返回參與者數量，可以直接更新，並手動抓取一次列表
                                 participantsCountEl.textContent = `目前參與人數：${result.participantCount} 人`;
