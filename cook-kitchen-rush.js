@@ -16,17 +16,51 @@ const cors = require('cors');
 const path = require('path');
 
 module.exports = function(pool) { // <-- 接收傳入的 pool
-    const { authenticateToken } = require('./auth');
     const cookGameApp = express();
 
-    // 資料庫連接配置 - 已移除，使用從外部傳入的 pool
-    
     // 中間件設置
     cookGameApp.use(cors());
     cookGameApp.use(express.json());
 
     // JWT密鑰
     const JWT_SECRET = process.env.COOK_JWT_SECRET || 'cook-kitchen-rush-secret-key';
+
+    // 遊戲認證中介軟體
+    const authenticateToken = (req, res, next) => {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+      
+        if (!token) {
+            return res.status(401).json({ success: false, error: '未提供認證令牌' });
+        }
+
+        jwt.verify(token, JWT_SECRET, async (err, decoded) => {
+            if (err) {
+                return res.status(403).json({ success: false, error: '令牌無效或已過期' });
+            }
+
+            try {
+                const result = await pool.query(
+                    'SELECT user_id, username FROM box_users WHERE user_id = $1',
+                    [decoded.userId] 
+                );
+
+                if (result.rows.length === 0) {
+                    return res.status(403).json({ success: false, error: '找不到對應的使用者' });
+                }
+
+                req.user = {
+                    userId: result.rows[0].user_id,
+                    username: result.rows[0].username
+                };
+                
+                next();
+            } catch (error) {
+                console.error('驗證使用者時出錯:', error);
+                res.status(500).json({ success: false, error: '伺服器錯誤' });
+            }
+        });
+    };
 
     const activeConnections = new Map(); // 用於追蹤 userId -> ws 的對應關係
 
