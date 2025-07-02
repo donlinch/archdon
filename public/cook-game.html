@@ -282,6 +282,7 @@
       color: #333;
       margin-right: 10px;
       pointer-events: auto;
+      display: none; /* 隱藏左下角帳號圖示 */
     }
     
     .player-inventory {
@@ -303,6 +304,7 @@
       align-items: center;
       justify-content: center;
       pointer-events: auto;
+      position: relative;
     }
     
     .inventory-slot.active {
@@ -310,26 +312,46 @@
       box-shadow: 0 0 5px var(--accent-color);
     }
     
-    /* 遊戲物品 */
+    /* 添加物品動畫效果 */
+    @keyframes itemAppear {
+      0% { transform: scale(0); opacity: 0; }
+      70% { transform: scale(1.2); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
     .game-item {
+      animation: itemAppear 0.3s ease-out;
+    }
+
+    /* 工作區樣式 */
+    .shared-workspace {
       position: absolute;
-      width: 40px;
-      height: 40px;
-      background-color: #777;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 200px;
+      height: 120px;
+      background-color: rgba(0, 0, 0, 0.3);
+      border: 2px dashed var(--border-color);
+      border-radius: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 10px;
+      justify-content: center;
+      align-items: center;
+      z-index: 4;
+    }
+
+    .workspace-slot {
+      width: 50px;
+      height: 50px;
+      background-color: rgba(255, 255, 255, 0.1);
+      border: 1px solid var(--border-color);
       border-radius: 5px;
-      z-index: 2;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: bold;
-      transition: transform 0.2s ease;
-      touch-action: none;
-      cursor: pointer;
-      user-select: none;
-    }
-    
-    .game-item:active {
-      transform: scale(1.1);
     }
     
     /* 對話與通知 */
@@ -490,6 +512,13 @@
           <!-- 添加任務提示元素 -->
           <div class="task-hint" id="taskHint">請拿取食材開始製作料理</div>
           <div class="kitchen-area">
+            <!-- 添加共享工作區 -->
+            <div class="shared-workspace" id="sharedWorkspace">
+              <div class="workspace-slot"></div>
+              <div class="workspace-slot"></div>
+              <div class="workspace-slot"></div>
+              <div class="workspace-slot"></div>
+            </div>
             <div class="stations-container" id="stationsContainer">
               <!-- 工作站將由JavaScript動態生成 -->
             </div>
@@ -805,6 +834,32 @@
             }
             break;
             
+          case 'workspace_update':
+            // 更新工作區
+            if (message.workspaceSlot !== undefined && message.itemType) {
+              const workspaceSlots = document.querySelectorAll('.workspace-slot');
+              const slot = workspaceSlots[message.workspaceSlot];
+              
+              if (slot) {
+                // 清空槽位
+                slot.innerHTML = '';
+                
+                if (message.itemType !== null) {
+                  // 創建物品圖標
+                  const itemIcon = document.createElement('div');
+                  itemIcon.className = 'game-item';
+                  itemIcon.textContent = getItemSymbol(message.itemType);
+                  itemIcon.style.position = 'relative';
+                  itemIcon.style.width = '40px';
+                  itemIcon.style.height = '40px';
+                  itemIcon.style.backgroundColor = getItemColor(message.itemType);
+                  
+                  slot.appendChild(itemIcon);
+                }
+              }
+            }
+            break;
+            
           default:
             console.log('未處理的訊息類型:', message.type);
         }
@@ -958,6 +1013,16 @@
             itemIcon.appendChild(itemLabel);
             
             slot.appendChild(itemIcon);
+
+            // 添加物品動畫效果
+            itemIcon.style.animation = 'itemAppear 0.3s ease-out';
+          } else {
+            // 如果槽位為空，添加提示文字
+            const emptyText = document.createElement('div');
+            emptyText.style.color = 'rgba(255, 255, 255, 0.3)';
+            emptyText.style.fontSize = '0.8em';
+            emptyText.textContent = '空槽';
+            slot.appendChild(emptyText);
           }
         });
       }
@@ -1042,6 +1107,38 @@
               slotIndex: gameState.activeSlot,
               cookingMethod: 'grill' // 預設烹飪方法
             });
+            
+            // 模擬烹飪過程
+            const slot = document.querySelectorAll('.inventory-slot')[gameState.activeSlot];
+            if (slot) {
+              // 添加烹飪動畫
+              const cookingEffect = document.createElement('div');
+              cookingEffect.style.position = 'absolute';
+              cookingEffect.style.top = '0';
+              cookingEffect.style.left = '0';
+              cookingEffect.style.width = '100%';
+              cookingEffect.style.height = '100%';
+              cookingEffect.style.backgroundColor = 'rgba(255, 100, 0, 0.3)';
+              cookingEffect.style.borderRadius = '5px';
+              cookingEffect.style.animation = 'pulse 1s infinite';
+              slot.appendChild(cookingEffect);
+              
+              // 添加烹飪動畫樣式
+              const style = document.createElement('style');
+              style.textContent = `
+                @keyframes pulse {
+                  0% { opacity: 0.3; }
+                  50% { opacity: 0.7; }
+                  100% { opacity: 0.3; }
+                }
+              `;
+              document.head.appendChild(style);
+              
+              // 3秒後移除動畫
+              setTimeout(() => {
+                cookingEffect.remove();
+              }, 3000);
+            }
             
             showToast(`正在烹飪${getItemName(currentItem.type)}...`);
           } else {
@@ -1464,6 +1561,23 @@
                   toPlayerId: player.id,
                   fromSlot: gameState.activeSlot
                 });
+                
+                // 添加傳遞動畫
+                const slot = document.querySelectorAll('.inventory-slot')[gameState.activeSlot];
+                if (slot && slot.querySelector('.game-item')) {
+                  const item = slot.querySelector('.game-item');
+                  item.style.animation = 'transferOut 0.5s ease-out';
+                  
+                  // 添加傳遞動畫樣式
+                  const style = document.createElement('style');
+                  style.textContent = `
+                    @keyframes transferOut {
+                      0% { transform: scale(1); opacity: 1; }
+                      100% { transform: scale(0); opacity: 0; }
+                    }
+                  `;
+                  document.head.appendChild(style);
+                }
               } else {
                 showToast('請先選擇要傳遞的物品');
               }
@@ -1474,6 +1588,95 @@
         });
         
         document.body.appendChild(transferContainer);
+
+        // 添加工作區傳遞功能
+        const workspaceSlots = document.querySelectorAll('.workspace-slot');
+        workspaceSlots.forEach((slot, index) => {
+          slot.addEventListener('click', () => {
+            // 如果工作區槽位為空且玩家有物品，則放入
+            if (slot.childElementCount === 0 && gameState.inventory[gameState.activeSlot]) {
+              const item = gameState.inventory[gameState.activeSlot];
+              
+              // 創建物品圖標
+              const itemIcon = document.createElement('div');
+              itemIcon.className = 'game-item';
+              itemIcon.textContent = getItemSymbol(item.type);
+              itemIcon.style.position = 'relative';
+              itemIcon.style.width = '40px';
+              itemIcon.style.height = '40px';
+              itemIcon.style.backgroundColor = getItemColor(item.type);
+              
+              slot.appendChild(itemIcon);
+              
+              // 清空玩家庫存槽
+              gameState.inventory[gameState.activeSlot] = null;
+              updateInventory(gameState.inventory);
+              
+              // 廣播給其他玩家
+              sendAction('place_in_workspace', {
+                itemType: item.type,
+                itemId: item.id,
+                workspaceSlot: index
+              });
+              
+              showToast('物品已放入共享工作區');
+            } 
+            // 如果工作區有物品且玩家槽位為空，則拿取
+            else if (slot.childElementCount > 0 && !gameState.inventory[gameState.activeSlot]) {
+              const itemIcon = slot.querySelector('.game-item');
+              if (itemIcon) {
+                // 從樣式中獲取物品類型
+                const backgroundColor = itemIcon.style.backgroundColor;
+                let itemType = '';
+                
+                // 根據顏色反向查找物品類型
+                for (const [type, color] of Object.entries(getItemColorMap())) {
+                  if (color === backgroundColor) {
+                    itemType = type;
+                    break;
+                  }
+                }
+                
+                if (itemType) {
+                  // 更新玩家庫存
+                  gameState.inventory[gameState.activeSlot] = {
+                    type: itemType,
+                    id: `item_${Date.now()}_${Math.floor(Math.random() * 1000)}`
+                  };
+                  
+                  updateInventory(gameState.inventory);
+                  
+                  // 清空工作區槽位
+                  slot.innerHTML = '';
+                  
+                  // 廣播給其他玩家
+                  sendAction('take_from_workspace', {
+                    workspaceSlot: index
+                  });
+                  
+                  showToast(`已從工作區拿取${getItemName(itemType)}`);
+                }
+              }
+            }
+          });
+        });
+      }
+      
+      // 獲取物品顏色映射表
+      function getItemColorMap() {
+        return {
+          'beef_raw': '#A52A2A',
+          'beef_cooked': '#8B4513',
+          'lettuce': '#32CD32',
+          'tomato': '#FF6347',
+          'onion': '#BA55D3',
+          'bread': '#F0E68C',
+          'cheese': '#FFD700',
+          'plate': '#B0C4DE',
+          'burger_basic': '#CD853F',
+          'burger_cheese': '#DAA520',
+          'burger_deluxe': '#B8860B'
+        };
       }
       
       // 更新訂單計時器
