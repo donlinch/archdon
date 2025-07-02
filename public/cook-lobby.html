@@ -460,6 +460,16 @@
     let userId;
     let username;
 
+    // 顯示創建房間模態框
+    function showCreateRoomModal() {
+        document.getElementById('createRoomModal').classList.add('show');
+    }
+
+    // 隱藏模態框
+    function hideModal(modalId) {
+        document.getElementById(modalId).classList.remove('show');
+    }
+
     // 初始化頁面
     document.addEventListener('DOMContentLoaded', function() {
         // 檢查是否已經登入
@@ -535,7 +545,8 @@
         // 註冊事件處理
         document.getElementById('createRoomBtn').addEventListener('click', showCreateRoomModal);
         document.getElementById('refreshRooms').addEventListener('click', fetchGameRooms);
-        document.getElementById('logoutBtn').addEventListener('click', logout);
+        document.getElementById('closeModalBtn').addEventListener('click', () => hideModal('createRoomModal'));
+        document.getElementById('submitRoomBtn').addEventListener('click', createRoom);
     });
 
     // 連接WebSocket
@@ -660,9 +671,14 @@
         event.preventDefault();
         
         const roomName = document.getElementById('roomName').value;
-        const difficulty = document.querySelector('input[name="difficulty"]:checked').value;
+        const difficulty = document.getElementById('roomDifficulty').value;
         const token = localStorage.getItem('cookGameToken');
         
+        if (!roomName) {
+            alert('請輸入房間名稱');
+            return;
+        }
+
         fetch('/cook-api/games/rooms', {
             method: 'POST',
             headers: {
@@ -674,17 +690,26 @@
                 difficulty: difficulty
             })
         })
-        .then(response => response.json())
+        .then(response => {
+             if (!response.ok) {
+                return response.json().then(err => { throw new Error(err.message || '創建房間失敗') });
+            }
+            return response.json();
+        })
         .then(data => {
             // 關閉模態窗
             hideModal('createRoomModal');
             
             // 加入創建的房間
-            joinRoom(data.roomId);
+            if (data && data.roomId) {
+                joinRoom(data.roomId);
+            } else {
+                throw new Error('無法獲取房間ID');
+            }
         })
         .catch(error => {
             console.error('創建房間失敗:', error);
-            document.getElementById('createRoomError').textContent = '創建房間失敗，請稍後再試';
+            alert(`創建房間失敗: ${error.message}`);
         });
     }
 
@@ -695,16 +720,6 @@
         
         // 轉到房間頁面
         window.location.href = 'cook-game-room.html';
-    }
-
-    // 登出函數
-    function logout() {
-        // 清除遊戲token
-        localStorage.removeItem('cookGameToken');
-        localStorage.removeItem('cookUsername');
-        
-        // 返回主頁
-        window.location.href = '/';
     }
   </script>
 </body>
