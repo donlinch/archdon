@@ -601,6 +601,7 @@
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${protocol}//${window.location.host}/cook-ws`;
         
+        console.log('正在連接到 WebSocket:', wsUrl);
         websocket = new WebSocket(wsUrl);
         
         websocket.onopen = () => {
@@ -608,10 +609,12 @@
           reconnectAttempts = 0;
           
           // 發送認證訊息
-          websocket.send(JSON.stringify({
+          const authMessage = {
             type: 'authenticate',
             token: token
-          }));
+          };
+          console.log('發送認證訊息:', authMessage);
+          websocket.send(JSON.stringify(authMessage));
           
           addSystemMessage('已連接到伺服器，正在進行認證...');
         };
@@ -653,11 +656,20 @@
             addSystemMessage('認證成功，正在加入房間...');
             // 發送加入房間訊息
             if (currentUser) {
-                websocket.send(JSON.stringify({
+                console.log('嘗試加入房間，發送數據:', {
                     type: 'join_room',
                     roomId: roomId,
                     userId: currentUser.user_id
-                }));
+                });
+                
+                // 延遲一點發送join_room請求，確保認證完全處理完畢
+                setTimeout(() => {
+                    websocket.send(JSON.stringify({
+                        type: 'join_room',
+                        roomId: roomId,
+                        userId: currentUser.user_id
+                    }));
+                }, 500);
             } else {
                 addSystemMessage('錯誤：找不到用戶資料，無法加入房間。');
             }
@@ -703,6 +715,7 @@
             break;
             
           case 'error':
+            console.error('伺服器錯誤:', message.message);
             addSystemMessage(`錯誤: ${message.message}`);
             break;
             
