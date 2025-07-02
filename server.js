@@ -25,8 +25,7 @@ const createReportRateLimiter = require('./report-ip-limiter');
 const bcrypt = require('bcryptjs'); // 用於密碼哈希
 const jwt = require('jsonwebtoken'); // 用於JWT Token (如果選擇JWT方案)
 
-const { cookGameApp, initCookGame } = require('./cook-kitchen-rush.js');
-
+ 
  
 
 const adminRouter = express.Router();
@@ -85,7 +84,17 @@ app.use(session({
 // 創建 HTTP 服務器
 const server = http.createServer(app);
 
-const { cookGameApp, initCookGame } = require('./cook-kitchen-rush');
+   // 导入廚房急先鋒游戏模块（重命名以避免冲突）
+   
+const { cookGameApp: gameApp, initCookGame } = require('./cook-kitchen-rush');
+   
+
+
+
+app.use('/cook-api', gameApp);
+
+
+
 
 // 創建 WebSocket 服務器
 const wss = new WebSocket.Server({ 
@@ -109,8 +118,7 @@ const userProfile = new UserProfile(pool);
 const chatResponder = new ChatResponder();
 
 
-app.use('/cook-api', cookGameApp);
- 
+  
 // =================================================================
 // ★★★ 管理後台專用認證中介軟體 (Admin Authentication) ★★★
 // =================================================================
