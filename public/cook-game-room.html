@@ -410,6 +410,57 @@
         grid-column: 3;
       }
     }
+
+    /* User Status Indicator */
+    .user-status {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        z-index: 1001;
+        display: flex;
+        align-items: center;
+        background-color: var(--card-bg-color, rgba(0, 0, 0, 0.7));
+        padding: 5px 10px;
+        border-radius: 20px;
+        border: 1px solid var(--border-color, #444);
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .user-status:hover {
+        transform: translateY(-2px);
+        background-color: rgba(0, 0, 0, 0.9);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.6);
+    }
+
+    .user-status img {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: 2px solid var(--accent-color, #FF9800);
+        object-fit: cover;
+    }
+
+    .user-status .username {
+        margin-left: 8px;
+        font-weight: 600;
+        color: var(--text-color, #f0f0f0);
+        max-width: 120px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    @media (max-width: 767px) {
+        .user-status {
+            padding: 3px;
+        }
+        
+        .user-status .username {
+            display: none;
+        }
+    }
   </style>
 </head>
 <body>

@@ -374,10 +374,6 @@
 
   <div class="header">
     <div class="header-title">廚房急先鋒 - 遊戲大廳</div>
-    <div class="user-info">
-      <span id="userInfo">Lv.1</span>
-      <div class="avatar" id="userAvatar">@</div>
-    </div>
   </div>
 
   <div class="main-content">
@@ -532,16 +528,6 @@
             // 顯示用戶資料
             userId = data.user.user_id;
             username = data.user.display_name || data.user.username;
-            document.getElementById('userInfo').textContent = 
-                `[LV.${data.user.level}] ${username} (積分: ${data.user.points})`;
-            
-            // 更新頭像 (如果用戶有頭像)
-            if (data.user.user_profile_image_url) {
-                const avatarImg = document.getElementById('userAvatar');
-                if (avatarImg) {
-                    avatarImg.src = data.user.user_profile_image_url;
-                }
-            }
             
             // Populate user status indicator
             const userStatus = document.getElementById('userStatus');
