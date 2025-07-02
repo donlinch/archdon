@@ -341,6 +341,66 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
             res.status(500).json({ message: '創建房間時服務器發生錯誤' });
         }
     });
+
+    // API: 快速登入
+    cookGameApp.post(`/auth/quick-login`, async (req, res) => {
+      try {
+        const { username } = req.body;
+        
+        if (!username) {
+          return res.status(400).json({ success: false, error: '請提供使用者名稱' });
+        }
+        
+        // 1. 從主系統的會員表查詢用戶
+        const result = await pool.query(
+          'SELECT user_id, username FROM box_users WHERE username = $1',
+          [username]
+        );
+        
+        if (result.rows.length === 0) {
+          return res.status(401).json({ success: false, error: '無效的使用者' });
+        }
+        
+        const user = result.rows[0];
+        
+        // 2. 生成遊戲專用的 JWT
+        const token = jwt.sign(
+          { userId: user.user_id, username: user.username },
+          JWT_SECRET,
+          { expiresIn: '7d' }
+        );
+        
+        // 3. 查詢或創建遊戲玩家資料 (與正常登入邏輯相同)
+        let playerResult = await pool.query(
+          'SELECT * FROM cook_players WHERE user_id = $1',
+          [user.user_id]
+        );
+        
+        if (playerResult.rows.length === 0) {
+          // 如果是第一次玩遊戲，創建玩家資料
+          await pool.query(
+            'INSERT INTO cook_players (user_id, username, level, points, created_at, last_login) VALUES ($1, $2, 1, 0, NOW(), NOW())',
+            [user.user_id, user.username]
+          );
+        } else {
+          // 更新最後登入時間
+          await pool.query(
+            'UPDATE cook_players SET last_login = NOW() WHERE user_id = $1',
+            [user.user_id]
+          );
+        }
+        
+        // 4. 返回成功的響應
+        res.json({
+          success: true,
+          token
+        });
+        
+      } catch (error) {
+        console.error('快速登入處理出錯:', error);
+        res.status(500).json({ success: false, error: '伺服器錯誤' });
+      }
+    });
     
     // ... 其他遊戲邏輯函數 ...
 
