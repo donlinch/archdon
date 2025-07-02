@@ -475,17 +475,6 @@
         return;
       }
       
-      // 從本地存儲中獲取用戶信息
-      let currentUser = null;
-      const userJson = localStorage.getItem('user');
-      if (userJson) {
-        try {
-          currentUser = JSON.parse(userJson);
-        } catch (error) {
-          console.error('解析用戶信息出錯:', error);
-        }
-      }
-      
       // DOM元素
       const roomNameDisplay = document.getElementById('roomNameDisplay');
       const roomHeaderTitle = document.getElementById('roomHeaderTitle');
@@ -504,6 +493,7 @@
       
       // 狀態變量
       let roomData = null;
+      let currentUser = null;
       let isReady = false;
       let isHost = false;
       let websocket = null;
@@ -511,10 +501,33 @@
       const maxReconnectAttempts = 5;
       const reconnectDelay = 3000;
       
+      // 首先獲取用戶資料
+      fetch('/cook-api/users/profile', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('無法驗證使用者身份');
+        }
+        return response.json();
+      })
+      .then(data => {
+        currentUser = data.user;
+        // 成功獲取用戶資料後，再連接WebSocket
+        connectWebsocket();
+      })
+      .catch(error => {
+        console.error('獲取用戶資料失敗:', error);
+        alert('獲取用戶資料失敗，將返回大廳。');
+        // 清除可能無效的token並重定向
+        localStorage.removeItem('cookGameToken');
+        window.location.href = 'cook-lobby.html';
+      });
+      
       // 連接WebSocket
       function connectWebsocket() {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/ws`;
+        const wsUrl = `${protocol}//${window.location.host}/cook-ws`;
         
         websocket = new WebSocket(wsUrl);
         
@@ -630,7 +643,7 @@
         roomCreatorDisplay.textContent = `房主: ${room.creator}`;
         
         // 檢查當前用戶是否為房主
-        isHost = currentUser && room.creatorId === currentUser.id;
+        isHost = currentUser && room.creatorId === currentUser.user_id;
         
         if (isHost) {
           startGameBtn.classList.remove('hidden');
@@ -648,7 +661,7 @@
           const playerCard = document.createElement('div');
           playerCard.className = 'player-card';
           
-          if (currentUser && player.id === currentUser.id) {
+          if (currentUser && player.id === currentUser.user_id) {
             playerCard.classList.add('current');
           }
           
@@ -666,7 +679,7 @@
           playerContainer.appendChild(playerCard);
           
           // 如果當前用戶已準備，更新按鈕狀態
-          if (currentUser && player.id === currentUser.id && player.ready) {
+          if (currentUser && player.id === currentUser.user_id && player.ready) {
             isReady = true;
             readyBtn.classList.add('active');
             readyBtn.textContent = '取消準備';
@@ -794,9 +807,6 @@
       readyBtn.addEventListener('click', toggleReady);
       leaveBtn.addEventListener('click', leaveRoom);
       startGameBtn.addEventListener('click', startGame);
-      
-      // 連接WebSocket並加入房間
-      connectWebsocket();
       
       // 頁面離開時關閉WebSocket連接
       window.addEventListener('beforeunload', () => {
