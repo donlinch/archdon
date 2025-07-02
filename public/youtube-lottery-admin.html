@@ -1279,14 +1279,7 @@
                     isLiveMode = !this.checked; // 未選中=直播模式，選中=影片模式
                     localStorage.setItem('ytLotteryMode', isLiveMode ? 'live' : 'video');
                     
-                    // 如果正在監控中，顯示適當的狀態提示
-                    if(monitoringToggle.checked) {
-                        toggleStatusEl.textContent = isLiveMode ? 
-                            '系統狀態: 監控中（直播）' : 
-                            '系統狀態: 留言已載入（影片）';
-                    } else {
-                        toggleStatusEl.textContent = '系統狀態: 停止中';
-                    }
+                    // 不再需要更新toggleStatusEl的文字
                 });
 
                 const myConfetti = confetti.create(confettiCanvas, {
@@ -1743,9 +1736,8 @@
                         updateTimer = null;
                     }
 
-                    // 更新狀態顯示
-                    toggleStatusEl.textContent = '系統狀態: 停止中';
-                    toggleStatusEl.style.color = '#ff5555'; // 紅色
+                    // 移除系統狀態顯示
+                    toggleStatusEl.textContent = '';
                 }
 
                 function updateParticipantsList(participantsData) {
@@ -2294,11 +2286,11 @@
 
                             if (actualIsLive) {
                                 // 直播模式
-                                toggleStatusEl.textContent = '系統狀態: 監控中（直播）';
+                                toggleStatusEl.textContent = '';
                                 startAutoUpdate();
                             } else {
                                 // 影片留言模式
-                                toggleStatusEl.textContent = `系統狀態: 留言已載入（影片）`;
+                                toggleStatusEl.textContent = '';
                                 stopAutoUpdate(); // 確保沒有舊的計時器在跑
                                 // 後端已返回參與者數量，可以直接更新，並手動抓取一次列表
                                 participantsCountEl.textContent = `目前參與人數：${result.participantCount} 人`;
@@ -2322,7 +2314,7 @@
                                 monitoringVideoIdEl.textContent = '';
                                 defaultAnimation.textContent = '已停止監控';
                                 apiRateInput.disabled = false; // 重新啟用 API 頻率選項
-                                toggleStatusEl.textContent = '系統狀態: 停止中';
+                                toggleStatusEl.textContent = '';
                             } else {
                                 throw new Error(result.error || '停止監控失敗');
                             }
