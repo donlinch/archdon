@@ -129,6 +129,246 @@
       max-width: 80%;
     }
     
+    /* 烹飪動畫 */
+    .socket {
+      width: 100px;
+      height: 100px;
+      position: absolute;
+      left: 50%;
+      margin-left: -50px;
+      top: 50%;
+      margin-top: -50px;
+      z-index: 100;
+    }
+
+    .hex-brick {
+      background: #ff2600;
+      width: 15px;
+      height: 8px;
+      position: absolute;
+      top: 5px;
+      animation-name: fade00;
+      animation-duration: 2s;
+      animation-iteration-count: infinite;
+      -webkit-animation-name: fade00;
+      -webkit-animation-duration: 2s;
+      -webkit-animation-iteration-count: infinite;
+    }
+
+    .h2 {
+      transform: rotate(60deg);
+      -webkit-transform: rotate(60deg);
+    }
+
+    .h3 {
+      transform: rotate(-60deg);
+      -webkit-transform: rotate(-60deg);
+    }
+
+    .gel {
+      height: 15px;
+      width: 15px;
+      transition: all 0.3s;
+      -webkit-transition: all 0.3s;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+    }
+
+    .center-gel {
+      margin-left: -7px;
+      margin-top: -7px;
+      animation-name: pulse00;
+      animation-duration: 2s;
+      animation-iteration-count: infinite;
+      -webkit-animation-name: pulse00;
+      -webkit-animation-duration: 2s;
+      -webkit-animation-iteration-count: infinite;
+    }
+
+    .c1 {
+      margin-left: -23px;
+      margin-top: -7px;
+    }
+
+    .c2 {
+      margin-left: -15px;
+      margin-top: -21px;
+    }
+
+    .c3 {
+      margin-left: 1px;
+      margin-top: -21px;
+    }
+
+    .c4 {
+      margin-left: 8px;
+      margin-top: -7px;
+    }
+
+    .c5 {
+      margin-left: -15px;
+      margin-top: 6px;
+    }
+
+    .c6 {
+      margin-left: 1px;
+      margin-top: 6px;
+    }
+
+    .c7 {
+      margin-left: -31px;
+      margin-top: -21px;
+    }
+
+    .c8 {
+      margin-left: 16px;
+      margin-top: -21px;
+    }
+
+    .c9 {
+      margin-left: -7px;
+      margin-top: 20px;
+    }
+
+    .c10 {
+      margin-left: -31px;
+      margin-top: 6px;
+    }
+
+    .c11 {
+      margin-left: 16px;
+      margin-top: 6px;
+    }
+
+    .c12 {
+      margin-left: -7px;
+      margin-top: -35px;
+    }
+
+    .r1 {
+      animation-name: pulse00;
+      animation-duration: 2s;
+      animation-iteration-count: infinite;
+      animation-delay: 0.2s;
+      -webkit-animation-name: pulse00;
+      -webkit-animation-duration: 2s;
+      -webkit-animation-iteration-count: infinite;
+      -webkit-animation-delay: 0.2s;
+    }
+
+    .r2 {
+      animation-name: pulse00;
+      animation-duration: 2s;
+      animation-iteration-count: infinite;
+      animation-delay: 0.4s;
+      -webkit-animation-name: pulse00;
+      -webkit-animation-duration: 2s;
+      -webkit-animation-iteration-count: infinite;
+      -webkit-animation-delay: 0.4s;
+    }
+
+    .r3 {
+      animation-name: pulse00;
+      animation-duration: 2s;
+      animation-iteration-count: infinite;
+      animation-delay: 0.6s;
+      -webkit-animation-name: pulse00;
+      -webkit-animation-duration: 2s;
+      -webkit-animation-iteration-count: infinite;
+      -webkit-animation-delay: 0.6s;
+    }
+
+    .r1 > .hex-brick {
+      animation-name: fade00;
+      animation-duration: 2s;
+      animation-iteration-count: infinite;
+      animation-delay: 0.2s;
+      -webkit-animation-name: fade00;
+      -webkit-animation-duration: 2s;
+      -webkit-animation-iteration-count: infinite;
+      -webkit-animation-delay: 0.2s;
+    }
+
+    .r2 > .hex-brick {
+      animation-name: fade00;
+      animation-duration: 2s;
+      animation-iteration-count: infinite;
+      animation-delay: 0.4s;
+      -webkit-animation-name: fade00;
+      -webkit-animation-duration: 2s;
+      -webkit-animation-iteration-count: infinite;
+      -webkit-animation-delay: 0.4s;
+    }
+
+    .r3 > .hex-brick {
+      animation-name: fade00;
+      animation-duration: 2s;
+      animation-iteration-count: infinite;
+      animation-delay: 0.6s;
+      -webkit-animation-name: fade00;
+      -webkit-animation-duration: 2s;
+      -webkit-animation-iteration-count: infinite;
+      -webkit-animation-delay: 0.6s;
+    }
+
+    @keyframes pulse00 {
+      0% {
+        -webkit-transform: scale(1);
+        transform: scale(1);
+      }
+
+      50% {
+        -webkit-transform: scale(0.01);
+        transform: scale(0.01);
+      }
+
+      100% {
+        -webkit-transform: scale(1);
+        transform: scale(1);
+      }
+    }
+
+    @keyframes fade00 {
+      0% {
+        background: #fff;
+      }
+
+      50% {
+        background: #ff2600;
+      }
+
+      100% {
+        background: #ff2600;
+      }
+    }
+    
+    /* 烹飪站動畫容器 */
+    .cooking-animation-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: rgba(0, 0, 0, 0.7);
+      border-radius: 8px;
+      z-index: 10;
+    }
+    
+    .cooking-timer {
+      position: absolute;
+      bottom: 10px;
+      left: 0;
+      width: 100%;
+      text-align: center;
+      color: #fff;
+      font-size: 14px;
+      font-weight: bold;
+    }
+    
     .game-main {
       flex-grow: 1;
       overflow-y: auto; /* 主要內容區域可滾動 */
@@ -1054,12 +1294,26 @@
         // 顯示圖標
         const icon = document.createElement('div');
         icon.textContent = getStationSymbol(type, subtype);
+        
+        // 為烹飪站添加特殊樣式
+        if (type === 'cooking') {
+          icon.style.fontSize = '28px';
+          icon.style.color = '#ff2600';
+          icon.style.textShadow = '0 0 10px rgba(255, 38, 0, 0.7)';
+        }
+        
         station.appendChild(icon);
         
         // 顯示標籤
         const label = document.createElement('div');
         label.className = 'station-label';
         label.textContent = getStationName(type, subtype);
+        
+        // 為烹飪站添加特殊描述
+        if (type === 'cooking') {
+          label.innerHTML = '烹飪區<br><small>(需等待10秒)</small>';
+        }
+        
         station.appendChild(label);
         
         // 添加點擊事件
@@ -1095,45 +1349,117 @@
           // 檢查當前選中的庫存槽是否有可烹飪的食材
           const currentItem = gameState.inventory[gameState.activeSlot];
           if (currentItem && isCookable(currentItem.type)) {
-            // 發送烹飪食材的動作
-            sendAction('cook_item', {
-              slotIndex: gameState.activeSlot,
-              cookingMethod: 'grill' // 預設烹飪方法
-            });
-            
-            // 模擬烹飪過程
+            // 顯示烹飪動畫
             const slot = document.querySelectorAll('.inventory-slot')[gameState.activeSlot];
             if (slot) {
-              // 添加烹飪動畫
-              const cookingEffect = document.createElement('div');
-              cookingEffect.style.position = 'absolute';
-              cookingEffect.style.top = '0';
-              cookingEffect.style.left = '0';
-              cookingEffect.style.width = '100%';
-              cookingEffect.style.height = '100%';
-              cookingEffect.style.backgroundColor = 'rgba(255, 100, 0, 0.3)';
-              cookingEffect.style.borderRadius = '5px';
-              cookingEffect.style.animation = 'pulse 1s infinite';
-              slot.appendChild(cookingEffect);
+              // 創建烹飪動畫容器
+              const cookingAnimationContainer = document.createElement('div');
+              cookingAnimationContainer.className = 'cooking-animation-container';
               
-              // 添加烹飪動畫樣式
-              const style = document.createElement('style');
-              style.textContent = `
-                @keyframes pulse {
-                  0% { opacity: 0.3; }
-                  50% { opacity: 0.7; }
-                  100% { opacity: 0.3; }
-                }
+              // 創建六角形動畫
+              const socketDiv = document.createElement('div');
+              socketDiv.className = 'socket';
+              socketDiv.innerHTML = `
+                <div class="gel center-gel">
+                  <div class="hex-brick h1"></div>
+                  <div class="hex-brick h2"></div>
+                  <div class="hex-brick h3"></div>
+                </div>
+                <div class="gel c1 r1">
+                  <div class="hex-brick h1"></div>
+                  <div class="hex-brick h2"></div>
+                  <div class="hex-brick h3"></div>
+                </div>
+                <div class="gel c2 r1">
+                  <div class="hex-brick h1"></div>
+                  <div class="hex-brick h2"></div>
+                  <div class="hex-brick h3"></div>
+                </div>
+                <div class="gel c3 r1">
+                  <div class="hex-brick h1"></div>
+                  <div class="hex-brick h2"></div>
+                  <div class="hex-brick h3"></div>
+                </div>
+                <div class="gel c4 r1">
+                  <div class="hex-brick h1"></div>
+                  <div class="hex-brick h2"></div>
+                  <div class="hex-brick h3"></div>
+                </div>
+                <div class="gel c5 r1">
+                  <div class="hex-brick h1"></div>
+                  <div class="hex-brick h2"></div>
+                  <div class="hex-brick h3"></div>
+                </div>
+                <div class="gel c6 r1">
+                  <div class="hex-brick h1"></div>
+                  <div class="hex-brick h2"></div>
+                  <div class="hex-brick h3"></div>
+                </div>
+                <div class="gel c7 r2">
+                  <div class="hex-brick h1"></div>
+                  <div class="hex-brick h2"></div>
+                  <div class="hex-brick h3"></div>
+                </div>
+                <div class="gel c8 r2">
+                  <div class="hex-brick h1"></div>
+                  <div class="hex-brick h2"></div>
+                  <div class="hex-brick h3"></div>
+                </div>
+                <div class="gel c9 r2">
+                  <div class="hex-brick h1"></div>
+                  <div class="hex-brick h2"></div>
+                  <div class="hex-brick h3"></div>
+                </div>
+                <div class="gel c10 r2">
+                  <div class="hex-brick h1"></div>
+                  <div class="hex-brick h2"></div>
+                  <div class="hex-brick h3"></div>
+                </div>
+                <div class="gel c11 r2">
+                  <div class="hex-brick h1"></div>
+                  <div class="hex-brick h2"></div>
+                  <div class="hex-brick h3"></div>
+                </div>
+                <div class="gel c12 r2">
+                  <div class="hex-brick h1"></div>
+                  <div class="hex-brick h2"></div>
+                  <div class="hex-brick h3"></div>
+                </div>
               `;
-              document.head.appendChild(style);
               
-              // 3秒後移除動畫
-              setTimeout(() => {
-                cookingEffect.remove();
-              }, 3000);
+              // 創建烹飪計時器
+              const cookingTimer = document.createElement('div');
+              cookingTimer.className = 'cooking-timer';
+              cookingTimer.textContent = '烹飪中... 10秒';
+              
+              // 將動畫和計時器添加到容器
+              cookingAnimationContainer.appendChild(socketDiv);
+              cookingAnimationContainer.appendChild(cookingTimer);
+              
+              // 將容器添加到槽位
+              slot.appendChild(cookingAnimationContainer);
+              
+              // 設置10秒倒計時
+              let timeLeft = 10;
+              const timerInterval = setInterval(() => {
+                timeLeft--;
+                if (timeLeft <= 0) {
+                  clearInterval(timerInterval);
+                  // 移除動畫容器
+                  cookingAnimationContainer.remove();
+                  
+                  // 發送烹飪食材的動作
+                  sendAction('cook_item', {
+                    slotIndex: gameState.activeSlot,
+                    cookingMethod: 'grill' // 預設烹飪方法
+                  });
+                } else {
+                  cookingTimer.textContent = `烹飪中... ${timeLeft}秒`;
+                }
+              }, 1000);
             }
             
-            showToast(`正在烹飪${getItemName(currentItem.type)}...`);
+            showToast(`正在烹飪${getItemName(currentItem.type)}...需要等待10秒`);
           } else if (currentItem) {
             showToast(`${getItemName(currentItem.type)}不可烹飪！`);
           } else {
@@ -1476,31 +1802,54 @@
         
         if (!slot) return;
         
-        // 檢查是否已有進度條
-        let progressBar = slot.querySelector('.cooking-progress');
-        if (!progressBar) {
-          progressBar = document.createElement('div');
-          progressBar.className = 'cooking-progress';
-          progressBar.style.position = 'absolute';
-          progressBar.style.bottom = '0';
-          progressBar.style.left = '0';
-          progressBar.style.height = '5px';
-          progressBar.style.backgroundColor = '#FF9800';
-          progressBar.style.transition = 'width 0.3s';
-          slot.style.position = 'relative';
-          slot.appendChild(progressBar);
+        // 檢查是否已有烹飪動畫容器
+        let cookingContainer = slot.querySelector('.cooking-animation-container');
+        
+        // 如果沒有烹飪動畫容器但需要顯示進度，則創建一個簡單的進度條
+        if (!cookingContainer) {
+          // 檢查是否已有進度條
+          let progressBar = slot.querySelector('.cooking-progress');
+          if (!progressBar) {
+            progressBar = document.createElement('div');
+            progressBar.className = 'cooking-progress';
+            progressBar.style.position = 'absolute';
+            progressBar.style.bottom = '0';
+            progressBar.style.left = '0';
+            progressBar.style.height = '5px';
+            progressBar.style.backgroundColor = '#FF9800';
+            progressBar.style.transition = 'width 0.3s';
+            slot.style.position = 'relative';
+            slot.appendChild(progressBar);
+          }
+          
+          // 更新進度條
+          progressBar.style.width = `${progress}%`;
+          
+          // 進度完成時移除進度條
+          if (progress >= 100) {
+            setTimeout(() => {
+              if (progressBar.parentNode) {
+                progressBar.parentNode.removeChild(progressBar);
+              }
+            }, 500);
+          }
         }
-        
-        // 更新進度條
-        progressBar.style.width = `${progress}%`;
-        
-        // 進度完成時移除進度條
-        if (progress >= 100) {
-          setTimeout(() => {
-            if (progressBar.parentNode) {
-              progressBar.parentNode.removeChild(progressBar);
+        // 如果有烹飪動畫容器，則更新其中的計時器
+        else {
+          const cookingTimer = cookingContainer.querySelector('.cooking-timer');
+          if (cookingTimer) {
+            const timeLeft = Math.ceil((100 - progress) / 10);
+            cookingTimer.textContent = `烹飪中... ${timeLeft}秒`;
+            
+            // 如果進度達到100%，移除烹飪動畫容器
+            if (progress >= 100) {
+              setTimeout(() => {
+                if (cookingContainer.parentNode) {
+                  cookingContainer.parentNode.removeChild(cookingContainer);
+                }
+              }, 500);
             }
-          }, 500);
+          }
         }
       }
       
