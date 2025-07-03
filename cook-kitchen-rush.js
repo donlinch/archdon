@@ -227,7 +227,6 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
         try {
             await client.query('BEGIN');
             
-            // 獲取房間資訊
             const roomResult = await client.query('SELECT * FROM cook_game_rooms WHERE room_id = $1 FOR UPDATE', [roomId]);
             if (roomResult.rows.length === 0) {
                 await client.query('ROLLBACK');
@@ -236,30 +235,43 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
             
             const room = roomResult.rows[0];
             const gameState = room.game_state;
+
+            if (room.status === 'finished') {
+                console.log(`[COOK-GAME] 房間 ${roomId} 遊戲已結束，跳過 endGame 邏輯。`);
+                await client.query('ROLLBACK');
+                return;
+            }
             
-            // 更新房間狀態為已完成
             await client.query("UPDATE cook_game_rooms SET status = 'finished' WHERE room_id = $1", [roomId]);
             
-            // 計算最終統計數據
+            // ★ 新增：更新玩家統計數據與任務進度
+            await updatePlayerStatsAndQuests(roomId, gameState);
+
             const finalStats = {
                 totalScore: gameState.score || 0,
                 completedOrders: gameState.completedOrders || 0,
-                playerScores: {}
+                playerScores: {},
+                rewards: {} // ★ 新增：用於存放獎勵資訊
             };
             
-            // 如果有玩家貢獻分數的記錄，計算每個玩家的分數
             if (gameState.players) {
                 gameState.players.forEach(player => {
-                    finalStats.playerScores[player.id] = player.score || Math.floor(finalStats.totalScore / gameState.players.length);
+                    finalStats.playerScores[player.id] = player.score || 0;
+                    // ★ 新增：將獎勵資訊加入 finalStats
+                    finalStats.rewards[player.id] = {
+                        pointsEarned: player.pointsEarned || 0,
+                        questReward: player.questReward || 0,
+                    };
                 });
             }
             
-            // 廣播遊戲結束消息
+            // ★ 修改：廣播包含獎勵資訊的遊戲結束消息
             broadcastToRoom(roomId, {
                 type: 'game_over',
                 finalScore: finalStats.totalScore,
                 completedOrders: finalStats.completedOrders,
                 playerScores: finalStats.playerScores,
+                rewards: finalStats.rewards, // ★ 新增
                 message: '遊戲時間結束！'
             });
             

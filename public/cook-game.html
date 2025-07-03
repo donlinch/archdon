@@ -788,6 +788,20 @@
               <div class="stat-value" id="personalScore">0</div>
             </div>
           </div>
+          <div class="rewards-container" style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+               <div class="reward-item" style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                   <span>本局得分:</span>
+                   <span id="pointsEarned">0</span>
+               </div>
+               <div class="reward-item" style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                   <span>任務獎勵:</span>
+                   <span id="questReward">0</span>
+               </div>
+               <div class="reward-item total-reward" style="display: flex; justify-content: space-between; font-weight: bold; color: var(--accent-color); font-size: 1.2em; margin-top: 10px;">
+                   <span>總計獲得積分:</span>
+                   <span id="totalPointsGained">0</span>
+               </div>
+          </div>
         </div>
         <button class="dialog-button" id="returnToLobbyBtn">返回大廳</button>
       </div>
@@ -1826,13 +1840,25 @@
         finalScore.textContent = gameOverData.finalScore || 0;
         completedOrders.textContent = gameOverData.completedOrders || 0;
         
-        // 獲取當前玩家的個人得分
         const currentPlayerId = gameState.currentPlayer.user_id;
-        const playerScore = gameOverData.playerScores && gameOverData.playerScores[currentPlayerId] 
-            ? gameOverData.playerScores[currentPlayerId] 
-            : Math.floor((gameOverData.finalScore || 0) / (gameState.players.length || 1));
-        
+        const playerScore = gameOverData.playerScores?.[currentPlayerId] || 0;
         personalScore.textContent = playerScore;
+
+        // ★ 新增：處理並顯示獎勵資訊
+        const rewards = gameOverData.rewards?.[currentPlayerId] || { pointsEarned: 0, questReward: 0 };
+        const pointsEarnedEl = document.getElementById('pointsEarned');
+        const questRewardEl = document.getElementById('questReward');
+        const totalPointsGainedEl = document.getElementById('totalPointsGained');
+
+        pointsEarnedEl.textContent = rewards.pointsEarned - rewards.questReward; // 顯示不含任務獎勵的遊戲得分
+        questRewardEl.textContent = rewards.questReward;
+        totalPointsGainedEl.textContent = rewards.pointsEarned; // 顯示總獲得積分
+
+        // 如果有任務獎勵，則高亮顯示
+        if (rewards.questReward > 0) {
+           questRewardEl.parentElement.style.color = 'var(--accent-color)';
+           questRewardEl.parentElement.style.fontWeight = 'bold';
+        }
         
         // 顯示遊戲結束對話框
         gameOverDialog.style.display = 'flex';
