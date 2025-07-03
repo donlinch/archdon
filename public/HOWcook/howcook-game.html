@@ -1,860 +1,605 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>HOW料理 - 本地測試版</title>
-  <style>
-    :root {
-      --primary-color: #32a852;
-      --secondary-color: #4CAF50;
-      --accent-color: #FF9800;
-      --text-color: #f0f0f0;
-      --bg-color: #222222;
-      --border-color: #444444;
-      --success-color: #4CAF50;
-      --error-color: #F44336;
-      --card-bg-color: rgba(0, 0, 0, 0.5);
-    }
-    
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-    
-    body {
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-height: 100vh;
-      background: #1a1a1a;
-      color: #f0f0f0;
-      font-family: 'Courier New', monospace;
-    }
-    
-    .game-container {
-      width: 100%;
-      max-width: 480px; /* 手機版面最大寬度 */
-      min-height: 100vh;
-      margin: 0 auto;
-      background: #0d1117; /* 深色背景 */
-      display: flex;
-      flex-direction: column;
-      box-shadow: 0 0 20px rgba(0,0,0,0.5);
-      position: relative;
-      overflow: hidden; /* 防止內容溢出 */
-    }
-    
-    .game-header {
-      height: 50px;
-      background-color: rgba(0, 0, 0, 0.7);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0 15px;
-      border-bottom: 1px solid var(--border-color);
-      z-index: 10;
-    }
-    
-    .category-nav {
-      display: flex;
-      flex-wrap: wrap;
-      padding: 10px;
-      background-color: rgba(0, 0, 0, 0.5);
-      border-bottom: 1px solid var(--border-color);
-    }
-    
-    .category-btn {
-      padding: 8px 12px;
-      margin: 5px;
-      background: transparent;
-      color: var(--text-color);
-      border: 1px solid var(--border-color);
-      border-radius: 3px;
-      font-family: 'Courier New', monospace;
-      font-size: 14px;
-      cursor: pointer;
-      transition: all 0.3s;
-    }
-    
-    .category-btn:hover, .category-btn.active {
-      background: var(--primary-color);
-      color: #000;
-    }
-    
-    .content-section {
-      padding: 15px;
-      border-bottom: 1px solid var(--border-color);
-    }
-    
-    .section-title {
-      font-size: 16px;
-      color: var(--secondary-color);
-      margin-bottom: 10px;
-    }
-    
-    .recipe-item {
-      padding: 10px;
-      margin-bottom: 10px;
-      border: 1px solid var(--border-color);
-      border-radius: 3px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      cursor: pointer;
-      transition: all 0.3s;
-    }
-    
-    .recipe-item:hover {
-      background: rgba(255, 255, 255, 0.05);
-    }
-    
-    .recipe-name {
-      font-size: 16px;
-    }
-    
-    .recipe-info {
-      font-size: 14px;
-      color: #999;
-    }
-    
-    .mode-buttons {
-      display: flex;
-      justify-content: space-around;
-      padding: 15px;
-      background-color: rgba(0, 0, 0, 0.5);
-    }
-    
-    .mode-btn {
-      padding: 10px 20px;
-      background: transparent;
-      color: var(--text-color);
-      border: 1px solid var(--accent-color);
-      border-radius: 3px;
-      font-family: 'Courier New', monospace;
-      font-size: 16px;
-      cursor: pointer;
-      transition: all 0.3s;
-    }
-    
-    .mode-btn:hover {
-      background: var(--accent-color);
-      color: #000;
-    }
-    
-    /* 詳情頁面樣式 */
-    .detail-view {
-      display: none;
-      height: 100%;
-      overflow-y: auto;
-    }
-    
-    .detail-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 15px;
-      border-bottom: 1px solid var(--border-color);
-    }
-    
-    .back-btn {
-      background: transparent;
-      border: none;
-      color: var(--text-color);
-      font-size: 16px;
-      cursor: pointer;
-    }
-    
-    .recipe-title {
-      font-size: 18px;
-      text-align: center;
-      flex-grow: 1;
-    }
-    
-    .recipe-meta {
-      display: flex;
-      justify-content: space-between;
-      padding: 10px 15px;
-      background-color: rgba(0, 0, 0, 0.3);
-      border-bottom: 1px solid var(--border-color);
-    }
-    
-    .ingredient-list, .step-list {
-      padding: 15px;
-    }
-    
-    .ingredient-item, .step-item {
-      padding: 8px 0;
-      border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
-    }
-    
-    .start-btn {
-      display: block;
-      width: 80%;
-      margin: 20px auto;
-      padding: 12px;
-      background: var(--primary-color);
-      color: #000;
-      border: none;
-      border-radius: 3px;
-      font-family: 'Courier New', monospace;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    
-    /* 烹飪界面樣式 */
-    .cooking-view {
-      display: none;
-      height: 100%;
-    }
-    
-    .step-header {
-      padding: 15px;
-      background-color: rgba(0, 0, 0, 0.5);
-      border-bottom: 1px solid var(--border-color);
-    }
-    
-    .cooking-area {
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 200px;
-    }
-    
-    .option-buttons {
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-    
-    .option-btn {
-      padding: 10px;
-      background: transparent;
-      color: var(--text-color);
-      border: 1px solid var(--border-color);
-      border-radius: 3px;
-      font-family: 'Courier New', monospace;
-      font-size: 14px;
-      text-align: left;
-      cursor: pointer;
-      transition: all 0.3s;
-    }
-    
-    .option-btn:hover {
-      background: rgba(255, 255, 255, 0.1);
-    }
-    
-    .narrative-area {
-      padding: 15px;
-      background-color: rgba(0, 0, 0, 0.3);
-      border-top: 1px solid var(--border-color);
-      max-height: 150px;
-      overflow-y: auto;
-    }
-    
-    .narrative-text {
-      line-height: 1.5;
-      white-space: pre-wrap;
-    }
-    
-    .nav-buttons {
-      display: flex;
-      justify-content: space-between;
-      padding: 15px;
-      background-color: rgba(0, 0, 0, 0.5);
-      border-top: 1px solid var(--border-color);
-    }
-    
-    .nav-btn {
-      padding: 8px 15px;
-      background: transparent;
-      color: var(--text-color);
-      border: 1px solid var(--border-color);
-      border-radius: 3px;
-      font-family: 'Courier New', monospace;
-      font-size: 14px;
-      cursor: pointer;
-    }
-    
-    .nav-btn:hover {
-      background: rgba(255, 255, 255, 0.1);
-    }
-    
-    /* 評分結果頁面 */
-    .result-view {
-      display: none;
-      height: 100%;
-      overflow-y: auto;
-    }
-    
-    .full-narrative {
-      padding: 15px;
-      max-height: 200px;
-      overflow-y: auto;
-      border-bottom: 1px solid var(--border-color);
-      line-height: 1.5;
-    }
-    
-    .ai-score {
-      font-size: 24px;
-      text-align: center;
-      margin: 15px 0;
-    }
-    
-    .ai-feedback {
-      padding: 15px;
-      background-color: rgba(0, 0, 0, 0.3);
-      border-radius: 5px;
-      margin: 0 15px 15px;
-      line-height: 1.5;
-    }
-    
-    .result-buttons {
-      display: flex;
-      justify-content: space-around;
-      padding: 15px;
-    }
-    
-    /* 通用樣式 */
-    .hidden {
-      display: none;
-    }
-    
-    .visible {
-      display: block;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>食譜比對系統</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Microsoft JhengHei', Arial, sans-serif;
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 10px;
+            background-color: #f9f5f0;
+            color: #333;
+            font-size: 16px;
+        }
+        h1 {
+            color: #8b4513;
+            text-align: center;
+            padding: 10px 0;
+            font-size: 1.5rem;
+        }
+        .input-section {
+            margin-bottom: 15px;
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .input-title {
+            font-weight: bold;
+            color: #8b4513;
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+        .recipe-challenge {
+            padding: 10px;
+            background-color: #fff9e6;
+            border-radius: 5px;
+            border: 1px solid #d2b48c;
+        }
+        .recipe-description {
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+            color: #5a3921;
+        }
+        .recipe-tips {
+            font-size: 0.9rem;
+            font-style: italic;
+            color: #8b6b4f;
+        }
+        .step-container {
+            display: none;
+            margin-bottom: 15px;
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .step-container.active {
+            display: block;
+        }
+        .step-title {
+            font-weight: bold;
+            color: #8b4513;
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+        .buttons-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .btn {
+            background-color: #f0e6d2;
+            border: 1px solid #d2b48c;
+            color: #5a3921;
+            padding: 8px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+        .btn:hover {
+            background-color: #d2b48c;
+            color: white;
+        }
+        .btn.selected {
+            background-color: #8b4513;
+            color: white;
+            border-color: #5a3921;
+        }
+        .result-container {
+            margin-top: 15px;
+            padding: 15px;
+            background-color: #fff9e6;
+            border: 1px dashed #d2b48c;
+            border-radius: 10px;
+        }
+        .recipe-sentence {
+            line-height: 1.6;
+            color: #5a3921;
+            margin-bottom: 10px;
+        }
+        .ai-prompt {
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            margin-top: 10px;
+            word-break: break-word;
+        }
+        .action-buttons {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .action-btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+            flex: 1;
+        }
+        .reset-btn {
+            background-color: #d2b48c;
+            color: white;
+        }
+        .reset-btn:hover {
+            background-color: #8b4513;
+        }
+        .random-btn {
+            background-color: #8b4513;
+            color: white;
+        }
+        .random-btn:hover {
+            background-color: #5a3921;
+        }
+        .next-btn {
+            background-color: #5a8b47;
+            color: white;
+        }
+        .next-btn:hover {
+            background-color: #3a5a2b;
+        }
+        .copy-btn {
+            background-color: #4a6b8b;
+            color: white;
+            width: 100%;
+        }
+        .copy-btn:hover {
+            background-color: #2d455a;
+        }
+        .emoji {
+            font-size: 1.2rem;
+            margin-right: 5px;
+        }
+        .step-indicator {
+            text-align: center;
+            margin: 10px 0;
+            font-weight: bold;
+            color: #8b4513;
+        }
+        .score-display {
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin: 15px 0;
+            color: #8b4513;
+        }
+    </style>
 </head>
 <body>
-  <div class="game-container">
-    <!-- 主界面 -->
-    <div id="main-view">
-      <div class="game-header">
-        <h1>HOW料理 v1.0</h1>
-      </div>
-      
-      <div class="category-nav">
-        <button class="category-btn active" data-category="all">全部</button>
-        <button class="category-btn" data-category="dish">菜品</button>
-        <button class="category-btn" data-category="staple">主食</button>
-        <button class="category-btn" data-category="soup">湯羹</button>
-        <button class="category-btn" data-category="drink">飲品</button>
-        <button class="category-btn" data-category="dessert">甜品</button>
-      </div>
-      
-      <div class="content-section">
-        <div class="section-title">> 推薦料理</div>
-        <div class="recipe-list">
-          <div class="recipe-item" data-recipe="tomato_egg">
-            <div class="recipe-name">□ 番茄炒蛋</div>
-            <div class="recipe-info">★☆☆ 15分鐘</div>
-          </div>
-          <div class="recipe-item" data-recipe="chive_egg">
-            <div class="recipe-name">□ 韭菜炒蛋</div>
-            <div class="recipe-info">★☆☆ 10分鐘</div>
-          </div>
-          <div class="recipe-item" data-recipe="cabbage">
-            <div class="recipe-name">□ 手撕包菜</div>
-            <div class="recipe-info">★☆☆ 15分鐘</div>
-          </div>
-          <div class="recipe-item" data-recipe="seaweed_soup">
-            <div class="recipe-name">□ 紫菜蛋花湯</div>
-            <div class="recipe-info">★☆☆ 10分鐘</div>
-          </div>
+    <h1><span class="emoji">🍳</span>食譜比對系統</h1>
+    
+    <!-- 修改後的題目顯示區，取代原本的 input-section -->
+    <div class="input-section">
+        <div class="input-title">今日挑戰題目</div>
+        <div class="recipe-challenge">
+            <div class="recipe-description" id="recipeDescription"></div>
+            <div class="recipe-tips" id="recipeTips"></div>
         </div>
-      </div>
-      
-      <div class="content-section">
-        <div class="section-title">> 最近學習</div>
-        <div class="recent-list">
-          <div class="recipe-item" data-recipe="honey_lemon">
-            <div class="recipe-name">□ 蜂蜜檸檬水</div>
-            <div class="recipe-info">★☆☆ 5分鐘</div>
-          </div>
-        </div>
-      </div>
-      
-      <div class="mode-buttons">
-        <button class="mode-btn" id="learn-mode-btn">學習模式</button>
-        <button class="mode-btn" id="challenge-mode-btn">挑戰模式</button>
-      </div>
     </div>
     
-    <!-- 詳情界面 -->
-    <div id="detail-view" class="detail-view">
-      <div class="detail-header">
-        <button class="back-btn" id="back-to-main">&lt; 返回</button>
-        <div class="recipe-title">番茄炒蛋</div>
-      </div>
-      
-      <div class="recipe-meta">
-        <div class="difficulty">難度：★☆☆</div>
-        <div class="time">時間：15分鐘</div>
-      </div>
-      
-      <div class="content-section">
-        <div class="section-title">> 食材準備</div>
-        <div class="ingredient-list">
-          <div class="ingredient-item">□ 番茄 x2</div>
-          <div class="ingredient-item">□ 雞蛋 x3</div>
-          <div class="ingredient-item">□ 蔥 x1</div>
-          <div class="ingredient-item">□ 鹽 適量</div>
-          <div class="ingredient-item">□ 糖 少許</div>
-        </div>
-      </div>
-      
-      <div class="content-section">
-        <div class="section-title">> 烹飪步驟</div>
-        <div class="step-list">
-          <div class="step-item">1. 番茄切塊</div>
-          <div class="step-item">2. 雞蛋打散</div>
-          <div class="step-item">3. 熱鍋炒蛋</div>
-          <div class="step-item">4. 加入番茄翻炒</div>
-          <div class="step-item">5. 調味出鍋</div>
-        </div>
-      </div>
-      
-      <button class="start-btn" id="start-cooking-btn">開始烹飪</button>
+    <div class="step-indicator">步驟 <span id="currentStep">1</span>/5</div>
+    
+    <!-- 步驟1: 選擇主食材 -->
+    <div class="step-container active" id="step1">
+        <div class="step-title">1. 選擇主食材</div>
+        <div class="buttons-container" id="ingredients"></div>
     </div>
     
-    <!-- 烹飪界面 -->
-    <div id="cooking-view" class="cooking-view">
-      <div class="game-header">
-        <div class="recipe-title">番茄炒蛋</div>
-        <div class="timer">剩餘: 10:45</div>
-      </div>
-      
-      <div class="step-header">
-        <div class="current-step">> 當前步驟：番茄切塊</div>
-      </div>
-      
-      <div class="cooking-area">
-        <div class="option-buttons">
-          <button class="option-btn" data-option="option1">均勻小塊</button>
-          <button class="option-btn" data-option="option2">粗略大塊</button>
-          <button class="option-btn" data-option="option3">細緻丁狀</button>
-        </div>
-      </div>
-      
-      <div class="narrative-area">
-        <div class="section-title">> 當前敘事</div>
-        <div class="narrative-text">我拿出了新鮮的番茄，準備開始切塊...</div>
-      </div>
-      
-      <div class="nav-buttons">
-        <button class="nav-btn" id="prev-step-btn">上一步</button>
-        <button class="nav-btn" id="next-step-btn">下一步</button>
-      </div>
+    <!-- 步驟2: 選擇配料 -->
+    <div class="step-container" id="step2">
+        <div class="step-title">2. 選擇配料</div>
+        <div class="buttons-container" id="sideIngredients"></div>
     </div>
     
-    <!-- 評分結果頁面 -->
-    <div id="result-view" class="result-view">
-      <div class="detail-header">
-        <div class="recipe-title">番茄炒蛋 - 烹飪評價</div>
-      </div>
-      
-      <div class="content-section">
-        <div class="section-title">> 你的烹飪敘事</div>
-        <div class="full-narrative">
-          我拿出了新鮮的番茄，將其切成均勻的小塊，大小適中。
-          然後我將雞蛋打入碗中，加入少許鹽，用筷子快速打散直到顏色均勻。
-          我將鍋燒熱，倒入適量的油，然後倒入打散的雞蛋快速翻炒至半凝固狀態。
-          接著我加入切好的番茄塊，保持中火翻炒，讓番茄出水並與雞蛋融合。
-          最後加入少許糖調味，翻炒均勻後關火出鍋。
-        </div>
-      </div>
-      
-      <div class="content-section">
-        <div class="section-title">> AI評價</div>
-        <div class="ai-score">評分：85/100</div>
-        <div class="ai-feedback">
-          你的番茄炒蛋製作步驟基本完整，火候掌握得當。
-          番茄切成均勻小塊有利於出水均勻和熟透。
-          雞蛋的處理也很到位，打散均勻有助於口感。
-          建議可以適當減少翻炒次數，保持蛋的嫩滑口感。
-          調味方面可以考慮先放鹽再放糖，以更好地平衡酸甜味。
-        </div>
-      </div>
-      
-      <div class="result-buttons">
-        <button class="mode-btn" id="back-to-home-btn">返回主頁</button>
-        <button class="mode-btn" id="retry-btn">再次嘗試</button>
-      </div>
+    <!-- 步驟3: 選擇調味料 -->
+    <div class="step-container" id="step3">
+        <div class="step-title">3. 選擇調味料</div>
+        <div class="buttons-container" id="seasonings"></div>
     </div>
-  </div>
+    
+    <!-- 步驟4: 選擇烹飪方法 -->
+    <div class="step-container" id="step4">
+        <div class="step-title">4. 選擇烹飪方法</div>
+        <div class="buttons-container" id="methods"></div>
+    </div>
+    
+    <!-- 步驟5: 選擇廚具 -->
+    <div class="step-container" id="step5">
+        <div class="step-title">5. 選擇廚具</div>
+        <div class="buttons-container" id="utensils"></div>
+    </div>
+    
+    <!-- 結果顯示區 -->
+    <div class="result-container" id="resultContainer">
+        <div class="score-display" id="scoreDisplay">相似度評分: -</div>
+        <div class="recipe-sentence" id="recipeResult">請依步驟選擇食材和烹飪方式...</div>
+        <div class="ai-prompt" id="aiPrompt"></div>
+        <button class="action-btn copy-btn" id="copyBtn">複製比對提示詞</button>
+    </div>
+    
+    <div class="action-buttons">
+        <button class="action-btn reset-btn" id="resetBtn">重設</button>
+        <button class="action-btn random-btn" id="randomBtn">隨機</button>
+        <button class="action-btn next-btn" id="nextBtn">下一步</button>
+    </div>
 
-  <script>
-    // 初始化頁面切換
-    document.addEventListener('DOMContentLoaded', function() {
-      // 頁面元素
-      const mainView = document.getElementById('main-view');
-      const detailView = document.getElementById('detail-view');
-      const cookingView = document.getElementById('cooking-view');
-      const resultView = document.getElementById('result-view');
-      
-      // 導航按鈕
-      const recipeItems = document.querySelectorAll('.recipe-item');
-      const backBtn = document.getElementById('back-to-main');
-      const startCookingBtn = document.getElementById('start-cooking-btn');
-      const prevStepBtn = document.getElementById('prev-step-btn');
-      const nextStepBtn = document.getElementById('next-step-btn');
-      const optionBtns = document.querySelectorAll('.option-btn');
-      const learnModeBtn = document.getElementById('learn-mode-btn');
-      const challengeModeBtn = document.getElementById('challenge-mode-btn');
-      const backToHomeBtn = document.getElementById('back-to-home-btn');
-      const retryBtn = document.getElementById('retry-btn');
-      
-      // 類別切換按鈕
-      const categoryBtns = document.querySelectorAll('.category-btn');
-      
-      // 食譜示例數據
-      const recipes = {
-        tomato_egg: {
-          name: "番茄炒蛋",
-          category: "dish",
-          difficulty: 1,
-          time: 15,
-          ingredients: [
-            {name: "番茄", amount: 2, unit: "個"},
-            {name: "雞蛋", amount: 3, unit: "個"},
-            {name: "蔥", amount: 1, unit: "根"},
-            {name: "鹽", amount: "適量"},
-            {name: "糖", amount: "少許"}
-          ],
-          steps: [
+    <script>
+        // 新增食譜題庫
+        const recipeQuestions = [
             {
-              id: 1, 
-              description: "番茄切塊", 
-              time: 120,
-              options: [
-                {text: "均勻小塊", quality: 0.9, narrative: "我將番茄切成均勻的小塊，大小適中。"},
-                {text: "粗略大塊", quality: 0.6, narrative: "我將番茄切成粗略的大塊，省時但不均勻。"},
-                {text: "細緻丁狀", quality: 0.8, narrative: "我將番茄精細地切成小丁，大小一致。"}
-              ]
+                "title": "吐司果醬",
+                "description": "飽足感的懶人快速營養早餐，2 分鐘搞定。",
+                "difficulty": "★",
+                "ingredients": ["吐司"],
+                "sideIngredients": ["果醬"],
+                "seasonings": [],
+                "methods": ["烤"],
+                "utensils": ["麵包機"],
+                "steps": [
+                    "將兩片吐司放入麵包機。",
+                    "設定好烘烤檔位，啟動加熱。",
+                    "待吐司加熱完成自動彈出後取出。",
+                    "取一片吐司塗滿果醬，再蓋上另一片吐司即可。"
+                ],
+                "tips": "麵包機價格親民。吐司可於超市或透過外送服務購買，一包通常為八片，保質期較短，十分乾淨衛生。用餐巾紙包著可以邊走邊吃。"
             },
             {
-              id: 2, 
-              description: "雞蛋打散", 
-              time: 60,
-              options: [
-                {text: "快速打散", quality: 0.7, narrative: "我將雞蛋打入碗中，快速攪拌使其混合。"},
-                {text: "充分打發", quality: 0.9, narrative: "我將雞蛋打入碗中，加入少許鹽，用筷子充分打散直到顏色均勻。"},
-                {text: "輕柔混合", quality: 0.5, narrative: "我將雞蛋打入碗中，輕輕攪拌幾下使蛋清蛋黃稍微混合。"}
-              ]
-            },
-            {
-              id: 3, 
-              description: "熱鍋炒蛋", 
-              time: 180,
-              options: [
-                {text: "大火快炒", quality: 0.6, narrative: "我用大火將鍋燒熱，倒入油和雞蛋，快速翻炒。"},
-                {text: "中火慢炒", quality: 0.8, narrative: "我用中火將鍋燒熱，倒入適量的油，然後倒入打散的雞蛋慢慢翻炒。"},
-                {text: "小火嫩炒", quality: 0.9, narrative: "我用小火將鍋燒熱，倒入適量的油，然後倒入打散的雞蛋輕輕翻炒至半凝固狀態。"}
-              ]
-            },
-            {
-              id: 4, 
-              description: "加入番茄翻炒", 
-              time: 240,
-              options: [
-                {text: "先炒番茄", quality: 0.7, narrative: "我先將番茄放入鍋中炒至軟爛出汁，再加入炒好的雞蛋一起翻炒。"},
-                {text: "同時下鍋", quality: 0.5, narrative: "我將番茄和雞蛋同時放入鍋中一起翻炒。"},
-                {text: "先炒蛋後加番茄", quality: 0.9, narrative: "我將炒至半熟的雞蛋撥到一邊，加入切好的番茄塊，保持中火翻炒，讓番茄出水並與雞蛋融合。"}
-              ]
-            },
-            {
-              id: 5, 
-              description: "調味出鍋", 
-              time: 60,
-              options: [
-                {text: "加鹽調味", quality: 0.7, narrative: "我加入適量的鹽調味，翻炒均勻後關火出鍋。"},
-                {text: "加鹽加糖", quality: 0.9, narrative: "我加入適量的鹽和少許糖調味，翻炒均勻後關火出鍋。"},
-                {text: "加多種調味料", quality: 0.5, narrative: "我加入鹽、糖、胡椒粉和雞精等多種調味料，翻炒均勻後關火出鍋。"}
-              ]
+                "title": "微波爐荷包蛋",
+                "description": "一道簡單易做且富含蛋白質的菜餚，120秒內即可完成，適合通勤上班族的快速早餐。",
+                "difficulty": "★",
+                "ingredients": ["雞蛋"],
+                "sideIngredients": ["飲用水"],
+                "seasonings": ["芝麻油", "鹽"],
+                "methods": ["微波"],
+                "utensils": ["微波爐", "小碗", "筷子", "抹布"],
+                "steps": [
+                    "將雞蛋打入可微波的小碗中，用筷子在蛋黃上戳幾個洞。",
+                    "向碗內倒入飲用水。",
+                    "向碗內加入鹽與芝麻油。",
+                    "將碗放入微波爐，高火加熱約80秒。",
+                    "加熱完成後，用抹布墊著手小心取出成品。"
+                ],
+                "tips": "為避免加熱時蛋黃和蛋白濺出，可以在碗上加蓋以防弄髒微波爐。"
             }
-          ]
-        }
-      };
-      
-      // 當前食譜和步驟
-      let currentRecipe = null;
-      let currentStepIndex = 0;
-      let narrativeText = "";
-      let selectedOptions = [];
-      
-      // 顯示食譜詳情
-      function showRecipeDetail(recipeId) {
-        currentRecipe = recipes[recipeId];
-        if (!currentRecipe) return;
-        
-        // 更新詳情頁面
-        document.querySelector('.recipe-title').textContent = currentRecipe.name;
-        document.querySelector('.difficulty').textContent = `難度：${'★'.repeat(currentRecipe.difficulty)}${'☆'.repeat(3-currentRecipe.difficulty)}`;
-        document.querySelector('.time').textContent = `時間：${currentRecipe.time}分鐘`;
-        
-        // 更新食材列表
-        const ingredientList = document.querySelector('.ingredient-list');
-        ingredientList.innerHTML = '';
-        currentRecipe.ingredients.forEach(ingredient => {
-          const item = document.createElement('div');
-          item.className = 'ingredient-item';
-          item.textContent = `□ ${ingredient.name} ${ingredient.amount}${ingredient.unit}`;
-          ingredientList.appendChild(item);
-        });
-        
-        // 更新步驟列表
-        const stepList = document.querySelector('.step-list');
-        stepList.innerHTML = '';
-        currentRecipe.steps.forEach((step, index) => {
-          const item = document.createElement('div');
-          item.className = 'step-item';
-          item.textContent = `${index + 1}. ${step.description}`;
-          stepList.appendChild(item);
-        });
-        
-        // 切換到詳情頁面
-        mainView.style.display = 'none';
-        detailView.style.display = 'block';
-        cookingView.style.display = 'none';
-        resultView.style.display = 'none';
-      }
-      
-      // 開始烹飪
-      function startCooking() {
-        if (!currentRecipe) return;
-        
-        // 重置步驟和敘事
-        currentStepIndex = 0;
-        narrativeText = "我開始準備製作" + currentRecipe.name + "...\n";
-        selectedOptions = [];
-        
-        updateCookingStep();
-        document.querySelector('.narrative-text').textContent = narrativeText;
-        
-        // 切換到烹飪頁面
-        mainView.style.display = 'none';
-        detailView.style.display = 'none';
-        cookingView.style.display = 'block';
-        resultView.style.display = 'none';
-      }
-      
-      // 更新烹飪步驟
-      function updateCookingStep() {
-        if (!currentRecipe || currentStepIndex >= currentRecipe.steps.length) return;
-        
-        const step = currentRecipe.steps[currentStepIndex];
-        document.querySelector('.current-step').textContent = `> 當前步驟：${step.description}`;
-        
-        // 更新選項按鈕
-        const optionButtons = document.querySelector('.option-buttons');
-        optionButtons.innerHTML = '';
-        step.options.forEach((option, index) => {
-          const btn = document.createElement('button');
-          btn.className = 'option-btn';
-          btn.dataset.option = index;
-          btn.textContent = option.text;
-          btn.addEventListener('click', function() {
-            selectOption(index);
-          });
-          optionButtons.appendChild(btn);
-        });
-        
-        // 更新按鈕狀態
-        prevStepBtn.disabled = currentStepIndex === 0;
-      }
-      
-      // 選擇選項
-      function selectOption(optionIndex) {
-        const step = currentRecipe.steps[currentStepIndex];
-        const option = step.options[optionIndex];
-        
-        // 保存選擇
-        selectedOptions[currentStepIndex] = option;
-        
-        // 更新敘事
-        narrativeText += option.narrative + "\n";
-        document.querySelector('.narrative-text').textContent = narrativeText;
-        
-        // 自動進入下一步
-        if (currentStepIndex < currentRecipe.steps.length - 1) {
-          currentStepIndex++;
-          updateCookingStep();
-        } else {
-          // 如果是最後一步，顯示完成按鈕
-          nextStepBtn.textContent = "完成烹飪";
-        }
-      }
-      
-      // 前往上一步
-      function prevStep() {
-        if (currentStepIndex > 0) {
-          currentStepIndex--;
-          updateCookingStep();
-          
-          // 移除最後一個選擇的敘事
-          if (selectedOptions[currentStepIndex]) {
-            const lastNarrative = selectedOptions[currentStepIndex].narrative;
-            narrativeText = narrativeText.replace(lastNarrative + "\n", "");
-            document.querySelector('.narrative-text').textContent = narrativeText;
-            selectedOptions[currentStepIndex] = null;
-          }
-          
-          // 恢復下一步按鈕
-          nextStepBtn.textContent = "下一步";
-        }
-      }
-      
-      // 前往下一步或完成
-      function nextStep() {
-        if (currentStepIndex < currentRecipe.steps.length - 1) {
-          // 如果當前步驟沒有選擇，提示用戶
-          if (!selectedOptions[currentStepIndex]) {
-            alert('請先選擇一個選項！');
-            return;
-          }
-          
-          currentStepIndex++;
-          updateCookingStep();
-        } else if (nextStepBtn.textContent === "完成烹飪") {
-          // 如果是最後一步且按鈕文字為"完成烹飪"，則顯示結果
-          showResults();
-        }
-      }
-      
-      // 顯示結果
-      function showResults() {
-        // 計算評分
-        let totalQuality = 0;
-        selectedOptions.forEach(option => {
-          if (option) {
-            totalQuality += option.quality;
-          }
-        });
-        
-        const averageQuality = totalQuality / currentRecipe.steps.length;
-        const score = Math.round(averageQuality * 100);
-        
-        // 更新結果頁面
-        document.querySelector('.full-narrative').textContent = narrativeText;
-        document.querySelector('.ai-score').textContent = `評分：${score}/100`;
-        
-        // 切換到結果頁面
-        mainView.style.display = 'none';
-        detailView.style.display = 'none';
-        cookingView.style.display = 'none';
-        resultView.style.display = 'block';
-      }
-      
-      // 點擊食譜項目
-      recipeItems.forEach(item => {
-        item.addEventListener('click', function() {
-          const recipeId = this.getAttribute('data-recipe');
-          showRecipeDetail(recipeId);
-        });
-      });
-      
-      // 返回主界面
-      backBtn.addEventListener('click', function() {
-        mainView.style.display = 'block';
-        detailView.style.display = 'none';
-        cookingView.style.display = 'none';
-        resultView.style.display = 'none';
-      });
-      
-      // 開始烹飪按鈕
-      startCookingBtn.addEventListener('click', startCooking);
-      
-      // 上一步按鈕
-      prevStepBtn.addEventListener('click', prevStep);
-      
-      // 下一步按鈕
-      nextStepBtn.addEventListener('click', nextStep);
-      
-      // 返回主頁按鈕
-      backToHomeBtn.addEventListener('click', function() {
-        mainView.style.display = 'block';
-        detailView.style.display = 'none';
-        cookingView.style.display = 'none';
-        resultView.style.display = 'none';
-      });
-      
-      // 再次嘗試按鈕
-      retryBtn.addEventListener('click', startCooking);
-      
-      // 模式按鈕
-      learnModeBtn.addEventListener('click', function() {
-        alert('學習模式將在下一版本推出！');
-      });
-      
-      challengeModeBtn.addEventListener('click', function() {
-        alert('挑戰模式將在下一版本推出！');
-      });
-      
-      // 類別切換按鈕
-      categoryBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-          // 移除所有active類
-          categoryBtns.forEach(b => b.classList.remove('active'));
-          // 為當前按鈕添加active類
-          this.classList.add('active');
-          
-          // 顯示切換類別的提示
-          const category = this.getAttribute('data-category');
-          if (category !== 'all') {
-            alert(`${this.textContent}類別將在下一版本顯示更多食譜！`);
-          }
-        });
-      });
-      
-      // 保存遊戲進度到localStorage
-      function saveProgress() {
-        const progress = {
-          completed_recipes: [],
-          learning_recipes: ["tomato_egg"],
-          high_scores: {},
-          narratives: {}
+        ];
+
+        // 當前顯示的題目
+        let currentQuestion = null;
+
+        // 定義所有選項
+        const options = {
+            ingredients: [
+                "雞肉", "豬肉", "牛肉", "羊肉", "鴨肉",
+                "魚肉", "蝦", "蟹", "貝類", "豆腐",
+                "雞蛋", "馬鈴薯", "地瓜", "南瓜", "花椰菜",
+                "高麗菜", "菠菜", "番茄", "茄子", "蘑菇",
+                "洋蔥", "紅蘿蔔", "玉米", "米飯", "麵條",
+                "吐司"
+            ],
+            sideIngredients: [
+                "青蔥", "大蒜", "薑", "辣椒", "九層塔",
+                "香菜", "檸檬", "芝麻", "花生", "腰果",
+                "起司", "培根", "火腿", "香菇", "海帶",
+                "木耳", "豆芽", "青豆", "洋菇", "甜椒",
+                "果醬", "飲用水"
+            ],
+            seasonings: [
+                "鹽", "醬油", "黑胡椒", "白胡椒", "糖",
+                "醋", "米酒", "香油", "橄欖油", "蠔油",
+                "番茄醬", "味噌", "咖哩粉", "五香粉", "孜然",
+                "辣椒粉", "花椒", "八角", "月桂葉", "迷迭香",
+                "芝麻油"
+            ],
+            methods: [
+                "炒", "煎", "炸", "蒸", "煮",
+                "燉", "烤", "燜", "滷", "涼拌",
+                "快炒", "紅燒", "清蒸", "乾煎", "燙煮",
+                "燴", "燻", "焗", "醃", "涮",
+                "微波"
+            ],
+            utensils: [
+                "炒鍋", "平底鍋", "湯鍋", "烤箱", "電鍋",
+                "壓力鍋", "微波爐", "砂鍋", "不沾鍋", "鑄鐵鍋",
+                "蒸籠", "烤盤", "燉鍋", "慢燉鍋", "空氣炸鍋",
+                "烤架", "燜燒罐", "石鍋", "陶鍋", "玻璃鍋",
+                "麵包機", "小碗", "筷子", "抹布"
+            ]
         };
-        
-        localStorage.setItem('how_cooking_progress', JSON.stringify(progress));
-      }
-      
-      // 保存烹飪敘事和分數
-      function saveNarrativeAndScore(recipeId, narrative, score) {
-        let progress = JSON.parse(localStorage.getItem('how_cooking_progress')) || {
-          completed_recipes: [],
-          learning_recipes: [],
-          high_scores: {},
-          narratives: {}
-        };
-        
-        // 更新分數（如果更高）
-        if (!progress.high_scores[recipeId] || progress.high_scores[recipeId] < score) {
-          progress.high_scores[recipeId] = score;
+
+        let currentStep = 1;
+        const totalSteps = 5;
+
+        // 初始化頁面
+        document.addEventListener('DOMContentLoaded', function() {
+            // 為每個類別生成按鈕
+            for (const category in options) {
+                const container = document.getElementById(category);
+                options[category].forEach(item => {
+                    const btn = document.createElement('button');
+                    btn.className = 'btn';
+                    btn.textContent = item;
+                    btn.addEventListener('click', function() {
+                        // 切換選中狀態
+                        this.classList.toggle('selected');
+                        updateDisplay();
+                    });
+                    container.appendChild(btn);
+                });
+            }
+
+            // 顯示隨機題目
+            showRandomQuestion();
+
+            // 重設按鈕
+            document.getElementById('resetBtn').addEventListener('click', function() {
+                showRandomQuestion();
+            });
+
+            // 隨機選擇按鈕
+            document.getElementById('randomBtn').addEventListener('click', function() {
+                randomizeCurrentStep();
+                updateDisplay();
+            });
+
+            // 下一步按鈕
+            document.getElementById('nextBtn').addEventListener('click', function() {
+                if (currentStep < totalSteps) {
+                    goToStep(currentStep + 1);
+                } else {
+                    // 如果是最後一步，重新開始
+                    goToStep(1);
+                }
+                updateDisplay();
+            });
+
+            // 複製按鈕
+            document.getElementById('copyBtn').addEventListener('click', function() {
+                copyToClipboard(document.getElementById('aiPrompt').textContent);
+                this.textContent = '已複製！';
+                setTimeout(() => {
+                    this.textContent = '複製比對提示詞';
+                }, 2000);
+            });
+
+            updateDisplay();
+        });
+
+        // 切換步驟
+        function goToStep(step) {
+            currentStep = step;
+            document.querySelectorAll('.step-container').forEach(container => {
+                container.classList.remove('active');
+            });
+            document.getElementById(`step${step}`).classList.add('active');
+            document.getElementById('currentStep').textContent = step;
+            
+            // 更新按鈕文字
+            const nextBtn = document.getElementById('nextBtn');
+            if (step === totalSteps) {
+                nextBtn.textContent = '重新開始';
+            } else {
+                nextBtn.textContent = '下一步';
+            }
         }
-        
-        // 保存敘事
-        progress.narratives[recipeId] = narrative;
-        
-        // 添加到已完成列表（如果不存在）
-        if (!progress.completed_recipes.includes(recipeId)) {
-          progress.completed_recipes.push(recipeId);
+
+        // 重置所有選擇
+        function resetAllSelections() {
+            document.querySelectorAll('.btn.selected').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            document.getElementById('scoreDisplay').textContent = '相似度評分: -';
         }
-        
-        localStorage.setItem('how_cooking_progress', JSON.stringify(progress));
-      }
-      
-      // 初始化時保存一些基本進度
-      if (!localStorage.getItem('how_cooking_progress')) {
-        saveProgress();
-      }
-    });
-  </script>
+
+        // 隨機選擇當前步驟的選項
+        function randomizeCurrentStep() {
+            const currentStepId = `step${currentStep}`;
+            const buttons = document.querySelectorAll(`#${currentStepId} .btn`);
+            const totalItems = buttons.length;
+            
+            // 先清除當前步驟的所有選擇
+            buttons.forEach(btn => btn.classList.remove('selected'));
+            
+            // 隨機選擇1-3個項目
+            const numToSelect = Math.floor(Math.random() * 3) + 1;
+            const selectedIndices = new Set();
+            
+            while (selectedIndices.size < numToSelect) {
+                const randomIndex = Math.floor(Math.random() * totalItems);
+                selectedIndices.add(randomIndex);
+            }
+            
+            selectedIndices.forEach(index => {
+                buttons[index].classList.add('selected');
+            });
+        }
+
+        // 隨機顯示題目函數
+        function showRandomQuestion() {
+            const randomIndex = Math.floor(Math.random() * recipeQuestions.length);
+            currentQuestion = recipeQuestions[randomIndex];
+            
+            document.getElementById('recipeDescription').textContent = currentQuestion.description;
+            document.getElementById('recipeTips').textContent = `小貼士：${currentQuestion.tips}`;
+            
+            // 重置所有選擇
+            resetAllSelections();
+            goToStep(1);
+            updateDisplay();
+        }
+
+        // 更新顯示
+        function updateDisplay() {
+            const selected = {
+                ingredients: getSelected('ingredients'),
+                sideIngredients: getSelected('sideIngredients'),
+                seasonings: getSelected('seasonings'),
+                methods: getSelected('methods'),
+                utensils: getSelected('utensils')
+            };
+            
+            let sentence = '';
+            let aiPrompt = '';
+            
+            // 如果有當前題目
+            if (currentQuestion) {
+                aiPrompt = '請根據以下題目要求和用戶選擇的食材，進行詳細比對分析：\n\n';
+                
+                // 顯示題目資訊
+                aiPrompt += '【題目要求】\n';
+                aiPrompt += `描述：${currentQuestion.description}\n`;
+                aiPrompt += `小貼士：${currentQuestion.tips}\n\n`;
+                
+                // 用戶選擇
+                aiPrompt += '【用戶選擇的組合】\n';
+                if (selected.ingredients.length > 0) {
+                    sentence += `主食材：${selected.ingredients.join('、')}`;
+                    aiPrompt += `主食材：${selected.ingredients.join('、')}\n`;
+                }
+                
+                if (selected.sideIngredients.length > 0) {
+                    if (sentence) sentence += '<br>';
+                    sentence += `配料：${selected.sideIngredients.join('、')}`;
+                    aiPrompt += `配料：${selected.sideIngredients.join('、')}\n`;
+                }
+                
+                if (selected.seasonings.length > 0) {
+                    if (sentence) sentence += '<br>';
+                    sentence += `調味料：${selected.seasonings.join('、')}`;
+                    aiPrompt += `調味料：${selected.seasonings.join('、')}\n`;
+                }
+                
+                if (selected.methods.length > 0) {
+                    if (sentence) sentence += '<br>';
+                    sentence += `烹飪方法：${selected.methods.join('、')}`;
+                    aiPrompt += `烹飪方法：${selected.methods.join('、')}\n`;
+                }
+                
+                if (selected.utensils.length > 0) {
+                    if (sentence) sentence += '<br>';
+                    sentence += `廚具：${selected.utensils.join('、')}`;
+                    aiPrompt += `廚具：${selected.utensils.join('、')}\n`;
+                }
+                
+                // 添加正確答案參考
+                aiPrompt += '\n【正確答案參考】\n';
+                aiPrompt += `主食材：${currentQuestion.ingredients.join('、')}\n`;
+                aiPrompt += `配料：${currentQuestion.sideIngredients.join('、')}\n`;
+                aiPrompt += `調味料：${currentQuestion.seasonings.length > 0 ? currentQuestion.seasonings.join('、') : '無'}\n`;
+                aiPrompt += `烹飪方法：${currentQuestion.methods.join('、')}\n`;
+                aiPrompt += `廚具：${currentQuestion.utensils.join('、')}\n\n`;
+                
+                // 比對要求部分
+                aiPrompt += '【比對要求】\n';
+                aiPrompt += '1. 請給出相似度評分（0-100分），考慮以下因素：\n';
+                aiPrompt += '   - 主要食材的匹配度\n';
+                aiPrompt += '   - 風味組合的協調性\n';
+                aiPrompt += '   - 烹飪方法的適合度\n';
+                aiPrompt += '   - 廚具使用的合理性\n';
+                aiPrompt += '2. 分析主要差異點（以表格形式呈現，包含：比對項目、正確答案、用戶選擇、差異說明）\n';
+                aiPrompt += '3. 提供具體改進建議（如何調整能更接近正確答案）\n';
+                aiPrompt += '4. 預測最終成品的味道和口感\n';
+                aiPrompt += '5. 如果差異很大，建議如何調整為創新料理\n';
+                aiPrompt += '6. 最後總結評語（簡短有力的結論）\n\n';
+                aiPrompt += '請用以下格式回覆：\n';
+                aiPrompt += '✅ 1. 相似度評分：\n[分數]/100\n\n';
+                aiPrompt += '✅ 2. 主要差異點分析：\n[表格]\n\n';
+                aiPrompt += '✅ 3. 改進建議：\n[具體建議]\n\n';
+                aiPrompt += '✅ 4. 味道與口感預測：\n[描述]\n\n';
+                aiPrompt += '✅ 5. 創新方向建議：\n[建議]\n\n';
+                aiPrompt += '✅ 6. 總結評語：\n[簡短結論]';
+            }
+            
+            if (!sentence) {
+                sentence = '請依步驟選擇食材和烹飪方式...';
+            }
+            
+            document.getElementById('recipeResult').innerHTML = sentence;
+            document.getElementById('aiPrompt').textContent = aiPrompt;
+            
+            // 如果有足夠的選擇，計算相似度評分
+            if (selected.ingredients.length > 0 && selected.methods.length > 0 && currentQuestion) {
+                // 計算相似度得分
+                let score = 0;
+                let totalPoints = 0;
+                
+                // 檢查主食材 (40分)
+                const ingredientMatches = selected.ingredients.filter(item => 
+                    currentQuestion.ingredients.includes(item)).length;
+                const ingredientScore = Math.min(40, (ingredientMatches / currentQuestion.ingredients.length) * 40);
+                score += ingredientScore;
+                totalPoints += 40;
+                
+                // 檢查配料 (20分)
+                const sideIngredientMatches = selected.sideIngredients.filter(item => 
+                    currentQuestion.sideIngredients.includes(item)).length;
+                const sideScore = Math.min(20, (sideIngredientMatches / Math.max(1, currentQuestion.sideIngredients.length)) * 20);
+                score += sideScore;
+                totalPoints += 20;
+                
+                // 檢查調味料 (10分)
+                const seasoningMatches = selected.seasonings.filter(item => 
+                    currentQuestion.seasonings.includes(item)).length;
+                const seasoningScore = currentQuestion.seasonings.length === 0 ? 
+                    (selected.seasonings.length === 0 ? 10 : 5) : 
+                    Math.min(10, (seasoningMatches / currentQuestion.seasonings.length) * 10);
+                score += seasoningScore;
+                totalPoints += 10;
+                
+                // 檢查烹飪方法 (15分)
+                const methodMatches = selected.methods.filter(item => 
+                    currentQuestion.methods.includes(item)).length;
+                const methodScore = Math.min(15, (methodMatches / currentQuestion.methods.length) * 15);
+                score += methodScore;
+                totalPoints += 15;
+                
+                // 檢查廚具 (15分)
+                const utensilMatches = selected.utensils.filter(item => 
+                    currentQuestion.utensils.includes(item)).length;
+                const utensilScore = Math.min(15, (utensilMatches / currentQuestion.utensils.length) * 15);
+                score += utensilScore;
+                totalPoints += 15;
+                
+                // 計算總得分 (0-100)
+                const finalScore = Math.round((score / totalPoints) * 100);
+                document.getElementById('scoreDisplay').textContent = `相似度評分: ${finalScore}/100`;
+            } else {
+                document.getElementById('scoreDisplay').textContent = '相似度評分: -';
+            }
+        }
+
+        // 獲取已選擇的項目
+        function getSelected(category) {
+            const selected = [];
+            document.querySelectorAll(`#${category} .btn.selected`).forEach(btn => {
+                selected.push(btn.textContent);
+            });
+            return selected;
+        }
+
+        // 複製到剪貼板
+        function copyToClipboard(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+        }
+    </script>
 </body>
 </html>
