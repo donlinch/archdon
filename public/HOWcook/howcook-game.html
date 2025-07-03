@@ -92,6 +92,7 @@
             border-left: 2px dashed #666;
             background-color: rgba(255,255,255,0.05);
             border-radius: 5px;
+            position: relative;
         }
         .code-line:first-child {
             margin-top: 0;
@@ -163,11 +164,16 @@
             display: flex;
             align-items: center;
             gap: 5px;
-            transition: transform 0.2s;
+            transition: all 0.2s;
             font-size: 0.9rem;
         }
-        .code-option:hover {
+        .code-option:hover:not(:disabled) {
             transform: scale(1.05);
+        }
+        .code-option:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+            opacity: 0.5;
         }
         /* 按類型區分顏色 */
         .code-line[data-type="ingredient"],
@@ -194,6 +200,21 @@
             border-color: #ae81ff;
             background-color: #3a2d4a;
             margin-top:10px;
+        }
+        .combine-btn {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background-color: #ae81ff;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .combine-btn:hover {
+            background-color: #9966ff;
         }
 
         .result-container {
@@ -309,7 +330,6 @@
                 <button class="filter-btn active" data-category="all">全部</button>
                 <button class="filter-btn" data-category="ingredients">食材</button>
                 <button class="filter-btn" data-category="actions">操作</button>
-                <button class="filter-btn" data-category="seasonings">調味</button>
                 <button class="filter-btn" data-category="tools">工具</button>
             </div>
             
@@ -379,11 +399,9 @@
                 { emoji: "🔥", name: "烤", type: "action", requires: ["ingredient", "tool"], process: (state, tool) => `用${tool}烤過的${state}` },
                 { emoji: "♨️", name: "微波", type: "action", requires: ["ingredient", "tool"], process: (state, tool) => `用${tool}微波過的${state}` },
                 { emoji: "🧂", name: "加鹽", type: "action", requires: ["ingredient"], process: (state) => `加鹽調味的${state}` },
-                { emoji: "💧", name: "加香油", type: "action", requires: ["ingredient"], process: (state) => `加了香油的${state}` }
-            ],
-            seasonings: [
-                { emoji: "🧂", name: "鹽", type: "seasoning" }, { emoji: "⚫", name: "黑胡椒", type: "seasoning" },
-                { emoji: "💧", name: "芝麻油", type: "seasoning" }, { emoji: "🍶", name: "醬油", type: "seasoning" }
+                { emoji: "⚫", name: "加黑胡椒", type: "action", requires: ["ingredient"], process: (state) => `加了黑胡椒的${state}`},
+                { emoji: "💧", name: "加芝麻油", type: "action", requires: ["ingredient"], process: (state) => `加了芝麻油的${state}`},
+                { emoji: "🍶", name: "加醬油", type: "action", requires: ["ingredient"], process: (state) => `加了醬油的${state}`}
             ],
             tools: [
                 { emoji: "🍳", name: "炒鍋", type: "tool" }, { emoji: "♨️", name: "微波爐", type: "tool" },
@@ -395,6 +413,7 @@
         let currentQuestion = null;
         let currentGroup = 0;
         let groups = { 0: [] };
+        let tempIngredients = []; // 儲存組合出的新食材
 
         // DOM載入後初始化
         document.addEventListener('DOMContentLoaded', function() {
@@ -421,8 +440,17 @@
             container.innerHTML = '';
             
             const allOptions = [];
-            for (const categoryKey in codeLibrary) {
-                codeLibrary[categoryKey].forEach(item => {
+            // 將永久食材和臨時食材合併
+            const currentIngredients = [...codeLibrary.ingredients, ...tempIngredients];
+
+            const libraryWithTempIngredients = {
+                ...codeLibrary,
+                ingredients: currentIngredients
+            };
+            
+            for (const categoryKey in libraryWithTempIngredients) {
+                if(categoryKey === 'seasonings') continue; // 調味料已合併到操作
+                libraryWithTempIngredients[categoryKey].forEach(item => {
                     const newItem = { ...item, category: categoryKey };
                     allOptions.push(newItem);
                 });
@@ -434,10 +462,12 @@
                 const btn = document.createElement('button');
                 btn.className = 'code-option';
                 btn.dataset.category = item.category;
+                btn.id = `option-${item.name}`; // 給按鈕一個ID，方便之後控制
                 btn.innerHTML = `<span class="emoji">${item.emoji}</span> ${item.name}`;
                 btn.addEventListener('click', () => addToCodeStack(item));
                 container.appendChild(btn);
             });
+            updatePaletteState(); // 初始化後更新一次面板狀態
         }
 
         // 分類篩選
@@ -459,6 +489,7 @@
             groups[currentGroup].push(newItem);
             
             updateCodePreview();
+            updatePaletteState();
         }
 
         // 更新程式碼預覽
@@ -501,6 +532,13 @@
                     stateDiv.dataset.type = 'processed';
                     stateDiv.innerHTML = `<span>➡️ 狀態: ${currentState}</span>`;
                     groupDiv.appendChild(stateDiv);
+
+                    // 新增"組合"按鈕
+                    const combineBtn = document.createElement('button');
+                    combineBtn.className = 'combine-btn';
+                    combineBtn.textContent = '組合';
+                    combineBtn.onclick = () => combineToIngredient(currentState, groupId);
+                    groupDiv.appendChild(combineBtn);
                 }
 
                 preview.appendChild(groupDiv);
@@ -538,7 +576,12 @@
         // 從堆疊中移除項目
         function removeFromCodeStack(id, groupId) {
             groups[groupId] = groups[groupId].filter(item => item.id !== id);
+            // 如果一個組空了，就把它刪掉，除非是最後一個預設組
+            if (groups[groupId].length === 0 && groupId != 0) {
+                delete groups[groupId];
+            }
             updateCodePreview();
+            updatePaletteState();
         }
 
         // 添加新處理組
@@ -550,6 +593,7 @@
             groupDiv.className = 'code-line-group';
             groupDiv.innerHTML = `<!-- New empty group -->`;
             document.getElementById('codePreview').appendChild(groupDiv);
+            updatePaletteState();
         }
 
         // 隨機選擇題目
@@ -564,6 +608,8 @@
         function resetAll() {
             currentGroup = 0;
             groups = { 0: [] };
+            tempIngredients = []; // 清空臨時食材
+            initPalette(); // 重新初始化面板
             updateCodePreview();
             document.getElementById('scoreDisplay').textContent = '相似度評分: -';
             document.getElementById('recipeResult').textContent = '組合你的料理程式碼，然後點擊「執行料理」來看看結果！';
@@ -573,12 +619,6 @@
 
         // 執行料理分析
         function executeRecipe() {
-            const validation = validateCodeStack();
-            if (!validation.isValid) {
-                showError(validation.feedback);
-                return;
-            }
-            
             const finalStates = Object.values(groups).map(getGroupState).filter(s => s);
             const score = calculateScore();
             document.getElementById('scoreDisplay').textContent = `相似度評分: ${score}/100`;
@@ -589,60 +629,78 @@
             document.getElementById('copyBtn').style.display = 'block';
         }
 
-        // 驗證程式碼堆疊
-        function validateCodeStack() {
-            const allItems = Object.values(groups).flat();
-            if (allItems.length === 0) {
-                return { isValid: false, feedback: "錯誤：料理程式碼是空的！請先加入指令。" };
-            }
-            
-            for (const groupId in groups) {
-                const group = groups[groupId];
-                if (group.length === 0) continue;
+        // **新增**：智慧更新指令面板狀態
+        function updatePaletteState() {
+            const currentGroupItems = groups[currentGroup] || [];
+            const hasIngredient = currentGroupItems.some(i => i.type === 'ingredient' || i.isCombinedResult);
+            const hasTool = currentGroupItems.some(i => i.type === 'tool');
 
-                const hasIngredient = group.some(item => item.type === 'ingredient');
-                if (!hasIngredient) {
-                    return { isValid: false, feedback: `錯誤：處理組 ${Object.keys(groups).indexOf(groupId) + 1} 沒有包含食材！` };
-                }
+            document.querySelectorAll('.code-option').forEach(btn => {
+                const category = btn.dataset.category;
+                let disabled = false;
 
-                for (const item of group) {
-                    if (item.requires) {
-                        const prevItems = group.slice(0, group.indexOf(item));
-                        for (const req of item.requires) {
-                            if (!prevItems.some(i => i.type === req)) {
-                                return { isValid: false, feedback: `錯誤：指令 "${item.name}" 需要先準備 "${req}" 類型的指令。` };
-                            }
+                if (category === 'actions') {
+                    if (!hasIngredient) {
+                        disabled = true; // 沒有食材，不能操作
+                    } else {
+                        // 檢查特定操作的需求
+                        const actionName = btn.textContent.trim().split(' ')[1];
+                        const action = codeLibrary.actions.find(a => a.name === actionName);
+                        if (action && action.requires.includes('tool') && !hasTool) {
+                            disabled = true; // 需要工具但沒有工具
                         }
                     }
                 }
-            }
-            
-            return { isValid: true };
+                btn.disabled = disabled;
+            });
         }
         
+        // **新增**：將組合結果變成新食材
+        function combineToIngredient(state, groupId) {
+            if (!state || tempIngredients.some(ing => ing.name === state)) return;
+
+            const newIngredient = {
+                emoji: '📦',
+                name: state,
+                type: 'ingredient',
+                isCombinedResult: true // 標記為組合結果
+            };
+            tempIngredients.push(newIngredient);
+
+            // 清空舊的group
+            delete groups[groupId];
+
+            initPalette(); // 重建指令面板以包含新食材
+            updateCodePreview();
+        }
+
         // 計算相似度分數
         function calculateScore() {
             let score = 0;
-            const userSelections = { ingredients: new Set(), actions: new Set(), seasonings: new Set(), tools: new Set() };
+            const userSelections = { ingredients: new Set(), actions: new Set(), tools: new Set() };
             
             Object.values(groups).flat().forEach(item => {
-                if(userSelections[item.category]) userSelections[item.category].add(item.name);
+                // 只計算非組合結果的原始食材
+                if (item.category === 'ingredients' && !item.isCombinedResult) {
+                    userSelections.ingredients.add(item.name);
+                } else if (userSelections[item.category]) {
+                    userSelections[item.category].add(item.name);
+                }
             });
 
             const answer = {
                 ingredients: new Set(currentQuestion.ingredients),
-                actions: new Set(currentQuestion.actions),
-                seasonings: new Set(currentQuestion.seasonings),
+                actions: new Set([...currentQuestion.actions, ...currentQuestion.seasonings]),
                 tools: new Set(currentQuestion.tools)
             };
             
-            const weights = { ingredients: 40, actions: 30, tools: 20, seasonings: 10 };
+            const weights = { ingredients: 40, actions: 40, tools: 20 }; // 調整權重
             
             for (const category in userSelections) {
                 const userItems = userSelections[category];
                 const answerItems = answer[category];
-                if (answerItems.size === 0) {
-                    score += userItems.size === 0 ? weights[category] : 0;
+                if (!answerItems || answerItems.size === 0) {
+                    score += userItems.size === 0 ? (weights[category] || 0) : 0;
                     continue;
                 }
                 let correctMatches = 0;
@@ -666,10 +724,9 @@
             analysis += `<h3>✅ 差異分析:</h3>`;
             analysis += `<table class="diff-table">
                 <tr><th>項目</th><th>您的選擇</th><th>正確答案</th><th>分析</th></tr>
-                ${generateDiffTableRows('食材', 'ingredients')}
-                ${generateDiffTableRows('操作', 'actions')}
-                ${generateDiffTableRows('調味料', 'seasonings')}
-                ${generateDiffTableRows('工具', 'tools')}
+                ${generateDiffTableRows('食材', 'ingredients', currentQuestion.ingredients)}
+                ${generateDiffTableRows('操作與調味', 'actions', [...currentQuestion.actions, ...currentQuestion.seasonings])}
+                ${generateDiffTableRows('工具', 'tools', currentQuestion.tools)}
             </table>`;
             analysis += `<h3>✅ 改進建議:</h3><p>${generateImprovementSuggestions()}</p>`;
             analysis += `<h3>✅ 成品預測:</h3><p>${predictOutcome(finalStates)}</p>`;
@@ -679,9 +736,9 @@
         }
 
         // 生成差異表格行
-        function generateDiffTableRows(categoryName, categoryKey) {
-            const userItems = new Set(Object.values(groups).flat().filter(i => i.category === categoryKey).map(i => i.name));
-            const correctItems = new Set(currentQuestion[categoryKey]);
+        function generateDiffTableRows(categoryName, categoryKey, correctItemsSet) {
+            const userItems = new Set(Object.values(groups).flat().filter(i => i.category === categoryKey && !i.isCombinedResult).map(i => i.name));
+            const correctItems = new Set(correctItemsSet);
             const allItems = [...new Set([...correctItems, ...userItems])];
             
             if (allItems.length === 0) {
@@ -709,12 +766,15 @@
         // 生成改進建議
         function generateImprovementSuggestions() {
             let suggestions = [];
-            const userItems = new Set(Object.values(groups).flat().map(i=>i.name));
+            const userActions = new Set(Object.values(groups).flat().filter(i => i.category === 'actions').map(i => i.name));
+            const userIngredients = new Set(Object.values(groups).flat().filter(i => i.category === 'ingredients' && !i.isCombinedResult).map(i => i.name));
             
-            ['ingredients', 'actions', 'tools', 'seasonings'].forEach(cat => {
-                currentQuestion[cat].forEach(item => {
-                    if (!userItems.has(item)) suggestions.push(`建議加入「${item}」。`);
-                });
+            const needed = [...currentQuestion.actions, ...currentQuestion.seasonings, ...currentQuestion.ingredients];
+
+            needed.forEach(item => {
+                if (!userActions.has(item) && !userIngredients.has(item)) {
+                    suggestions.push(`建議加入「${item}」。`);
+                }
             });
 
             return suggestions.length > 0 ? suggestions.join(' ') : "您的步驟已經相當完善！";
@@ -733,14 +793,6 @@
             return "這是一個有趣的嘗試，或許能創造出新菜式！";
         }
 
-        // 顯示錯誤
-        function showError(message) {
-            document.getElementById('scoreDisplay').textContent = "程式碼錯誤";
-            document.getElementById('recipeResult').innerHTML = `<p style="color: red;">${message}</p>`;
-            document.getElementById('aiPrompt').innerHTML = '';
-            document.getElementById('copyBtn').style.display = 'none';
-        }
-
         // 複製分析結果
         function copyAnalysisResult() {
             const textToCopy = document.getElementById('aiPrompt').innerText;
@@ -751,5 +803,4 @@
         }
     </script>
 </body>
-</html>
 </html>
