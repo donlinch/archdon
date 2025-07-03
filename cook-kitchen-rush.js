@@ -286,6 +286,185 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
         }
     }
 
+    // ★ 新增：更新玩家統計數據與任務進度的函數
+    async function updatePlayerStatsAndQuests(roomId, gameState) {
+        try {
+            // 確保有玩家和分數
+            if (!gameState.players || !gameState.score) {
+                console.log(`[COOK-GAME] 房間 ${roomId} 沒有玩家或分數資料，跳過更新。`);
+                return;
+            }
+
+            // 計算每個玩家的基礎獎勵
+            const basePoints = Math.floor(gameState.score / gameState.players.length);
+            const completedOrders = gameState.completedOrders || 0;
+            
+            // 為每個玩家更新統計數據
+            for (const player of gameState.players) {
+                const userId = player.id;
+                if (!userId) continue;
+
+                // 計算玩家獲得的經驗值和點數
+                let pointsEarned = basePoints;
+                let questReward = 0;
+                let expGained = Math.floor(basePoints / 10) + completedOrders; // 基礎經驗值
+                
+                // 檢查玩家是否有進行中的任務
+                const questResult = await pool.query(
+                    'SELECT * FROM cook_player_quests WHERE user_id = $1 AND status = $2',
+                    [userId, 'active']
+                );
+                
+                // 處理任務進度
+                if (questResult.rows.length > 0) {
+                    for (const quest of questResult.rows) {
+                        let questUpdated = false;
+                        
+                        // 根據任務類型更新進度
+                        switch (quest.quest_type) {
+                            case 'complete_games':
+                                await pool.query(
+                                    'UPDATE cook_player_quests SET progress = progress + 1 WHERE id = $1',
+                                    [quest.id]
+                                );
+                                questUpdated = true;
+                                break;
+                                
+                            case 'earn_points':
+                                await pool.query(
+                                    'UPDATE cook_player_quests SET progress = progress + $1 WHERE id = $2',
+                                    [basePoints, quest.id]
+                                );
+                                questUpdated = true;
+                                break;
+                                
+                            case 'complete_orders':
+                                await pool.query(
+                                    'UPDATE cook_player_quests SET progress = progress + $1 WHERE id = $2',
+                                    [completedOrders, quest.id]
+                                );
+                                questUpdated = true;
+                                break;
+                        }
+                        
+                        // 檢查任務是否完成
+                        if (questUpdated) {
+                            const updatedQuestResult = await pool.query(
+                                'SELECT * FROM cook_player_quests WHERE id = $1',
+                                [quest.id]
+                            );
+                            
+                            if (updatedQuestResult.rows.length > 0) {
+                                const updatedQuest = updatedQuestResult.rows[0];
+                                if (updatedQuest.progress >= updatedQuest.target) {
+                                    // 任務完成，更新狀態並給予獎勵
+                                    await pool.query(
+                                        'UPDATE cook_player_quests SET status = $1 WHERE id = $2',
+                                        ['completed', quest.id]
+                                    );
+                                    
+                                    // 根據任務難度給予額外獎勵
+                                    const questRewardPoints = getQuestReward(updatedQuest.difficulty);
+                                    questReward += questRewardPoints;
+                                    expGained += Math.floor(questRewardPoints / 5);
+                                    
+                                    console.log(`[COOK-GAME] 玩家 ${userId} 完成了任務 ${quest.id}，獲得 ${questRewardPoints} 點額外獎勵`);
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // 更新玩家統計數據
+                const totalPointsEarned = pointsEarned + questReward;
+                
+                // 更新玩家資料
+                await pool.query(
+                    `UPDATE cook_players 
+                     SET 
+                        points = points + $1, 
+                        exp = exp + $2, 
+                        games_played = games_played + 1,
+                        orders_completed = orders_completed + $3,
+                        last_game_at = NOW()
+                     WHERE user_id = $4`,
+                    [totalPointsEarned, expGained, completedOrders, userId]
+                );
+                
+                // 檢查經驗值是否足夠升級
+                await checkAndUpdatePlayerLevel(userId);
+                
+                // 將獎勵資訊保存到遊戲狀態中，以便傳送給前端
+                player.pointsEarned = totalPointsEarned;
+                player.questReward = questReward;
+                player.expGained = expGained;
+                
+                console.log(`[COOK-GAME] 玩家 ${userId} 獲得了 ${totalPointsEarned} 點數和 ${expGained} 經驗值`);
+            }
+            
+            // 更新遊戲狀態中的已完成訂單數量
+            if (typeof gameState.completedOrders === 'undefined') {
+                // 如果沒有記錄完成訂單數，根據分數估算
+                gameState.completedOrders = Math.floor(gameState.score / 50); // 假設平均每單50分
+            }
+            
+            console.log(`[COOK-GAME] 房間 ${roomId} 的玩家統計數據已更新`);
+        } catch (error) {
+            console.error(`[COOK-GAME] 更新玩家統計數據時出錯:`, error);
+        }
+    }
+    
+    // ★ 新增：根據任務難度獲取獎勵點數
+    function getQuestReward(difficulty) {
+        switch (difficulty) {
+            case 'easy': return 50;
+            case 'medium': return 100;
+            case 'hard': return 200;
+            case 'epic': return 500;
+            default: return 50;
+        }
+    }
+    
+    // ★ 新增：檢查並更新玩家等級
+    async function checkAndUpdatePlayerLevel(userId) {
+        try {
+            const playerResult = await pool.query('SELECT exp, level FROM cook_players WHERE user_id = $1', [userId]);
+            
+            if (playerResult.rows.length === 0) return;
+            
+            const player = playerResult.rows[0];
+            const currentExp = player.exp;
+            const currentLevel = player.level;
+            
+            // 計算升級所需經驗值 (簡單公式：level * 100)
+            const expNeededForNextLevel = currentLevel * 100;
+            
+            if (currentExp >= expNeededForNextLevel) {
+                // 玩家可以升級
+                const newLevel = currentLevel + 1;
+                
+                await pool.query(
+                    'UPDATE cook_players SET level = $1, exp = $2 WHERE user_id = $3',
+                    [newLevel, currentExp - expNeededForNextLevel, userId]
+                );
+                
+                console.log(`[COOK-GAME] 玩家 ${userId} 升級到 ${newLevel} 級！`);
+                
+                // 如果有連線中的玩家，發送升級通知
+                const playerWs = activeConnections.get(userId);
+                if (playerWs && playerWs.readyState === WebSocket.OPEN) {
+                    playerWs.send(JSON.stringify({
+                        type: 'level_up',
+                        newLevel: newLevel,
+                        message: `恭喜！你升到了 ${newLevel} 級！`
+                    }));
+                }
+            }
+        } catch (error) {
+            console.error(`[COOK-GAME] 檢查玩家等級時出錯:`, error);
+        }
+    }
+
     // WebSocket連接處理函數 (修正版本，使用資料庫)
     async function handleAuthenticatedMessage(ws, data, userId, username, userProfile) {
         const { type, roomId } = data;
@@ -753,6 +932,18 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
                             // 計算得分
                             const points = calculateOrderPoints(order);
                             gameState.score += points;
+                            
+                            // ★ 新增：記錄完成的訂單數量
+                            if (!gameState.completedOrders) {
+                                gameState.completedOrders = 0;
+                            }
+                            gameState.completedOrders += 1;
+                            
+                            // ★ 新增：記錄玩家個人分數
+                            if (!player.score) {
+                                player.score = 0;
+                            }
+                            player.score += points;
                             
                             gameState.players[playerIndex] = player;
 

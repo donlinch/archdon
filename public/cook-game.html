@@ -788,19 +788,30 @@
               <div class="stat-value" id="personalScore">0</div>
             </div>
           </div>
-          <div class="rewards-container" style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px;">
-               <div class="reward-item" style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                   <span>本局得分:</span>
-                   <span id="pointsEarned">0</span>
-               </div>
-               <div class="reward-item" style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                   <span>任務獎勵:</span>
-                   <span id="questReward">0</span>
-               </div>
-               <div class="reward-item total-reward" style="display: flex; justify-content: space-between; font-weight: bold; color: var(--accent-color); font-size: 1.2em; margin-top: 10px;">
-                   <span>總計獲得積分:</span>
-                   <span id="totalPointsGained">0</span>
-               </div>
+          <!-- 新增：獎勵資訊區域 -->
+          <div class="rewards-container" id="rewardsContainer" style="margin-top: 15px; padding: 10px; background-color: rgba(0, 0, 0, 0.2); border-radius: 5px;">
+            <div class="reward-title" style="font-weight: bold; color: #FFD700; margin-bottom: 5px;">獲得獎勵</div>
+            <div class="reward-item" style="display: flex; justify-content: space-between; margin: 5px 0;">
+              <span>基礎點數:</span>
+              <span id="basePoints">0</span>
+            </div>
+            <div class="reward-item" style="display: flex; justify-content: space-between; margin: 5px 0;">
+              <span>任務獎勵:</span>
+              <span id="questReward">0</span>
+            </div>
+            <div class="reward-item" style="display: flex; justify-content: space-between; margin: 5px 0; font-weight: bold;">
+              <span>獲得經驗值:</span>
+              <span id="expGained">0</span>
+            </div>
+            <div class="level-progress" id="levelProgressContainer" style="margin-top: 10px; display: none;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+                <span>等級進度:</span>
+                <span id="levelProgress">0/100</span>
+              </div>
+              <div style="width: 100%; height: 8px; background-color: #444; border-radius: 4px; overflow: hidden;">
+                <div id="levelProgressBar" style="height: 100%; background-color: #4CAF50; width: 0%; transition: width 1s;"></div>
+              </div>
+            </div>
           </div>
         </div>
         <button class="dialog-button" id="returnToLobbyBtn">返回大廳</button>
@@ -1159,6 +1170,11 @@
                 }
               }
             }
+            break;
+            
+          case 'level_up':
+            // 處理升級通知
+            showLevelUpNotification(message);
             break;
             
           default:
@@ -1840,24 +1856,49 @@
         finalScore.textContent = gameOverData.finalScore || 0;
         completedOrders.textContent = gameOverData.completedOrders || 0;
         
+        // 獲取當前玩家的個人得分
         const currentPlayerId = gameState.currentPlayer.user_id;
-        const playerScore = gameOverData.playerScores?.[currentPlayerId] || 0;
+        const playerScore = gameOverData.playerScores && gameOverData.playerScores[currentPlayerId] 
+            ? gameOverData.playerScores[currentPlayerId] 
+            : Math.floor((gameOverData.finalScore || 0) / (gameState.players.length || 1));
+        
         personalScore.textContent = playerScore;
-
-        // ★ 新增：處理並顯示獎勵資訊
-        const rewards = gameOverData.rewards?.[currentPlayerId] || { pointsEarned: 0, questReward: 0 };
-        const pointsEarnedEl = document.getElementById('pointsEarned');
-        const questRewardEl = document.getElementById('questReward');
-        const totalPointsGainedEl = document.getElementById('totalPointsGained');
-
-        pointsEarnedEl.textContent = rewards.pointsEarned - rewards.questReward; // 顯示不含任務獎勵的遊戲得分
-        questRewardEl.textContent = rewards.questReward;
-        totalPointsGainedEl.textContent = rewards.pointsEarned; // 顯示總獲得積分
-
-        // 如果有任務獎勵，則高亮顯示
-        if (rewards.questReward > 0) {
-           questRewardEl.parentElement.style.color = 'var(--accent-color)';
-           questRewardEl.parentElement.style.fontWeight = 'bold';
+        
+        // ★ 新增：顯示獎勵資訊
+        if (gameOverData.rewards && gameOverData.rewards[currentPlayerId]) {
+          const rewards = gameOverData.rewards[currentPlayerId];
+          const basePoints = rewards.pointsEarned - (rewards.questReward || 0);
+          
+          document.getElementById('basePoints').textContent = basePoints;
+          document.getElementById('questReward').textContent = rewards.questReward || 0;
+          document.getElementById('expGained').textContent = rewards.expGained || 0;
+          
+          // 如果有等級進度資訊，顯示進度條
+          if (rewards.expGained) {
+            // 獲取玩家當前等級資訊
+            fetch('/cook-api/users/profile', {
+              headers: { 'Authorization': `Bearer ${token}` }
+            })
+            .then(response => response.json())
+            .then(data => {
+              if (data.success && data.user) {
+                const playerLevel = data.user.player_level || 1;
+                const expNeeded = playerLevel * 100;
+                const currentExp = data.user.player_exp || 0;
+                const expPercentage = Math.min(100, (currentExp / expNeeded) * 100);
+                
+                document.getElementById('levelProgressContainer').style.display = 'block';
+                document.getElementById('levelProgress').textContent = `${currentExp}/${expNeeded}`;
+                document.getElementById('levelProgressBar').style.width = `${expPercentage}%`;
+              }
+            })
+            .catch(error => {
+              console.error('獲取玩家資料失敗:', error);
+            });
+          }
+          
+          // 添加獎勵動畫效果
+          document.getElementById('rewardsContainer').style.animation = 'fadeIn 0.5s, bounce 0.5s 0.5s';
         }
         
         // 顯示遊戲結束對話框
@@ -1867,6 +1908,48 @@
         finalScore.style.animation = 'fadeIn 1s, bounce 1s 1s';
         completedOrders.style.animation = 'fadeIn 1s, bounce 1s 1.2s';
         personalScore.style.animation = 'fadeIn 1s, bounce 1s 1.4s';
+        
+        // ★ 新增：如果收到了升級通知，顯示升級提示
+        if (gameOverData.levelUp) {
+          setTimeout(() => {
+            showLevelUpNotification(gameOverData.levelUp);
+          }, 2000);
+        }
+      }
+      
+      // ★ 新增：顯示升級提示
+      function showLevelUpNotification(levelData) {
+        const levelUpToast = document.createElement('div');
+        levelUpToast.className = 'level-up-toast';
+        levelUpToast.style.position = 'fixed';
+        levelUpToast.style.top = '50%';
+        levelUpToast.style.left = '50%';
+        levelUpToast.style.transform = 'translate(-50%, -50%)';
+        levelUpToast.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+        levelUpToast.style.color = '#FFD700';
+        levelUpToast.style.padding = '20px';
+        levelUpToast.style.borderRadius = '10px';
+        levelUpToast.style.textAlign = 'center';
+        levelUpToast.style.zIndex = '2000';
+        levelUpToast.style.animation = 'fadeIn 0.5s, bounce 0.5s 0.5s';
+        levelUpToast.style.boxShadow = '0 0 20px #FFD700';
+        
+        levelUpToast.innerHTML = `
+          <div style="font-size: 24px; margin-bottom: 10px;">🎉 升級了！ 🎉</div>
+          <div style="font-size: 36px; font-weight: bold; margin: 15px 0;">等級 ${levelData.newLevel}</div>
+          <div style="font-size: 16px;">${levelData.message || '恭喜你達到了新的等級！'}</div>
+        `;
+        
+        document.body.appendChild(levelUpToast);
+        
+        setTimeout(() => {
+          levelUpToast.style.animation = 'fadeOut 0.5s forwards';
+          setTimeout(() => {
+            if (levelUpToast.parentNode) {
+              levelUpToast.parentNode.removeChild(levelUpToast);
+            }
+          }, 500);
+        }, 3000);
       }
       
       // 註冊事件監聽器
