@@ -11,7 +11,7 @@
             padding: 0;
         }
         body {
-            font-family: 'Microsoft JhengHei', Arial, sans-serif;
+            font-family: 'Microsoft JhengHei', 'SF Pro Text', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
             max-width: 100%;
             margin: 0 auto;
             padding: 10px;
@@ -54,49 +54,98 @@
             font-style: italic;
             color: #8b6b4f;
         }
-        .step-container {
-            display: none;
-            margin-bottom: 15px;
-            background-color: #fff;
-            padding: 15px;
-            border-radius: 10px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        .step-container.active {
-            display: block;
-        }
-        .step-title {
-            font-weight: bold;
-            color: #8b4513;
-            margin-bottom: 10px;
-            font-size: 1.2rem;
-        }
-        .buttons-container {
+        
+        /* 新增：程式碼組合介面樣式 */
+        .code-container {
             display: flex;
+            gap: 15px;
+            margin-top: 20px;
             flex-wrap: wrap;
-            gap: 8px;
+        }
+        .code-preview {
+            flex: 1;
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', Courier, monospace;
+            min-height: 200px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+            overflow-y: auto;
+            border: 1px solid #444;
+        }
+        .code-line {
+            margin: 8px 0;
+            padding: 5px 8px;
+            border-left: 4px solid;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background-color: #3a3a3a;
+            border-radius: 0 4px 4px 0;
+        }
+        .code-line:first-child {
+            margin-top: 0;
+        }
+        .code-palette {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .category-filter {
+            display: flex;
+            gap: 5px;
             margin-bottom: 10px;
         }
-        .btn {
-            background-color: #f0e6d2;
+        .filter-btn {
+            flex: 1;
+            padding: 8px 10px;
             border: 1px solid #d2b48c;
+            background-color: #f0e6d2;
             color: #5a3921;
-            padding: 8px 12px;
             border-radius: 20px;
             cursor: pointer;
             transition: all 0.3s;
-            font-size: 0.9rem;
-            white-space: nowrap;
         }
-        .btn:hover {
-            background-color: #d2b48c;
-            color: white;
-        }
-        .btn.selected {
+        .filter-btn.active, .filter-btn:hover {
             background-color: #8b4513;
             color: white;
             border-color: #5a3921;
         }
+        .code-options {
+            background: #fff;
+            padding: 10px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            overflow-y: auto;
+            max-height: 250px;
+        }
+        .code-option {
+            background: #49483e;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: transform 0.2s;
+        }
+        .code-option:hover {
+            transform: scale(1.05);
+        }
+        /* 按類型區分顏色 */
+        .code-line[data-type="ingredient"] { border-color: #a6e22e; } /* 綠色 - 食材 */
+        .code-line[data-type="action"] { border-color: #f92672; } /* 粉色 - 操作 */
+        .code-line[data-type="tool"] { border-color: #66d9ef; } /* 藍色 - 工具 */
+        .code-line[data-type="seasoning"] { border-color: #fd971f; } /* 橘色 - 調味料 */
+
         .result-container {
             margin-top: 15px;
             padding: 15px;
@@ -108,6 +157,7 @@
             line-height: 1.6;
             color: #5a3921;
             margin-bottom: 10px;
+            white-space: pre-wrap; /* 為了顯示換行 */
         }
         .ai-prompt {
             background-color: #f0f0f0;
@@ -116,21 +166,31 @@
             font-size: 0.9rem;
             margin-top: 10px;
             word-break: break-word;
+            white-space: pre-wrap;
         }
         .action-buttons {
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             gap: 10px;
             margin: 15px 0;
         }
         .action-btn {
-            padding: 10px 15px;
+            padding: 12px 25px;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 0.9rem;
+            font-size: 1.1rem;
+            font-weight: bold;
             transition: all 0.3s;
-            flex: 1;
+            flex-basis: 200px;
+            flex-grow: 0;
+        }
+        .run-btn {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .run-btn:hover {
+            background-color: #45a049;
         }
         .reset-btn {
             background-color: #d2b48c;
@@ -139,37 +199,10 @@
         .reset-btn:hover {
             background-color: #8b4513;
         }
-        .random-btn {
-            background-color: #8b4513;
-            color: white;
-        }
-        .random-btn:hover {
-            background-color: #5a3921;
-        }
-        .next-btn {
-            background-color: #5a8b47;
-            color: white;
-        }
-        .next-btn:hover {
-            background-color: #3a5a2b;
-        }
-        .copy-btn {
-            background-color: #4a6b8b;
-            color: white;
-            width: 100%;
-        }
-        .copy-btn:hover {
-            background-color: #2d455a;
-        }
         .emoji {
             font-size: 1.2rem;
             margin-right: 5px;
-        }
-        .step-indicator {
-            text-align: center;
-            margin: 10px 0;
-            font-weight: bold;
-            color: #8b4513;
+            vertical-align: middle;
         }
         .score-display {
             text-align: center;
@@ -181,9 +214,8 @@
     </style>
 </head>
 <body>
-    <h1><span class="emoji">🍳</span>食譜比對系統</h1>
+    <h1><span class="emoji">🍳</span>食譜程式設計</h1>
     
-    <!-- 修改後的題目顯示區，取代原本的 input-section -->
     <div class="input-section">
         <div class="input-title">今日挑戰題目</div>
         <div class="recipe-challenge">
@@ -192,243 +224,172 @@
         </div>
     </div>
     
-    <div class="step-indicator">步驟 <span id="currentStep">1</span>/5</div>
-    
-    <!-- 步驟1: 選擇主食材 -->
-    <div class="step-container active" id="step1">
-        <div class="step-title">1. 選擇主食材</div>
-        <div class="buttons-container" id="ingredients"></div>
+    <div class="code-container">
+        <!-- 指令堆疊區 -->
+        <div class="code-preview" id="codePreview">
+            <div class="code-line" id="initialMessage">// 點擊右側指令開始組合...</div>
+        </div>
+        
+        <!-- 自由選擇面板 -->
+        <div class="code-palette">
+            <div class="category-filter">
+                <button class="filter-btn active" data-category="all">全部</button>
+                <button class="filter-btn" data-category="ingredient">食材</button>
+                <button class="filter-btn" data-category="action">操作</button>
+                <button class="filter-btn" data-category="seasoning">調味</button>
+                <button class="filter-btn" data-category="tool">工具</button>
+            </div>
+            
+            <div class="code-options" id="codeOptions">
+                <!-- 動態生成的選項按鈕 -->
+            </div>
+        </div>
     </div>
-    
-    <!-- 步驟2: 選擇配料 -->
-    <div class="step-container" id="step2">
-        <div class="step-title">2. 選擇配料</div>
-        <div class="buttons-container" id="sideIngredients"></div>
-    </div>
-    
-    <!-- 步驟3: 選擇調味料 -->
-    <div class="step-container" id="step3">
-        <div class="step-title">3. 選擇調味料</div>
-        <div class="buttons-container" id="seasonings"></div>
-    </div>
-    
-    <!-- 步驟4: 選擇烹飪方法 -->
-    <div class="step-container" id="step4">
-        <div class="step-title">4. 選擇烹飪方法</div>
-        <div class="buttons-container" id="methods"></div>
-    </div>
-    
-    <!-- 步驟5: 選擇廚具 -->
-    <div class="step-container" id="step5">
-        <div class="step-title">5. 選擇廚具</div>
-        <div class="buttons-container" id="utensils"></div>
+
+    <div class="action-buttons">
+        <button class="action-btn reset-btn" id="changeQuestionBtn">換一題</button>
+        <button class="action-btn run-btn" id="runCode">
+            <span class="emoji">⚡</span> 執行料理
+        </button>
     </div>
     
     <!-- 結果顯示區 -->
     <div class="result-container" id="resultContainer">
         <div class="score-display" id="scoreDisplay">相似度評分: -</div>
-        <div class="recipe-sentence" id="recipeResult">請依步驟選擇食材和烹飪方式...</div>
+        <div class="recipe-sentence" id="recipeResult">組合你的料理程式碼，然後點擊「執行料理」來看看結果！</div>
         <div class="ai-prompt" id="aiPrompt"></div>
-        <button class="action-btn copy-btn" id="copyBtn">複製比對提示詞</button>
-    </div>
-    
-    <div class="action-buttons">
-        <button class="action-btn reset-btn" id="resetBtn">重設</button>
-        <button class="action-btn random-btn" id="randomBtn">隨機</button>
-        <button class="action-btn next-btn" id="nextBtn">下一步</button>
+        <button class="action-btn copy-btn" id="copyBtn" style="display:none;">複製分析提示詞</button>
     </div>
 
     <script>
-        // 新增食譜題庫
         const recipeQuestions = [
             {
                 "title": "吐司果醬",
-                "description": "飽足感的懶人快速營養早餐，2 分鐘搞定。",
-                "difficulty": "★",
-                "ingredients": ["吐司"],
-                "sideIngredients": ["果醬"],
+                "description": "挑戰：製作一份飽足感的懶人快速營養早餐，2 分鐘搞定。",
+                "ingredients": ["吐司", "果醬"],
+                "actions": ["烤"],
                 "seasonings": [],
-                "methods": ["烤"],
-                "utensils": ["麵包機"],
-                "steps": [
-                    "將兩片吐司放入麵包機。",
-                    "設定好烘烤檔位，啟動加熱。",
-                    "待吐司加熱完成自動彈出後取出。",
-                    "取一片吐司塗滿果醬，再蓋上另一片吐司即可。"
-                ],
-                "tips": "麵包機價格親民。吐司可於超市或透過外送服務購買，一包通常為八片，保質期較短，十分乾淨衛生。用餐巾紙包著可以邊走邊吃。"
+                "tools": ["麵包機"],
+                "tips": "吐司可於超市購買，保質期較短。用餐巾紙包著可以邊走邊吃。"
             },
             {
                 "title": "微波爐荷包蛋",
-                "description": "一道簡單易做且富含蛋白質的菜餚，120秒內即可完成，適合通勤上班族的快速早餐。",
-                "difficulty": "★",
-                "ingredients": ["雞蛋"],
-                "sideIngredients": ["飲用水"],
+                "description": "挑戰：製作一道簡單易做且富含蛋白質的菜餚，120秒內即可完成。",
+                "ingredients": ["雞蛋", "飲用水"],
+                "actions": ["微波"],
                 "seasonings": ["芝麻油", "鹽"],
-                "methods": ["微波"],
-                "utensils": ["微波爐", "小碗", "筷子", "抹布"],
-                "steps": [
-                    "將雞蛋打入可微波的小碗中，用筷子在蛋黃上戳幾個洞。",
-                    "向碗內倒入飲用水。",
-                    "向碗內加入鹽與芝麻油。",
-                    "將碗放入微波爐，高火加熱約80秒。",
-                    "加熱完成後，用抹布墊著手小心取出成品。"
-                ],
-                "tips": "為避免加熱時蛋黃和蛋白濺出，可以在碗上加蓋以防弄髒微波爐。"
+                "tools": ["微波爐", "小碗"],
+                "tips": "為避免加熱時蛋黃濺出，可以在碗上加蓋。用筷子在蛋黃上戳幾個洞是關鍵！"
             }
         ];
-
-        // 當前顯示的題目
-        let currentQuestion = null;
-
-        // 定義所有選項
-        const options = {
+        
+        const codeLibrary = {
             ingredients: [
-                "雞肉", "豬肉", "牛肉", "羊肉", "鴨肉",
-                "魚肉", "蝦", "蟹", "貝類", "豆腐",
-                "雞蛋", "馬鈴薯", "地瓜", "南瓜", "花椰菜",
-                "高麗菜", "菠菜", "番茄", "茄子", "蘑菇",
-                "洋蔥", "紅蘿蔔", "玉米", "米飯", "麵條",
-                "吐司"
+                { emoji: "🐔", name: "雞肉" }, { emoji: "🐷", name: "豬肉" }, { emoji: "🐮", name: "牛肉" },
+                { emoji: "🐟", name: "魚肉" }, { emoji: "🦐", name: "蝦" }, { emoji: "🥚", name: "雞蛋" },
+                { emoji: "🥔", name: "馬鈴薯" }, { emoji: "🥬", name: "高麗菜" }, { emoji: "🧅", name: "洋蔥" },
+                { emoji: "🥕", name: "紅蘿蔔" }, { emoji: "🍚", name: "米飯" }, { emoji: "🍜", name: "麵條" },
+                { emoji: "🍞", name: "吐司" }, { emoji: "💧", name: "飲用水" }, { emoji: "🍓", name: "果醬" },
             ],
-            sideIngredients: [
-                "青蔥", "大蒜", "薑", "辣椒", "九層塔",
-                "香菜", "檸檬", "芝麻", "花生", "腰果",
-                "起司", "培根", "火腿", "香菇", "海帶",
-                "木耳", "豆芽", "青豆", "洋菇", "甜椒",
-                "果醬", "飲用水"
+            actions: [
+                { emoji: "🔪", name: "切塊", requires: "ingredient" }, { emoji: "🍳", name: "炒", requires: ["ingredient", "tool"] },
+                { emoji: "🍳", name: "煎", requires: ["ingredient", "tool"] }, { emoji: "🔥", name: "炸", requires: ["ingredient", "tool"] },
+                { emoji: "💨", name: "蒸", requires: ["ingredient", "tool"] }, { emoji: "🍲", name: "煮", requires: ["ingredient", "tool"] },
+                { emoji: "🔥", name: "烤", requires: ["ingredient", "tool"] }, { emoji: "♨️", name: "微波", requires: ["ingredient", "tool"] },
+                { emoji: "🥣", name: "涼拌", requires: "ingredient" }, { emoji: "🥣", name: "醃製", requires: ["ingredient", "seasoning"] }
             ],
             seasonings: [
-                "鹽", "醬油", "黑胡椒", "白胡椒", "糖",
-                "醋", "米酒", "香油", "橄欖油", "蠔油",
-                "番茄醬", "味噌", "咖哩粉", "五香粉", "孜然",
-                "辣椒粉", "花椒", "八角", "月桂葉", "迷迭香",
-                "芝麻油"
+                { emoji: "🧂", name: "鹽" }, { emoji: "⚫", name: "黑胡椒" }, { emoji: "⚪", name: "白胡椒" },
+                { emoji: "🍬", name: "糖" }, { emoji: "🍶", name: "醬油" }, { emoji: "🍇", name: "醋" },
+                { emoji: "🥃", name: "米酒" }, { emoji: "💧", name: "香油" }, { emoji: "💧", name: "芝麻油" },
+                { emoji: "🫒", name: "橄欖油" }, { emoji: "🥫", name: "番茄醬" }, { emoji: "🌶️", name: "辣椒粉" }
             ],
-            methods: [
-                "炒", "煎", "炸", "蒸", "煮",
-                "燉", "烤", "燜", "滷", "涼拌",
-                "快炒", "紅燒", "清蒸", "乾煎", "燙煮",
-                "燴", "燻", "焗", "醃", "涮",
-                "微波"
-            ],
-            utensils: [
-                "炒鍋", "平底鍋", "湯鍋", "烤箱", "電鍋",
-                "壓力鍋", "微波爐", "砂鍋", "不沾鍋", "鑄鐵鍋",
-                "蒸籠", "烤盤", "燉鍋", "慢燉鍋", "空氣炸鍋",
-                "烤架", "燜燒罐", "石鍋", "陶鍋", "玻璃鍋",
-                "麵包機", "小碗", "筷子", "抹布"
+            tools: [
+                { emoji: "🍳", name: "炒鍋" }, { emoji: "🍳", name: "平底鍋" }, { emoji: "🍲", name: "湯鍋" },
+                { emoji: "🔥", name: "烤箱" }, { emoji: "🍚", name: "電鍋" }, { emoji: "♨️", name: "微波爐" },
+                { emoji: "🍞", name: "麵包機" }, { emoji: "🥣", name: "小碗" }, { emoji: "🥢", name: "筷子" }
             ]
         };
 
-        let currentStep = 1;
-        const totalSteps = 5;
+        let currentQuestion = null;
+        let codeStack = [];
 
-        // 初始化頁面
         document.addEventListener('DOMContentLoaded', function() {
-            // 為每個類別生成按鈕
-            for (const category in options) {
-                const container = document.getElementById(category);
-                options[category].forEach(item => {
-                    const btn = document.createElement('button');
-                    btn.className = 'btn';
-                    btn.textContent = item;
-                    btn.addEventListener('click', function() {
-                        // 切換選中狀態
-                        this.classList.toggle('selected');
-                        updateDisplay();
-                    });
-                    container.appendChild(btn);
-                });
-            }
-
-            // 顯示隨機題目
+            initPalette();
             showRandomQuestion();
 
-            // 重設按鈕
-            document.getElementById('resetBtn').addEventListener('click', function() {
-                showRandomQuestion();
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', () => handleFilterClick(btn));
             });
 
-            // 隨機選擇按鈕
-            document.getElementById('randomBtn').addEventListener('click', function() {
-                randomizeCurrentStep();
-                updateDisplay();
-            });
-
-            // 下一步按鈕
-            document.getElementById('nextBtn').addEventListener('click', function() {
-                if (currentStep < totalSteps) {
-                    goToStep(currentStep + 1);
-                } else {
-                    // 如果是最後一步，重新開始
-                    goToStep(1);
-                }
-                updateDisplay();
-            });
-
-            // 複製按鈕
+            document.getElementById('changeQuestionBtn').addEventListener('click', showRandomQuestion);
+            document.getElementById('runCode').addEventListener('click', handleRunClick);
+            
             document.getElementById('copyBtn').addEventListener('click', function() {
                 copyToClipboard(document.getElementById('aiPrompt').textContent);
                 this.textContent = '已複製！';
                 setTimeout(() => {
-                    this.textContent = '複製比對提示詞';
+                    this.textContent = '複製分析提示詞';
                 }, 2000);
             });
-
-            updateDisplay();
         });
 
-        // 切換步驟
-        function goToStep(step) {
-            currentStep = step;
-            document.querySelectorAll('.step-container').forEach(container => {
-                container.classList.remove('active');
-            });
-            document.getElementById(`step${step}`).classList.add('active');
-            document.getElementById('currentStep').textContent = step;
-            
-            // 更新按鈕文字
-            const nextBtn = document.getElementById('nextBtn');
-            if (step === totalSteps) {
-                nextBtn.textContent = '重新開始';
-            } else {
-                nextBtn.textContent = '下一步';
+        function initPalette() {
+            const container = document.getElementById('codeOptions');
+            container.innerHTML = '';
+            for (const category in codeLibrary) {
+                codeLibrary[category].forEach(item => {
+                    const btn = document.createElement('button');
+                    btn.className = 'code-option';
+                    btn.dataset.category = category;
+                    btn.innerHTML = `<span class="emoji">${item.emoji}</span> ${item.name}`;
+                    btn.addEventListener('click', () => handleOptionClick(item, category));
+                    container.appendChild(btn);
+                });
             }
         }
 
-        // 重置所有選擇
-        function resetAllSelections() {
-            document.querySelectorAll('.btn.selected').forEach(btn => {
-                btn.classList.remove('selected');
+        function handleFilterClick(clickedBtn) {
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            clickedBtn.classList.add('active');
+            const category = clickedBtn.dataset.category;
+            
+            document.querySelectorAll('.code-option').forEach(option => {
+                if (category === 'all' || option.dataset.category === category) {
+                    option.style.display = 'flex';
+                } else {
+                    option.style.display = 'none';
+                }
             });
-            document.getElementById('scoreDisplay').textContent = '相似度評分: -';
         }
 
-        // 隨機選擇當前步驟的選項
-        function randomizeCurrentStep() {
-            const currentStepId = `step${currentStep}`;
-            const buttons = document.querySelectorAll(`#${currentStepId} .btn`);
-            const totalItems = buttons.length;
-            
-            // 先清除當前步驟的所有選擇
-            buttons.forEach(btn => btn.classList.remove('selected'));
-            
-            // 隨機選擇1-3個項目
-            const numToSelect = Math.floor(Math.random() * 3) + 1;
-            const selectedIndices = new Set();
-            
-            while (selectedIndices.size < numToSelect) {
-                const randomIndex = Math.floor(Math.random() * totalItems);
-                selectedIndices.add(randomIndex);
+        function handleOptionClick(item, category) {
+            // 移除初始訊息
+            const initialMessage = document.getElementById('initialMessage');
+            if (initialMessage) {
+                initialMessage.remove();
             }
             
-            selectedIndices.forEach(index => {
-                buttons[index].classList.add('selected');
-            });
+            codeStack.push({ ...item, type: category.slice(0, -1) }); // e.g., ingredients -> ingredient
+            updateCodePreview();
         }
 
-        // 隨機顯示題目函數
+        function updateCodePreview() {
+            const preview = document.getElementById('codePreview');
+            preview.innerHTML = '';
+            if (codeStack.length === 0) {
+                 preview.innerHTML = '<div class="code-line" id="initialMessage">// 點擊右側指令開始組合...</div>';
+                 return;
+            }
+            codeStack.forEach((line, index) => {
+                const lineDiv = document.createElement('div');
+                lineDiv.className = 'code-line';
+                lineDiv.dataset.type = line.type;
+                lineDiv.innerHTML = `<span class="emoji">${line.emoji}</span> ${line.name}`;
+                preview.appendChild(lineDiv);
+            });
+        }
+        
         function showRandomQuestion() {
             const randomIndex = Math.floor(Math.random() * recipeQuestions.length);
             currentQuestion = recipeQuestions[randomIndex];
@@ -436,162 +397,176 @@
             document.getElementById('recipeDescription').textContent = currentQuestion.description;
             document.getElementById('recipeTips').textContent = `小貼士：${currentQuestion.tips}`;
             
-            // 重置所有選擇
-            resetAllSelections();
-            goToStep(1);
-            updateDisplay();
+            resetAll();
         }
 
-        // 更新顯示
-        function updateDisplay() {
-            const selected = {
-                ingredients: getSelected('ingredients'),
-                sideIngredients: getSelected('sideIngredients'),
-                seasonings: getSelected('seasonings'),
-                methods: getSelected('methods'),
-                utensils: getSelected('utensils')
-            };
+        function resetAll() {
+            codeStack = [];
+            updateCodePreview();
+            document.getElementById('scoreDisplay').textContent = '相似度評分: -';
+            document.getElementById('recipeResult').textContent = '組合你的料理程式碼，然後點擊「執行料理」來看看結果！';
+            document.getElementById('aiPrompt').textContent = '';
+            document.getElementById('copyBtn').style.display = 'none';
+        }
+
+        function handleRunClick() {
+            const { isValid, feedback } = validateCodeStack();
             
-            let sentence = '';
-            let aiPrompt = '';
-            
-            // 如果有當前題目
-            if (currentQuestion) {
-                aiPrompt = '請根據以下題目要求和用戶選擇的食材，進行詳細比對分析：\n\n';
-                
-                // 顯示題目資訊
-                aiPrompt += '【題目要求】\n';
-                aiPrompt += `描述：${currentQuestion.description}\n`;
-                aiPrompt += `小貼士：${currentQuestion.tips}\n\n`;
-                
-                // 用戶選擇
-                aiPrompt += '【用戶選擇的組合】\n';
-                if (selected.ingredients.length > 0) {
-                    sentence += `主食材：${selected.ingredients.join('、')}`;
-                    aiPrompt += `主食材：${selected.ingredients.join('、')}\n`;
-                }
-                
-                if (selected.sideIngredients.length > 0) {
-                    if (sentence) sentence += '<br>';
-                    sentence += `配料：${selected.sideIngredients.join('、')}`;
-                    aiPrompt += `配料：${selected.sideIngredients.join('、')}\n`;
-                }
-                
-                if (selected.seasonings.length > 0) {
-                    if (sentence) sentence += '<br>';
-                    sentence += `調味料：${selected.seasonings.join('、')}`;
-                    aiPrompt += `調味料：${selected.seasonings.join('、')}\n`;
-                }
-                
-                if (selected.methods.length > 0) {
-                    if (sentence) sentence += '<br>';
-                    sentence += `烹飪方法：${selected.methods.join('、')}`;
-                    aiPrompt += `烹飪方法：${selected.methods.join('、')}\n`;
-                }
-                
-                if (selected.utensils.length > 0) {
-                    if (sentence) sentence += '<br>';
-                    sentence += `廚具：${selected.utensils.join('、')}`;
-                    aiPrompt += `廚具：${selected.utensils.join('、')}\n`;
-                }
-                
-                // 添加正確答案參考
-                aiPrompt += '\n【正確答案參考】\n';
-                aiPrompt += `主食材：${currentQuestion.ingredients.join('、')}\n`;
-                aiPrompt += `配料：${currentQuestion.sideIngredients.join('、')}\n`;
-                aiPrompt += `調味料：${currentQuestion.seasonings.length > 0 ? currentQuestion.seasonings.join('、') : '無'}\n`;
-                aiPrompt += `烹飪方法：${currentQuestion.methods.join('、')}\n`;
-                aiPrompt += `廚具：${currentQuestion.utensils.join('、')}\n\n`;
-                
-                // 比對要求部分
-                aiPrompt += '【比對要求】\n';
-                aiPrompt += '1. 請給出相似度評分（0-100分），考慮以下因素：\n';
-                aiPrompt += '   - 主要食材的匹配度\n';
-                aiPrompt += '   - 風味組合的協調性\n';
-                aiPrompt += '   - 烹飪方法的適合度\n';
-                aiPrompt += '   - 廚具使用的合理性\n';
-                aiPrompt += '2. 分析主要差異點（以表格形式呈現，包含：比對項目、正確答案、用戶選擇、差異說明）\n';
-                aiPrompt += '3. 提供具體改進建議（如何調整能更接近正確答案）\n';
-                aiPrompt += '4. 預測最終成品的味道和口感\n';
-                aiPrompt += '5. 如果差異很大，建議如何調整為創新料理\n';
-                aiPrompt += '6. 最後總結評語（簡短有力的結論）\n\n';
-                aiPrompt += '請用以下格式回覆：\n';
-                aiPrompt += '✅ 1. 相似度評分：\n[分數]/100\n\n';
-                aiPrompt += '✅ 2. 主要差異點分析：\n[表格]\n\n';
-                aiPrompt += '✅ 3. 改進建議：\n[具體建議]\n\n';
-                aiPrompt += '✅ 4. 味道與口感預測：\n[描述]\n\n';
-                aiPrompt += '✅ 5. 創新方向建議：\n[建議]\n\n';
-                aiPrompt += '✅ 6. 總結評語：\n[簡短結論]';
+            if (!isValid) {
+                document.getElementById('scoreDisplay').textContent = "程式碼錯誤！";
+                document.getElementById('recipeResult').textContent = feedback;
+                document.getElementById('aiPrompt').textContent = '';
+                document.getElementById('copyBtn').style.display = 'none';
+                return;
             }
-            
-            if (!sentence) {
-                sentence = '請依步驟選擇食材和烹飪方式...';
-            }
-            
-            document.getElementById('recipeResult').innerHTML = sentence;
+
+            const score = calculateScore();
+            document.getElementById('scoreDisplay').textContent = `相似度評分: ${score}/100`;
+
+            const recipeText = generateRecipe();
+            document.getElementById('recipeResult').textContent = recipeText;
+
+            const aiPrompt = generateAIPrompt();
             document.getElementById('aiPrompt').textContent = aiPrompt;
-            
-            // 如果有足夠的選擇，計算相似度評分
-            if (selected.ingredients.length > 0 && selected.methods.length > 0 && currentQuestion) {
-                // 計算相似度得分
-                let score = 0;
-                let totalPoints = 0;
-                
-                // 檢查主食材 (40分)
-                const ingredientMatches = selected.ingredients.filter(item => 
-                    currentQuestion.ingredients.includes(item)).length;
-                const ingredientScore = Math.min(40, (ingredientMatches / currentQuestion.ingredients.length) * 40);
-                score += ingredientScore;
-                totalPoints += 40;
-                
-                // 檢查配料 (20分)
-                const sideIngredientMatches = selected.sideIngredients.filter(item => 
-                    currentQuestion.sideIngredients.includes(item)).length;
-                const sideScore = Math.min(20, (sideIngredientMatches / Math.max(1, currentQuestion.sideIngredients.length)) * 20);
-                score += sideScore;
-                totalPoints += 20;
-                
-                // 檢查調味料 (10分)
-                const seasoningMatches = selected.seasonings.filter(item => 
-                    currentQuestion.seasonings.includes(item)).length;
-                const seasoningScore = currentQuestion.seasonings.length === 0 ? 
-                    (selected.seasonings.length === 0 ? 10 : 5) : 
-                    Math.min(10, (seasoningMatches / currentQuestion.seasonings.length) * 10);
-                score += seasoningScore;
-                totalPoints += 10;
-                
-                // 檢查烹飪方法 (15分)
-                const methodMatches = selected.methods.filter(item => 
-                    currentQuestion.methods.includes(item)).length;
-                const methodScore = Math.min(15, (methodMatches / currentQuestion.methods.length) * 15);
-                score += methodScore;
-                totalPoints += 15;
-                
-                // 檢查廚具 (15分)
-                const utensilMatches = selected.utensils.filter(item => 
-                    currentQuestion.utensils.includes(item)).length;
-                const utensilScore = Math.min(15, (utensilMatches / currentQuestion.utensils.length) * 15);
-                score += utensilScore;
-                totalPoints += 15;
-                
-                // 計算總得分 (0-100)
-                const finalScore = Math.round((score / totalPoints) * 100);
-                document.getElementById('scoreDisplay').textContent = `相似度評分: ${finalScore}/100`;
-            } else {
-                document.getElementById('scoreDisplay').textContent = '相似度評分: -';
+            document.getElementById('copyBtn').style.display = 'block';
+        }
+
+        function validateCodeStack() {
+            if (codeStack.length === 0) {
+                return { isValid: false, feedback: "錯誤：料理程式碼是空的！請先加入指令。" };
             }
+            
+            const has = {
+                ingredient: codeStack.some(l => l.type === 'ingredient'),
+                action: codeStack.some(l => l.type === 'action'),
+                tool: codeStack.some(l => l.type === 'tool')
+            };
+
+            if (!has.ingredient) {
+                return { isValid: false, feedback: "錯誤：你沒有準備任何食材！" };
+            }
+            if (!has.action) {
+                return { isValid: false, feedback: "錯誤：你沒有執行任何烹飪操作！" };
+            }
+            if (!has.tool) {
+                return { isValid: false, feedback: "錯誤：你沒有使用任何廚具！" };
+            }
+
+            for (let i = 0; i < codeStack.length; i++) {
+                const line = codeStack[i];
+                if (line.type === 'action' && line.requires) {
+                    const requirements = Array.isArray(line.requires) ? line.requires : [line.requires];
+                    const stackBefore = codeStack.slice(0, i);
+                    
+                    for (const req of requirements) {
+                        if (!stackBefore.some(l => l.type === req)) {
+                            return { 
+                                isValid: false, 
+                                feedback: `錯誤：指令 "${line.name}" 需要先準備 "${req}" 類型的指令。`
+                            };
+                        }
+                    }
+                }
+            }
+
+            return { isValid: true, feedback: "程式碼看起來很棒！" };
         }
 
-        // 獲取已選擇的項目
-        function getSelected(category) {
-            const selected = [];
-            document.querySelectorAll(`#${category} .btn.selected`).forEach(btn => {
-                selected.push(btn.textContent);
+        function calculateScore() {
+            let score = 0;
+            const userSelections = {
+                ingredients: new Set(codeStack.filter(l => l.type === 'ingredient').map(l => l.name)),
+                actions: new Set(codeStack.filter(l => l.type === 'action').map(l => l.name)),
+                seasonings: new Set(codeStack.filter(l => l.type === 'seasoning').map(l => l.name)),
+                tools: new Set(codeStack.filter(l => l.type === 'tool').map(l => l.name))
+            };
+
+            const answer = {
+                ingredients: new Set(currentQuestion.ingredients),
+                actions: new Set(currentQuestion.actions),
+                seasonings: new Set(currentQuestion.seasonings),
+                tools: new Set(currentQuestion.tools)
+            };
+
+            // 分數權重
+            const weights = { ingredients: 40, actions: 30, tools: 20, seasonings: 10 };
+
+            for (const category in userSelections) {
+                const userItems = userSelections[category];
+                const answerItems = answer[category];
+                
+                if (answerItems.size === 0) {
+                    // 如果答案不需要此類別 (例如調味料)
+                    score += (userItems.size === 0) ? weights[category] : 0;
+                    continue;
+                }
+
+                let correctMatches = 0;
+                userItems.forEach(item => {
+                    if (answerItems.has(item)) {
+                        correctMatches++;
+                    }
+                });
+                
+                // 分數計算: (正確數 / 答案需求數) * 權重，但不超過權重
+                const categoryScore = Math.min(weights[category], (correctMatches / answerItems.size) * weights[category]);
+                score += categoryScore;
+            }
+            
+            return Math.round(score);
+        }
+
+        function generateRecipe() {
+            let recipe = "## 您的創意料理流程\n\n";
+            codeStack.forEach((line, index) => {
+                recipe += `${index + 1}. ${line.emoji} 執行指令: ${line.name}\n`;
+                switch(line.type) {
+                    case "ingredient":
+                        recipe += `   - [準備食材] 將 ${line.name} 放到料理台上。\n`;
+                        break;
+                    case "seasoning":
+                        recipe += `   - [添加風味] 使用 ${line.name} 進行調味。\n`;
+                        break;
+
+                    case "action":
+                        recipe += `   - [執行操作] 對食材執行「${line.name}」操作。\n`;
+                        break;
+                    case "tool":
+                        recipe += `   - [選用工具] 拿出 ${line.name} 準備使用。\n`;
+                        break;
+                }
             });
-            return selected;
+            return recipe;
         }
 
-        // 複製到剪貼板
+        function generateAIPrompt() {
+            let prompt = `請根據以下食譜挑戰和用戶提交的「料理程式碼」，進行詳細比對分析。\n\n`;
+            
+            prompt += '【題目要求】\n';
+            prompt += `描述：${currentQuestion.description}\n`;
+            prompt += `提示：${currentQuestion.tips}\n\n`;
+            
+            prompt += '【正確答案參考】\n';
+            prompt += `- 食材: ${currentQuestion.ingredients.join('、') || '無'}\n`;
+            prompt += `- 操作: ${currentQuestion.actions.join('、') || '無'}\n`;
+            prompt += `- 調味料: ${currentQuestion.seasonings.join('、') || '無'}\n`;
+            prompt += `- 工具: ${currentQuestion.tools.join('、') || '無'}\n\n`;
+
+            prompt += '【用戶的料理程式碼】\n';
+            codeStack.forEach((line, index) => {
+                prompt += `${index + 1}. [${line.type}] ${line.name}\n`;
+            });
+
+            prompt += '\n【比對要求】\n';
+            prompt += '1. 分析主要差異點（以表格呈現，包含：比對項目、正確答案、用戶選擇、差異說明）\n';
+            prompt += '2. 提供具體改進建議（如何調整指令順序或替換指令能更接近正確答案）\n';
+            prompt += '3. 根據用戶的指令組合，預測最終成品的味道和口感，並給出創意點評。\n';
+            prompt += '4. 如果組合非常奇特，請以鼓勵的語氣提出創新料理的可能性。\n';
+            prompt += '5. 最後總結評語（簡短有力的結論）。';
+            
+            return prompt;
+        }
+
         function copyToClipboard(text) {
             const textarea = document.createElement('textarea');
             textarea.value = text;
