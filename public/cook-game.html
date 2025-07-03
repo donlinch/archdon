@@ -688,6 +688,46 @@
             display: none;
         }
     }
+
+    /* 遊戲結束對話框樣式 */
+    .final-score-container {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    
+    .final-score-label {
+      font-size: 1.2em;
+      color: #ccc;
+      margin-bottom: 5px;
+    }
+    
+    .final-score {
+      font-size: 3em;
+      font-weight: bold;
+      color: var(--accent-color);
+    }
+    
+    .stats-container {
+      display: flex;
+      justify-content: space-around;
+      margin: 20px 0;
+    }
+    
+    .stat-item {
+      text-align: center;
+    }
+    
+    .stat-label {
+      font-size: 0.9em;
+      color: #ccc;
+      margin-bottom: 5px;
+    }
+    
+    .stat-value {
+      font-size: 1.5em;
+      font-weight: bold;
+      color: var(--secondary-color);
+    }
   </style>
 </head>
 <body>
@@ -734,7 +774,20 @@
       <div class="dialog-content">
         <div class="dialog-title">遊戲結束</div>
         <div class="dialog-text" id="gameOverText">
-          你的團隊得分: <span id="finalScore">0</span>
+          <div class="final-score-container">
+            <div class="final-score-label">團隊總分</div>
+            <div class="final-score" id="finalScore">0</div>
+          </div>
+          <div class="stats-container">
+            <div class="stat-item">
+              <div class="stat-label">完成訂單</div>
+              <div class="stat-value" id="completedOrders">0</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">個人得分</div>
+              <div class="stat-value" id="personalScore">0</div>
+            </div>
+          </div>
         </div>
         <button class="dialog-button" id="returnToLobbyBtn">返回大廳</button>
       </div>
@@ -781,6 +834,8 @@
       const gameOverDialog = document.getElementById('gameOverDialog');
       const gameOverText = document.getElementById('gameOverText');
       const finalScore = document.getElementById('finalScore');
+      const completedOrders = document.getElementById('completedOrders');
+      const personalScore = document.getElementById('personalScore');
       const returnToLobbyBtn = document.getElementById('returnToLobbyBtn');
       const toast = document.getElementById('toast');
       
@@ -925,6 +980,7 @@
             break;
             
           case 'game_tick':
+            // 接收伺服器的時間更新
             updateTimer(message.timeRemaining);
             break;
             
@@ -952,7 +1008,8 @@
             break;
             
           case 'game_over':
-            endGame(message.finalScore, message.teamScore);
+            // 處理遊戲結束
+            endGame(message);
             break;
             
           // 新增的消息處理
@@ -1762,16 +1819,28 @@
       }
       
       // 結束遊戲
-      function endGame(playerScore, teamScore) {
+      function endGame(gameOverData) {
         gameState.isRunning = false;
         
-        finalScore.textContent = teamScore;
-        gameOverText.innerHTML = `
-          你的個人得分: ${playerScore} <br>
-          團隊總得分: ${teamScore}
-        `;
+        // 更新遊戲結束對話框中的數據
+        finalScore.textContent = gameOverData.finalScore || 0;
+        completedOrders.textContent = gameOverData.completedOrders || 0;
         
+        // 獲取當前玩家的個人得分
+        const currentPlayerId = gameState.currentPlayer.user_id;
+        const playerScore = gameOverData.playerScores && gameOverData.playerScores[currentPlayerId] 
+            ? gameOverData.playerScores[currentPlayerId] 
+            : Math.floor((gameOverData.finalScore || 0) / (gameState.players.length || 1));
+        
+        personalScore.textContent = playerScore;
+        
+        // 顯示遊戲結束對話框
         gameOverDialog.style.display = 'flex';
+        
+        // 添加動畫效果
+        finalScore.style.animation = 'fadeIn 1s, bounce 1s 1s';
+        completedOrders.style.animation = 'fadeIn 1s, bounce 1s 1.2s';
+        personalScore.style.animation = 'fadeIn 1s, bounce 1s 1.4s';
       }
       
       // 註冊事件監聽器
