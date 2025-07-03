@@ -114,47 +114,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             // 8. 設置 iframe 內容 
             const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
             iframeDoc.open();
-           
+            iframeDoc.write(reportData.html_content);
+
+
+
+
+
             
-
-            // 1. 為了安全和正確顯示，先對內容進行 HTML Escape 處理
-//    這可以防止內容中的特殊字元（如 < 或 >）被誤認為 HTML 標籤
-const escapeHtml = (unsafe) => {
-    if (typeof unsafe !== 'string') return '';
-    return unsafe
-         .replace(/&/g, "&")
-         .replace(/</g, "<")
-         .replace(/>/g, ">")
-         .replace(/"/g, "&quot;")
-         .replace(/'/g, "'");
-};
-
-const escapedContent = escapeHtml(reportData.html_content);
-
-// 2. 將處理過的內容包裹在 <pre> 標籤中，並加上一些美化樣式
-const finalHtml = `
-    <style>
-        body { margin: 0; }
-        pre { 
-            white-space: pre-wrap;   /* 自動換行 */
-            word-wrap: break-word;   /* 長單字換行 */
-            padding: 15px;
-            background-color: #f5f5f5;
-            border-radius: 5px;
-            font-family: monospace;
-        }
-    </style>
-    <pre>${escapedContent}</pre>
-`;
-
-// 3. 現在寫入這個完整的、安全的 HTML 內容
-iframeDoc.write(finalHtml);
-
-
-
-
-
-
             iframeDoc.close();
 
             // 9. 更新標題
