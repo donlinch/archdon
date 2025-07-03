@@ -1230,7 +1230,13 @@ app.post('/api/track/conversion', async (req, res) => {
 });
 
 
-
+// --- Godot Game API Endpoint ---
+app.get('/api/game/hello', (req, res) => {
+    console.log('[API CALL] Received request from Godot game!');
+    res.json({
+        message: "Hello from your Node.js server! Connection successful."
+    });
+});
 
  
 app.use(express.static(path.join(__dirname, 'public')));
