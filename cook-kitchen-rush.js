@@ -166,6 +166,114 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
         }
     }
 
+    // ★ 新增：遊戲計時器管理函數
+    async function startGameTimer(roomId, initialTime) {
+        // 如果已有計時器，先清除
+        if (gameTimers.has(roomId)) {
+            clearInterval(gameTimers.get(roomId));
+        }
+
+        let timeRemaining = initialTime;
+        let lastDbUpdate = Date.now();
+
+        const timerId = setInterval(async () => {
+            try {
+                // 減少剩餘時間
+                timeRemaining--;
+                
+                // 檢查遊戲是否應該結束
+                if (timeRemaining <= 0) {
+                    clearInterval(timerId);
+                    gameTimers.delete(roomId);
+                    await endGame(roomId);
+                    return;
+                }
+                
+                // 每秒廣播時間更新
+                broadcastToRoom(roomId, { 
+                    type: 'game_tick', 
+                    timeRemaining: timeRemaining 
+                });
+                
+                // 每5秒或時間結束時更新資料庫
+                const now = Date.now();
+                if (now - lastDbUpdate >= 5000 || timeRemaining <= 0) {
+                    const roomResult = await pool.query('SELECT game_state FROM cook_game_rooms WHERE room_id = $1', [roomId]);
+                    if (roomResult.rows.length === 0) {
+                        // 房間已不存在，停止計時器
+                        clearInterval(timerId);
+                        gameTimers.delete(roomId);
+                        return;
+                    }
+                    
+                    const gameState = roomResult.rows[0].game_state;
+                    gameState.timeRemaining = timeRemaining;
+                    
+                    await pool.query('UPDATE cook_game_rooms SET game_state = $1 WHERE room_id = $2', [gameState, roomId]);
+                    lastDbUpdate = now;
+                }
+            } catch (error) {
+                console.error(`[COOK-GAME] 遊戲計時器錯誤 (房間 ${roomId}):`, error);
+            }
+        }, 1000);
+        
+        gameTimers.set(roomId, timerId);
+        console.log(`[COOK-GAME] 房間 ${roomId} 的遊戲計時器已啟動，初始時間: ${initialTime}秒`);
+    }
+
+    // ★ 新增：遊戲結束處理函數
+    async function endGame(roomId) {
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            
+            // 獲取房間資訊
+            const roomResult = await client.query('SELECT * FROM cook_game_rooms WHERE room_id = $1 FOR UPDATE', [roomId]);
+            if (roomResult.rows.length === 0) {
+                await client.query('ROLLBACK');
+                return;
+            }
+            
+            const room = roomResult.rows[0];
+            const gameState = room.game_state;
+            
+            // 更新房間狀態為已完成
+            await client.query("UPDATE cook_game_rooms SET status = 'finished' WHERE room_id = $1", [roomId]);
+            
+            // 計算最終統計數據
+            const finalStats = {
+                totalScore: gameState.score || 0,
+                completedOrders: gameState.completedOrders || 0,
+                playerScores: {}
+            };
+            
+            // 如果有玩家貢獻分數的記錄，計算每個玩家的分數
+            if (gameState.players) {
+                gameState.players.forEach(player => {
+                    finalStats.playerScores[player.id] = player.score || Math.floor(finalStats.totalScore / gameState.players.length);
+                });
+            }
+            
+            // 廣播遊戲結束消息
+            broadcastToRoom(roomId, {
+                type: 'game_over',
+                finalScore: finalStats.totalScore,
+                completedOrders: finalStats.completedOrders,
+                playerScores: finalStats.playerScores,
+                message: '遊戲時間結束！'
+            });
+            
+            console.log(`[COOK-GAME] 房間 ${roomId} 的遊戲已結束，最終分數: ${finalStats.totalScore}`);
+            
+            await client.query('COMMIT');
+        } catch (error) {
+            await client.query('ROLLBACK');
+            console.error(`[COOK-GAME] 結束遊戲錯誤 (房間 ${roomId}):`, error);
+        } finally {
+            client.release();
+        }
+    }
+
     // WebSocket連接處理函數 (修正版本，使用資料庫)
     async function handleAuthenticatedMessage(ws, data, userId, username, userProfile) {
         const { type, roomId } = data;
@@ -1253,112 +1361,4 @@ function generateOrder() {
         timeRemaining: totalTime,
         createdAt: Date.now()
     };
-}
-
-// ★ 新增：遊戲計時器管理函數
-async function startGameTimer(roomId, initialTime) {
-    // 如果已有計時器，先清除
-    if (gameTimers.has(roomId)) {
-        clearInterval(gameTimers.get(roomId));
-    }
-
-    let timeRemaining = initialTime;
-    let lastDbUpdate = Date.now();
-
-    const timerId = setInterval(async () => {
-        try {
-            // 減少剩餘時間
-            timeRemaining--;
-            
-            // 檢查遊戲是否應該結束
-            if (timeRemaining <= 0) {
-                clearInterval(timerId);
-                gameTimers.delete(roomId);
-                await endGame(roomId);
-                return;
-            }
-            
-            // 每秒廣播時間更新
-            broadcastToRoom(roomId, { 
-                type: 'game_tick', 
-                timeRemaining: timeRemaining 
-            });
-            
-            // 每5秒或時間結束時更新資料庫
-            const now = Date.now();
-            if (now - lastDbUpdate >= 5000 || timeRemaining <= 0) {
-                const roomResult = await pool.query('SELECT game_state FROM cook_game_rooms WHERE room_id = $1', [roomId]);
-                if (roomResult.rows.length === 0) {
-                    // 房間已不存在，停止計時器
-                    clearInterval(timerId);
-                    gameTimers.delete(roomId);
-                    return;
-                }
-                
-                const gameState = roomResult.rows[0].game_state;
-                gameState.timeRemaining = timeRemaining;
-                
-                await pool.query('UPDATE cook_game_rooms SET game_state = $1 WHERE room_id = $2', [gameState, roomId]);
-                lastDbUpdate = now;
-            }
-        } catch (error) {
-            console.error(`[COOK-GAME] 遊戲計時器錯誤 (房間 ${roomId}):`, error);
-        }
-    }, 1000);
-    
-    gameTimers.set(roomId, timerId);
-    console.log(`[COOK-GAME] 房間 ${roomId} 的遊戲計時器已啟動，初始時間: ${initialTime}秒`);
-}
-
-// ★ 新增：遊戲結束處理函數
-async function endGame(roomId) {
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
-        
-        // 獲取房間資訊
-        const roomResult = await client.query('SELECT * FROM cook_game_rooms WHERE room_id = $1 FOR UPDATE', [roomId]);
-        if (roomResult.rows.length === 0) {
-            await client.query('ROLLBACK');
-            return;
-        }
-        
-        const room = roomResult.rows[0];
-        const gameState = room.game_state;
-        
-        // 更新房間狀態為已完成
-        await client.query("UPDATE cook_game_rooms SET status = 'finished' WHERE room_id = $1", [roomId]);
-        
-        // 計算最終統計數據
-        const finalStats = {
-            totalScore: gameState.score || 0,
-            completedOrders: gameState.completedOrders || 0,
-            playerScores: {}
-        };
-        
-        // 如果有玩家貢獻分數的記錄，計算每個玩家的分數
-        if (gameState.players) {
-            gameState.players.forEach(player => {
-                finalStats.playerScores[player.id] = player.score || Math.floor(finalStats.totalScore / gameState.players.length);
-            });
-        }
-        
-        // 廣播遊戲結束消息
-        broadcastToRoom(roomId, {
-            type: 'game_over',
-            finalScore: finalStats.totalScore,
-            completedOrders: finalStats.completedOrders,
-            playerScores: finalStats.playerScores,
-            message: '遊戲時間結束！'
-        });
-        
-        console.log(`[COOK-GAME] 房間 ${roomId} 的遊戲已結束，最終分數: ${finalStats.totalScore}`);
-        
-        await client.query('COMMIT');
-    } catch (error) {
-        await client.query('ROLLBACK');
-        console.error(`[COOK-GAME] 結束遊戲錯誤 (房間 ${roomId}):`, error);
-    } finally {
-        client.release();
-    }
 }
