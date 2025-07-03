@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>HOW料理 - 本地測試版</title>
+  <style>
+    :root {
+      --primary-color: #32a852;
+      --secondary-color: #4CAF50;
+      --accent-color: #FF9800;
+      --text-color: #f0f0f0;
+      --bg-color: #222222;
+      --border-color: #444444;
+      --success-color: #4CAF50;
+      --error-color: #F44336;
+      --card-bg-color: rgba(0, 0, 0, 0.5);
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      background: #1a1a1a;
+      color: #f0f0f0;
+      font-family: 'Courier New', monospace;
+    }
+    
+    .game-container {
+      width: 100%;
+      max-width: 480px; /* 手機版面最大寬度 */
+      min-height: 100vh;
+      margin: 0 auto;
+      background: #0d1117; /* 深色背景 */
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+      position: relative;
+      overflow: hidden; /* 防止內容溢出 */
+    }
+    
+    .game-header {
+      height: 50px;
+      background-color: rgba(0, 0, 0, 0.7);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 0 15px;
+      border-bottom: 1px solid var(--border-color);
+      z-index: 10;
+    }
+    
+    .category-nav {
+      display: flex;
+      flex-wrap: wrap;
+      padding: 10px;
+      background-color: rgba(0, 0, 0, 0.5);
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .category-btn {
+      padding: 8px 12px;
+      margin: 5px;
+      background: transparent;
+      color: var(--text-color);
+      border: 1px solid var(--border-color);
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .category-btn:hover, .category-btn.active {
+      background: var(--primary-color);
+      color: #000;
+    }
+    
+    .content-section {
+      padding: 15px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .section-title {
+      font-size: 16px;
+      color: var(--secondary-color);
+      margin-bottom: 10px;
+    }
+    
+    .recipe-item {
+      padding: 10px;
+      margin-bottom: 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 3px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .recipe-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    
+    .recipe-name {
+      font-size: 16px;
+    }
+    
+    .recipe-info {
+      font-size: 14px;
+      color: #999;
+    }
+    
+    .mode-buttons {
+      display: flex;
+      justify-content: space-around;
+      padding: 15px;
+      background-color: rgba(0, 0, 0, 0.5);
+    }
+    
+    .mode-btn {
+      padding: 10px 20px;
+      background: transparent;
+      color: var(--text-color);
+      border: 1px solid var(--accent-color);
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .mode-btn:hover {
+      background: var(--accent-color);
+      color: #000;
+    }
+    
+    /* 詳情頁面樣式 */
+    .detail-view {
+      display: none;
+      height: 100%;
+      overflow-y: auto;
+    }
+    
+    .detail-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .back-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-color);
+      font-size: 16px;
+      cursor: pointer;
+    }
+    
+    .recipe-title {
+      font-size: 18px;
+      text-align: center;
+      flex-grow: 1;
+    }
+    
+    .recipe-meta {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 15px;
+      background-color: rgba(0, 0, 0, 0.3);
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .ingredient-list, .step-list {
+      padding: 15px;
+    }
+    
+    .ingredient-item, .step-item {
+      padding: 8px 0;
+      border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+    }
+    
+    .start-btn {
+      display: block;
+      width: 80%;
+      margin: 20px auto;
+      padding: 12px;
+      background: var(--primary-color);
+      color: #000;
+      border: none;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    
+    /* 烹飪界面樣式 */
+    .cooking-view {
+      display: none;
+      height: 100%;
+    }
+    
+    .step-header {
+      padding: 15px;
+      background-color: rgba(0, 0, 0, 0.5);
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .cooking-area {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 200px;
+    }
+    
+    .ingredient-display {
+      width: 150px;
+      height: 150px;
+      border: 2px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      font-size: 18px;
+    }
+    
+    .action-btn {
+      padding: 10px 20px;
+      background: var(--secondary-color);
+      color: #000;
+      border: none;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    
+    .instruction-area {
+      padding: 15px;
+      background-color: rgba(0, 0, 0, 0.3);
+      border-top: 1px solid var(--border-color);
+    }
+    
+    .nav-buttons {
+      display: flex;
+      justify-content: space-between;
+      padding: 15px;
+      background-color: rgba(0, 0, 0, 0.5);
+      border-top: 1px solid var(--border-color);
+    }
+    
+    .nav-btn {
+      padding: 8px 15px;
+      background: transparent;
+      color: var(--text-color);
+      border: 1px solid var(--border-color);
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    
+    .nav-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    
+    /* 通用樣式 */
+    .hidden {
+      display: none;
+    }
+    
+    .visible {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="game-container">
+    <!-- 主界面 -->
+    <div id="main-view">
+      <div class="game-header">
+        <h1>HOW料理 v1.0</h1>
+      </div>
+      
+      <div class="category-nav">
+        <button class="category-btn active" data-category="all">全部</button>
+        <button class="category-btn" data-category="dish">菜品</button>
+        <button class="category-btn" data-category="staple">主食</button>
+        <button class="category-btn" data-category="soup">湯羹</button>
+        <button class="category-btn" data-category="drink">飲品</button>
+        <button class="category-btn" data-category="dessert">甜品</button>
+      </div>
+      
+      <div class="content-section">
+        <div class="section-title">> 推薦料理</div>
+        <div class="recipe-list">
+          <div class="recipe-item" data-recipe="tomato_egg">
+            <div class="recipe-name">□ 番茄炒蛋</div>
+            <div class="recipe-info">★☆☆ 15分鐘</div>
+          </div>
+          <div class="recipe-item" data-recipe="chive_egg">
+            <div class="recipe-name">□ 韭菜炒蛋</div>
+            <div class="recipe-info">★☆☆ 10分鐘</div>
+          </div>
+          <div class="recipe-item" data-recipe="cabbage">
+            <div class="recipe-name">□ 手撕包菜</div>
+            <div class="recipe-info">★☆☆ 15分鐘</div>
+          </div>
+          <div class="recipe-item" data-recipe="seaweed_soup">
+            <div class="recipe-name">□ 紫菜蛋花湯</div>
+            <div class="recipe-info">★☆☆ 10分鐘</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="content-section">
+        <div class="section-title">> 最近學習</div>
+        <div class="recent-list">
+          <div class="recipe-item" data-recipe="honey_lemon">
+            <div class="recipe-name">□ 蜂蜜檸檬水</div>
+            <div class="recipe-info">★☆☆ 5分鐘</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="mode-buttons">
+        <button class="mode-btn" id="learn-mode-btn">學習模式</button>
+        <button class="mode-btn" id="challenge-mode-btn">挑戰模式</button>
+      </div>
+    </div>
+    
+    <!-- 詳情界面 -->
+    <div id="detail-view" class="detail-view">
+      <div class="detail-header">
+        <button class="back-btn" id="back-to-main">&lt; 返回</button>
+        <div class="recipe-title">番茄炒蛋</div>
+      </div>
+      
+      <div class="recipe-meta">
+        <div class="difficulty">難度：★☆☆</div>
+        <div class="time">時間：15分鐘</div>
+      </div>
+      
+      <div class="content-section">
+        <div class="section-title">> 食材準備</div>
+        <div class="ingredient-list">
+          <div class="ingredient-item">□ 番茄 x2</div>
+          <div class="ingredient-item">□ 雞蛋 x3</div>
+          <div class="ingredient-item">□ 蔥 x1</div>
+          <div class="ingredient-item">□ 鹽 適量</div>
+          <div class="ingredient-item">□ 糖 少許</div>
+        </div>
+      </div>
+      
+      <div class="content-section">
+        <div class="section-title">> 烹飪步驟</div>
+        <div class="step-list">
+          <div class="step-item">1. 番茄切塊</div>
+          <div class="step-item">2. 雞蛋打散</div>
+          <div class="step-item">3. 熱鍋炒蛋</div>
+          <div class="step-item">4. 加入番茄翻炒</div>
+          <div class="step-item">5. 調味出鍋</div>
+        </div>
+      </div>
+      
+      <button class="start-btn" id="start-cooking-btn">開始烹飪</button>
+    </div>
+    
+    <!-- 烹飪界面 -->
+    <div id="cooking-view" class="cooking-view">
+      <div class="game-header">
+        <div class="recipe-title">番茄炒蛋</div>
+        <div class="timer">剩餘: 10:45</div>
+      </div>
+      
+      <div class="step-header">
+        <div class="current-step">> 當前步驟：番茄切塊</div>
+      </div>
+      
+      <div class="cooking-area">
+        <div class="ingredient-display">[番茄]</div>
+        <button class="action-btn" id="cooking-action-btn">點擊切塊</button>
+      </div>
+      
+      <div class="instruction-area">
+        <div class="section-title">> 操作指示</div>
+        <div class="instruction-text">
+          點擊番茄進行切塊<br>
+          完成後點擊[下一步]
+        </div>
+      </div>
+      
+      <div class="nav-buttons">
+        <button class="nav-btn" id="prev-step-btn">上一步</button>
+        <button class="nav-btn" id="next-step-btn">下一步</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 初始化頁面切換
+    document.addEventListener('DOMContentLoaded', function() {
+      // 頁面元素
+      const mainView = document.getElementById('main-view');
+      const detailView = document.getElementById('detail-view');
+      const cookingView = document.getElementById('cooking-view');
+      
+      // 導航按鈕
+      const recipeItems = document.querySelectorAll('.recipe-item');
+      const backBtn = document.getElementById('back-to-main');
+      const startCookingBtn = document.getElementById('start-cooking-btn');
+      const prevStepBtn = document.getElementById('prev-step-btn');
+      const nextStepBtn = document.getElementById('next-step-btn');
+      const cookingActionBtn = document.getElementById('cooking-action-btn');
+      const learnModeBtn = document.getElementById('learn-mode-btn');
+      const challengeModeBtn = document.getElementById('challenge-mode-btn');
+      
+      // 類別切換按鈕
+      const categoryBtns = document.querySelectorAll('.category-btn');
+      
+      // 食譜示例數據
+      const recipes = {
+        tomato_egg: {
+          name: "番茄炒蛋",
+          category: "dish",
+          difficulty: 1,
+          time: 15,
+          ingredients: [
+            {name: "番茄", amount: 2, unit: "個"},
+            {name: "雞蛋", amount: 3, unit: "個"},
+            {name: "蔥", amount: 1, unit: "根"},
+            {name: "鹽", amount: "適量"},
+            {name: "糖", amount: "少許"}
+          ],
+          steps: [
+            {id: 1, description: "番茄切塊", action: "切塊", time: 120},
+            {id: 2, description: "雞蛋打散", action: "打散", time: 60},
+            {id: 3, description: "熱鍋炒蛋", action: "翻炒", time: 180},
+            {id: 4, description: "加入番茄翻炒", action: "翻炒", time: 240},
+            {id: 5, description: "調味出鍋", action: "調味", time: 60}
+          ]
+        }
+      };
+      
+      // 當前食譜和步驟
+      let currentRecipe = null;
+      let currentStepIndex = 0;
+      
+      // 顯示食譜詳情
+      function showRecipeDetail(recipeId) {
+        currentRecipe = recipes[recipeId];
+        if (!currentRecipe) return;
+        
+        // 更新詳情頁面
+        document.querySelector('.recipe-title').textContent = currentRecipe.name;
+        document.querySelector('.difficulty').textContent = `難度：${'★'.repeat(currentRecipe.difficulty)}${'☆'.repeat(3-currentRecipe.difficulty)}`;
+        document.querySelector('.time').textContent = `時間：${currentRecipe.time}分鐘`;
+        
+        // 更新食材列表
+        const ingredientList = document.querySelector('.ingredient-list');
+        ingredientList.innerHTML = '';
+        currentRecipe.ingredients.forEach(ingredient => {
+          const item = document.createElement('div');
+          item.className = 'ingredient-item';
+          item.textContent = `□ ${ingredient.name} ${ingredient.amount}${ingredient.unit}`;
+          ingredientList.appendChild(item);
+        });
+        
+        // 更新步驟列表
+        const stepList = document.querySelector('.step-list');
+        stepList.innerHTML = '';
+        currentRecipe.steps.forEach((step, index) => {
+          const item = document.createElement('div');
+          item.className = 'step-item';
+          item.textContent = `${index + 1}. ${step.description}`;
+          stepList.appendChild(item);
+        });
+        
+        // 切換到詳情頁面
+        mainView.style.display = 'none';
+        detailView.style.display = 'block';
+        cookingView.style.display = 'none';
+      }
+      
+      // 開始烹飪
+      function startCooking() {
+        if (!currentRecipe) return;
+        
+        // 重置步驟
+        currentStepIndex = 0;
+        updateCookingStep();
+        
+        // 切換到烹飪頁面
+        mainView.style.display = 'none';
+        detailView.style.display = 'none';
+        cookingView.style.display = 'block';
+      }
+      
+      // 更新烹飪步驟
+      function updateCookingStep() {
+        if (!currentRecipe || currentStepIndex >= currentRecipe.steps.length) return;
+        
+        const step = currentRecipe.steps[currentStepIndex];
+        document.querySelector('.current-step').textContent = `> 當前步驟：${step.description}`;
+        document.querySelector('.action-btn').textContent = `點擊${step.action}`;
+        
+        // 更新食材顯示
+        if (currentStepIndex === 0) {
+          document.querySelector('.ingredient-display').textContent = '[番茄]';
+        } else if (currentStepIndex === 1) {
+          document.querySelector('.ingredient-display').textContent = '[雞蛋]';
+        } else if (currentStepIndex === 2) {
+          document.querySelector('.ingredient-display').textContent = '[炒蛋]';
+        } else if (currentStepIndex === 3) {
+          document.querySelector('.ingredient-display').textContent = '[番茄+炒蛋]';
+        } else {
+          document.querySelector('.ingredient-display').textContent = '[成品]';
+        }
+        
+        // 更新按鈕狀態
+        prevStepBtn.disabled = currentStepIndex === 0;
+        nextStepBtn.disabled = currentStepIndex === currentRecipe.steps.length - 1;
+      }
+      
+      // 前往上一步
+      function prevStep() {
+        if (currentStepIndex > 0) {
+          currentStepIndex--;
+          updateCookingStep();
+        }
+      }
+      
+      // 前往下一步
+      function nextStep() {
+        if (currentStepIndex < currentRecipe.steps.length - 1) {
+          currentStepIndex++;
+          updateCookingStep();
+        }
+      }
+      
+      // 點擊食譜項目
+      recipeItems.forEach(item => {
+        item.addEventListener('click', function() {
+          const recipeId = this.getAttribute('data-recipe');
+          showRecipeDetail(recipeId);
+        });
+      });
+      
+      // 返回主界面
+      backBtn.addEventListener('click', function() {
+        mainView.style.display = 'block';
+        detailView.style.display = 'none';
+        cookingView.style.display = 'none';
+      });
+      
+      // 開始烹飪按鈕
+      startCookingBtn.addEventListener('click', startCooking);
+      
+      // 烹飪操作按鈕
+      cookingActionBtn.addEventListener('click', function() {
+        // 模擬烹飪操作完成
+        setTimeout(() => {
+          nextStep();
+        }, 1000);
+      });
+      
+      // 上一步按鈕
+      prevStepBtn.addEventListener('click', prevStep);
+      
+      // 下一步按鈕
+      nextStepBtn.addEventListener('click', nextStep);
+      
+      // 模式按鈕
+      learnModeBtn.addEventListener('click', function() {
+        alert('學習模式將在下一版本推出！');
+      });
+      
+      challengeModeBtn.addEventListener('click', function() {
+        alert('挑戰模式將在下一版本推出！');
+      });
+      
+      // 類別切換按鈕
+      categoryBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+          // 移除所有active類
+          categoryBtns.forEach(b => b.classList.remove('active'));
+          // 為當前按鈕添加active類
+          this.classList.add('active');
+          
+          // 顯示切換類別的提示
+          const category = this.getAttribute('data-category');
+          if (category !== 'all') {
+            alert(`${this.textContent}類別將在下一版本顯示更多食譜！`);
+          }
+        });
+      });
+      
+      // 保存遊戲進度到localStorage
+      function saveProgress() {
+        const progress = {
+          completed_recipes: [],
+          learning_recipes: ["tomato_egg"],
+          high_scores: {}
+        };
+        
+        localStorage.setItem('how_cooking_progress', JSON.stringify(progress));
+      }
+      
+      // 初始化時保存一些基本進度
+      if (!localStorage.getItem('how_cooking_progress')) {
+        saveProgress();
+      }
+    });
+  </script>
+</body>
+</html>
