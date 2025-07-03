@@ -506,7 +506,7 @@
             
             const allOptions = [];
             // 將永久食材和臨時食材合併
-            const currentIngredients = [...codeLibrary.ingredients, ...tempIngredients];
+            const currentIngredients = [...codeLibrary.ingredients];
 
             const libraryWithTempIngredients = {
                 ...codeLibrary,
@@ -531,6 +531,7 @@
                 // 組合出來的食材，也歸類到食材，以便 require 判斷
                 if (item.isCombinedResult) {
                     btn.dataset.type = 'ingredient';
+                    btn.dataset.isCombined = 'true';
                 } else {
                     btn.dataset.type = item.type;
                 }
@@ -546,7 +547,7 @@
         function filterOptions(category) {
             document.querySelectorAll('.code-option').forEach(option => {
                 const optionCategory = option.dataset.category;
-                const isCombined = tempIngredients.some(ing => ing.name === option.textContent.trim().split(' ')[1]);
+                const isCombined = option.dataset.isCombined === 'true';
 
                 let show = false;
                 if (category === 'all') {
@@ -672,14 +673,12 @@
 
         // 添加新處理組
         function addNewGroup() {
+            if (groups[currentGroup] && groups[currentGroup].length === 0) {
+                return;
+            }
             currentGroup = Date.now();
             groups[currentGroup] = [];
-            
-            const groupDiv = document.createElement('div');
-            groupDiv.className = 'code-line-group';
-            groupDiv.innerHTML = `<!-- New empty group -->`;
-            // 讓新處理組出現在最前面，符合操作邏輯
-            document.getElementById('codePreview').prepend(groupDiv);
+            updateCodePreview(); // 更新預覽以顯示新組的空間
             updatePaletteState();
         }
 
@@ -731,13 +730,18 @@
                         disabled = true; // 沒有食材，不能操作
                     } else {
                         // 檢查特定操作的需求
-                        const actionName = btn.textContent.trim().split(' ')[1];
+                        const actionName = btn.textContent.trim().split(' ').slice(1).join(' ');
                         const action = codeLibrary.actions.find(a => a.name === actionName);
                         if (action && action.requires.includes('tool') && !hasTool) {
                             disabled = true; // 需要工具但沒有工具
                         }
                     }
+                } else if (category === 'ingredients' || category === 'combined') {
+                    if (hasIngredient) {
+                        disabled = true;
+                    }
                 }
+
                 btn.disabled = disabled;
             });
         }
@@ -771,14 +775,16 @@
             let score = 0;
             const userSelections = { ingredients: new Set(), actions: new Set(), tools: new Set() };
             
-            Object.values(groups).flat().forEach(item => {
-                // 只計算非組合結果的原始食材
-                if (item.category === 'ingredients' && !item.isCombinedResult) {
-                    userSelections.ingredients.add(item.name);
-                } else if (userSelections[item.category]) {
-                    userSelections[item.category].add(item.name);
-                }
-            });
+            for (const groupId in groups) {
+                if (!Array.isArray(groups[groupId])) continue;
+                groups[groupId].forEach(item => {
+                    if (item.category === 'ingredients' && !item.isCombinedResult) {
+                        userSelections.ingredients.add(item.name);
+                    } else if (userSelections[item.category]) {
+                        userSelections[item.category].add(item.name);
+                    }
+                });
+            }
 
             const answer = {
                 ingredients: new Set(currentQuestion.ingredients),
@@ -807,12 +813,13 @@
         function generateResult(finalStates, score) {
             let recipe = `<h2>您的料理流程</h2>`;
             recipe += Object.keys(groups).map((groupId, index) => {
-                if (groups[groupId].length === 0) return '';
-                return `<h3>處理組 ${index + 1} ➡️ ${finalStates[index] || '未完成'}</h3>` +
+                if (!Array.isArray(groups[groupId]) || groups[groupId].length === 0) return '';
+                return `<h3>處理組 ${index + 1} ➡️ ${getGroupState(groups[groupId]) || '未完成'}</h3>` +
                     groups[groupId].map(item => `<div>${item.emoji} ${item.name}</div>`).join('');
             }).join('');
             
             let analysis = `<h3>✅ 相似度評分: ${score}/100</h3>`;
+            analysis += `<p>${getOverallFeedback(score)}</p>`;
             analysis += `<h3>✅ 差異分析:</h3>`;
             analysis += `<table class="diff-table">
                 <tr><th>項目</th><th>您的選擇</th><th>正確答案</th><th>分析</th></tr>
@@ -829,11 +836,19 @@
 
         // 生成差異表格行
         function generateDiffTableRows(categoryName, categoryKey, correctItemsSet) {
-            const userItems = new Set(Object.values(groups).flat().filter(i => i.category === categoryKey && !i.isCombinedResult).map(i => i.name));
+            const userItems = new Set();
+            for (const groupId in groups) {
+                if (!Array.isArray(groups[groupId])) continue;
+                groups[groupId].forEach(item => {
+                    if (item.category === categoryKey && !item.isCombinedResult) {
+                        userItems.add(item.name);
+                    }
+                });
+            }
             const correctItems = new Set(correctItemsSet);
             const allItems = [...new Set([...correctItems, ...userItems])];
             
-            if (allItems.length === 0) {
+            if (allItems.length === 0 && correctItems.size === 0) {
                  return `<tr><td>${categoryName}</td><td>✓ (無)</td><td>✓ (無)</td><td>正確</td></tr>`;
             }
             
@@ -853,6 +868,46 @@
             if (!isCorrect && isUser) return `多餘的選擇，此食譜不需要「${item}」。`;
             if (isCorrect && !isUser) return `缺少必要的「${item}」。`;
             return "-";
+        }
+
+        // 新增：總體評價
+        function getOverallFeedback(score) {
+            if (score >= 80) return "您的料理與標準答案非常接近，完美掌握基本技巧！";
+            if (score >= 50) return "雖然有些差異，但這可能成為您獨特的料理風格！";
+            
+            const { missingKeyIngredient, missingKeyAction } = findKeyMistakes();
+            if (missingKeyIngredient) {
+                return `主要失誤：您的料理缺少了關鍵食材「${missingKeyIngredient}」，導致風味和基礎完全不同。`;
+            }
+            if (missingKeyAction) {
+                return `主要失誤：您的料理缺少了核心步驟「${missingKeyAction}」，這是這道菜的靈魂所在。`;
+            }
+
+            return "這是一個有趣的嘗試，但似乎偏離了挑戰目標。試著更貼近提示來操作看看？";
+        }
+
+        // 新增：找出關鍵錯誤
+        function findKeyMistakes() {
+            const userIngredients = new Set();
+            const userActions = new Set();
+            for (const groupId in groups) {
+                if (!Array.isArray(groups[groupId])) continue;
+                groups[groupId].forEach(item => {
+                    if (item.category === 'ingredients' && !item.isCombinedResult) {
+                        userIngredients.add(item.name);
+                    } else if (item.category === 'actions') {
+                        userActions.add(item.name);
+                    }
+                });
+            }
+            
+            const neededIngredients = new Set(currentQuestion.ingredients);
+            const neededActions = new Set([...(currentQuestion.actions || []), ...(currentQuestion.seasonings || [])]);
+
+            const firstMissingIngredient = [...neededIngredients].find(i => !userIngredients.has(i));
+            const firstMissingAction = [...neededActions].find(a => !userActions.has(a));
+
+            return { missingKeyIngredient: firstMissingIngredient, missingKeyAction: firstMissingAction };
         }
 
         // 生成改進建議
@@ -888,7 +943,7 @@
         function getCreativeFeedback(score) {
             if (score > 80) return "您的料理與標準答案非常接近，完美掌握基本技巧！";
             if (score > 50) return "雖然有些差異，但這可能成為您獨特的料理風格！";
-            return "這是一個有趣的嘗試，或許能創造出新菜式！";
+            return "這是一個完全創新的料理組合，說不定會意外地美味！";
         }
 
         // 複製分析結果
