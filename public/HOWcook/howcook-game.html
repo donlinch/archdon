@@ -328,6 +328,7 @@
         <div class="code-palette">
             <div class="category-filter">
                 <button class="filter-btn active" data-category="all">全部</button>
+                <button class="filter-btn" data-category="combined">組合</button>
                 <button class="filter-btn" data-category="ingredients">食材</button>
                 <button class="filter-btn" data-category="actions">操作</button>
                 <button class="filter-btn" data-category="tools">工具</button>
@@ -383,6 +384,46 @@
                 "seasonings": [],
                 "tools": ["炒鍋"],
                 "tips": "火候要大，時間要短，這樣才能保持蔬菜的脆度。"
+            },
+            {
+                "title": "微波爐蛋糕的做法",
+                "description": "微波爐「叮」蛋糕，大約需要 2 分鐘就能搞定！初學者所需時間預計延長至 20 分鐘。",
+                "ingredients": ["雞蛋", "麵粉", "黃油", "泡打粉", "咖啡粉", "巧克力", "麥片", "牛奶", "堅果", "餅乾屑", "香蕉"],
+                "actions": ["微波", "加糖", "加鹽"],
+                "tools": ["微波爐", "微波容器"],
+                "tips": "泡打粉可讓蛋糕更蓬鬆。若加入牛奶等液體食材，需少量多次添加，確保麵糊能維持稠狀。所有食材的總量不應超過容器的3/4，以免加熱時溢出。"
+            },
+            {
+                "title": "牛奶燕麥的做法",
+                "description": "高蛋白、富含穀物纖維、具飽足感的懶人快速營養早餐，3 分鐘搞定。",
+                "ingredients": ["牛奶", "燕麥", "雞蛋", "水", "水果", "蔬菜", "蘇打餅乾"],
+                "actions": ["煮", "煎", "加油", "加椒鹽"],
+                "tools": ["早餐杯", "鍋", "微波爐"],
+                "tips": "可將一般燕麥替換為快煮燕麥，與牛奶混合後放入微波爐中火加熱4分鐘。本餐點搭配水果、蔬菜或蘇打餅乾風味更佳。"
+            },
+            {
+                "title": "番茄炒蛋",
+                "description": "經典家常菜，酸甜開胃，營養豐富，是米飯的絕佳搭檔。",
+                "ingredients": ["雞蛋", "番茄", "蔥"],
+                "actions": ["炒", "加油", "加鹽", "加糖"],
+                "tools": ["炒鍋", "碗", "鍋鏟"],
+                "tips": "喜歡湯汁多一點可以在炒番茄時加入少量水。加一點糖可以平衡番茄的酸味，讓風味更有層次。"
+            },
+            {
+                "title": "可樂雞翅",
+                "description": "鹹甜交織的零失敗料理，色澤紅亮誘人，肉質鮮嫩，連廚房新手也能輕鬆駕馭。",
+                "ingredients": ["雞翅", "薑", "蔥"],
+                "actions": ["煎", "燜", "加可樂", "加醬油", "加料酒", "加油"],
+                "tools": ["平底鍋", "鍋鏟"],
+                "tips": "雞翅先煎過可以讓表皮更香酥。收汁時要不停翻動，避免醬汁燒焦黏鍋。可樂的甜度已足夠，通常不需額外加糖。"
+            },
+            {
+                "title": "家常雞蛋炒飯",
+                "description": "快速解決剩飯的最佳方式，簡單美味，粒粒分明，是每個家庭必備的快速餐點。",
+                "ingredients": ["隔夜飯", "雞蛋", "蔥", "冷凍蔬菜丁"],
+                "actions": ["炒", "加油", "加醬油", "加鹽", "加白胡椒粉"],
+                "tools": ["炒鍋", "碗", "鍋鏟"],
+                "tips": "使用隔夜的冷飯是炒飯粒粒分明的關鍵。可依個人喜好加入火腿、蝦仁或肉末等配料，讓炒飯更豐富。"
             }
         ];
         
@@ -391,7 +432,19 @@
                 { emoji: "🍞", name: "吐司", type: "ingredient" }, { emoji: "🍓", name: "果醬", type: "ingredient" },
                 { emoji: "🥚", name: "雞蛋", type: "ingredient" }, { emoji: "💧", name: "飲用水", type: "ingredient" },
                 { emoji: "🥬", name: "高麗菜", type: "ingredient" }, { emoji: "🧄", name: "大蒜", type: "ingredient" },
-                { emoji: "🐔", name: "雞肉", type: "ingredient" }, { emoji: "🐟", name: "魚肉", type: "ingredient" }
+                { emoji: "🐔", name: "雞肉", type: "ingredient" }, { emoji: "🐟", name: "魚肉", type: "ingredient" },
+                { emoji: "🌾", name: "麵粉", type: "ingredient" }, { emoji: "🧈", name: "黃油", type: "ingredient" },
+                { emoji: "🥡", name: "泡打粉", type: "ingredient" }, { emoji: "☕", name: "咖啡粉", type: "ingredient" },
+                { emoji: "🍫", name: "巧克力", type: "ingredient" }, { emoji: "🥣", name: "麥片", type: "ingredient" },
+                { emoji: "🥛", name: "牛奶", type: "ingredient" }, { emoji: "🥜", name: "堅果", type: "ingredient" },
+                { emoji: "🍪", name: "餅乾屑", type: "ingredient" }, { emoji: "🍌", name: "香蕉", type: "ingredient" },
+                { emoji: "🥣", name: "燕麥", type: "ingredient" }, { emoji: "💧", name: "水", type: "ingredient" },
+                { emoji: "🍓", name: "水果", type: "ingredient" }, { emoji: "🥬", name: "蔬菜", type: "ingredient" },
+                { emoji: "🥨", name: "蘇打餅乾", type: "ingredient" }, { emoji: "🍅", name: "番茄", type: "ingredient" },
+                { emoji: "🧅", name: "蔥", type: "ingredient" }, { emoji: "🍗", name: "雞翅", type: "ingredient" },
+                { emoji: "🫚", name: "薑", type: "ingredient" }, { emoji: "🥤", name: "可樂", type: "ingredient" },
+                { emoji: "🍾", name: "料酒", type: "ingredient" }, { emoji: "🍚", name: "隔夜飯", type: "ingredient" },
+                { emoji: "🥦", name: "冷凍蔬菜丁", type: "ingredient" }
             ],
             actions: [
                 { emoji: "🔪", name: "切", type: "action", requires: ["ingredient"], process: (state) => `切好的${state}` },
@@ -401,11 +454,23 @@
                 { emoji: "🧂", name: "加鹽", type: "action", requires: ["ingredient"], process: (state) => `加鹽調味的${state}` },
                 { emoji: "⚫", name: "加黑胡椒", type: "action", requires: ["ingredient"], process: (state) => `加了黑胡椒的${state}`},
                 { emoji: "💧", name: "加芝麻油", type: "action", requires: ["ingredient"], process: (state) => `加了芝麻油的${state}`},
-                { emoji: "🍶", name: "加醬油", type: "action", requires: ["ingredient"], process: (state) => `加了醬油的${state}`}
+                { emoji: "🍶", name: "加醬油", type: "action", requires: ["ingredient"], process: (state) => `加了醬油的${state}`},
+                { emoji: "🍬", name: "加糖", type: "action", requires: ["ingredient"], process: (state) => `加糖調味的${state}`},
+                { emoji: "💧", name: "加油", type: "action", requires: ["ingredient"], process: (state) => `加油潤飾的${state}`},
+                { emoji: "🌶️", name: "加椒鹽", type: "action", requires: ["ingredient"], process: (state) => `加了椒鹽的${state}`},
+                { emoji: "🔥", name: "煮", type: "action", requires: ["ingredient", "tool"], process: (state, tool) => `用${tool}煮熟的${state}`},
+                { emoji: "🍳", name: "煎", type: "action", requires: ["ingredient", "tool"], process: (state, tool) => `用${tool}煎過的${state}`},
+                { emoji: "🍲", name: "燜", type: "action", requires: ["ingredient", "tool"], process: (state, tool) => `用${tool}燜煮的${state}`},
+                { emoji: "🥤", name: "加可樂", type: "action", requires: ["ingredient"], process: (state) => `用可樂滷製的${state}`},
+                { emoji: "🍾", name: "加料酒", type: "action", requires: ["ingredient"], process: (state) => `用料酒調味的${state}`},
+                { emoji: "🌶️", name: "加白胡椒粉", type: "action", requires: ["ingredient"], process: (state) => `撒上白胡椒粉的${state}`}
             ],
             tools: [
                 { emoji: "🍳", name: "炒鍋", type: "tool" }, { emoji: "♨️", name: "微波爐", type: "tool" },
-                { emoji: "🍞", name: "麵包機", type: "tool" }, { emoji: "🥣", name: "小碗", type: "tool" }
+                { emoji: "🍞", name: "麵包機", type: "tool" }, { emoji: "🥣", name: "小碗", type: "tool" },
+                { emoji: "⚗️", name: "微波容器", type: "tool" }, { emoji: "☕", name: "早餐杯", type: "tool" },
+                { emoji: "🍲", name: "鍋", type: "tool" }, { emoji: "🥣", name: "碗", type: "tool" },
+                { emoji: "🍳", name: "鍋鏟", type: "tool" }, { emoji: "🍳", name: "平底鍋", type: "tool" }
             ]
         };
 
@@ -445,7 +510,8 @@
 
             const libraryWithTempIngredients = {
                 ...codeLibrary,
-                ingredients: currentIngredients
+                ingredients: currentIngredients,
+                combined: tempIngredients // 新增一個給組合按鈕用的分類
             };
             
             for (const categoryKey in libraryWithTempIngredients) {
@@ -462,7 +528,13 @@
                 const btn = document.createElement('button');
                 btn.className = 'code-option';
                 btn.dataset.category = item.category;
-                btn.id = `option-${item.name}`; // 給按鈕一個ID，方便之後控制
+                // 組合出來的食材，也歸類到食材，以便 require 判斷
+                if (item.isCombinedResult) {
+                    btn.dataset.type = 'ingredient';
+                } else {
+                    btn.dataset.type = item.type;
+                }
+                btn.id = `option-${item.name.replace(/\s/g, '-')}`;
                 btn.innerHTML = `<span class="emoji">${item.emoji}</span> ${item.name}`;
                 btn.addEventListener('click', () => addToCodeStack(item));
                 container.appendChild(btn);
@@ -473,11 +545,21 @@
         // 分類篩選
         function filterOptions(category) {
             document.querySelectorAll('.code-option').forEach(option => {
-                if (category === 'all' || option.dataset.category === category) {
-                    option.style.display = 'flex';
+                const optionCategory = option.dataset.category;
+                const isCombined = tempIngredients.some(ing => ing.name === option.textContent.trim().split(' ')[1]);
+
+                let show = false;
+                if (category === 'all') {
+                    show = true;
+                } else if (category === 'combined') {
+                    if (isCombined) show = true;
+                } else if (category === 'ingredients') {
+                    if (optionCategory === 'ingredients' && !isCombined) show = true;
                 } else {
-                    option.style.display = 'none';
+                    if (optionCategory === category) show = true;
                 }
+
+                option.style.display = show ? 'flex' : 'none';
             });
         }
 
@@ -485,6 +567,10 @@
         function addToCodeStack(item) {
             document.getElementById('initialMessage')?.remove();
             
+            if (!groups[currentGroup]) {
+                groups[currentGroup] = [];
+            }
+
             const newItem = { ...item, id: Date.now() + Math.random().toString(36).substr(2, 5) };
             groups[currentGroup].push(newItem);
             
@@ -592,7 +678,8 @@
             const groupDiv = document.createElement('div');
             groupDiv.className = 'code-line-group';
             groupDiv.innerHTML = `<!-- New empty group -->`;
-            document.getElementById('codePreview').appendChild(groupDiv);
+            // 讓新處理組出現在最前面，符合操作邏輯
+            document.getElementById('codePreview').prepend(groupDiv);
             updatePaletteState();
         }
 
@@ -670,6 +757,11 @@
             // 清空舊的group
             delete groups[groupId];
 
+            // 如果被組合掉的是當前操作的組，則建立一個新組
+            if (currentGroup == groupId) {
+                addNewGroup();
+            }
+
             initPalette(); // 重建指令面板以包含新食材
             updateCodePreview();
         }
@@ -690,7 +782,7 @@
 
             const answer = {
                 ingredients: new Set(currentQuestion.ingredients),
-                actions: new Set([...currentQuestion.actions, ...currentQuestion.seasonings]),
+                actions: new Set([...(currentQuestion.actions || []), ...(currentQuestion.seasonings || [])]),
                 tools: new Set(currentQuestion.tools)
             };
             
@@ -769,11 +861,17 @@
             const userActions = new Set(Object.values(groups).flat().filter(i => i.category === 'actions').map(i => i.name));
             const userIngredients = new Set(Object.values(groups).flat().filter(i => i.category === 'ingredients' && !i.isCombinedResult).map(i => i.name));
             
-            const needed = [...currentQuestion.actions, ...currentQuestion.seasonings, ...currentQuestion.ingredients];
+            const neededActions = new Set([...(currentQuestion.actions || []), ...(currentQuestion.seasonings || [])]);
+            const neededIngredients = new Set(currentQuestion.ingredients);
 
-            needed.forEach(item => {
-                if (!userActions.has(item) && !userIngredients.has(item)) {
-                    suggestions.push(`建議加入「${item}」。`);
+            neededActions.forEach(item => {
+                if (!userActions.has(item)) {
+                    suggestions.push(`建議加入操作「${item}」。`);
+                }
+            });
+            neededIngredients.forEach(item => {
+                if (!userIngredients.has(item)) {
+                    suggestions.push(`建議加入食材「${item}」。`);
                 }
             });
 
