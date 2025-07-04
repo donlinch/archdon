@@ -814,7 +814,7 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
 
                                 await pool.query("UPDATE cook_game_rooms SET status = 'playing', game_state = $2, updated_at = NOW() WHERE room_id = $1", [roomId, initialGameState]);
                                 console.log(`[COOK-GAME] 遊戲 ${roomId} 已正式開始`);
-                                broadcastToRoom(roomId, { type: 'game_started', gameState: initialGameState });
+                                broadcastToRoom(roomId, { type: 'game_started', roomId: roomId, gameState: initialGameState });
                                 
                                 // ★ 新增：啟動遊戲計時器
                                 startGameTimer(roomId, initialGameState.timeRemaining);

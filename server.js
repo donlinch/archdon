@@ -1230,26 +1230,6 @@ app.post('/api/track/conversion', async (req, res) => {
 });
 
 
-
-
-
-
-// --- Godot Game API Endpoint ---
-app.get('/api/game/hello', (req, res) => {
-    console.log('[API CALL] Received request from Godot game!');
-    res.json({
-        message: "Hello from your Node.js server! Connection successful."
-    });
-});
-
-// --- Godot Button Click Handler ---
-app.post('/api/game/button-clicked', (req, res) => {
-    console.log('[API CALL] Received a button click from Godot!');
-    res.json({
-        response: "伺服器已收到你的點擊！做得好！" 
-    });
-});
-
  
 
 
