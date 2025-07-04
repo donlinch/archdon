@@ -1210,6 +1210,9 @@
                   };
               }
               
+              // 初始化用戶狀態指示器
+              initializeUserStatus();
+              
               // 發送加入房間的請求
               websocket.send(JSON.stringify({
                   type: 'join_room',
@@ -1247,6 +1250,16 @@
               const loadingScreenOnStart = document.getElementById('loadingScreen');
               if (loadingScreenOnStart) {
                   loadingScreenOnStart.style.display = 'none';
+              }
+              startGame(message.gameState);
+              break;
+              
+          case 'game_state':
+              // 新增：處理 game_state 訊息，與 game_started 做同樣的事情
+              console.log('收到遊戲狀態更新，初始化遊戲UI');
+              const loadingScreenOnState = document.getElementById('loadingScreen');
+              if (loadingScreenOnState) {
+                  loadingScreenOnState.style.display = 'none';
               }
               startGame(message.gameState);
               break;
@@ -1633,6 +1646,9 @@
           // 初始化UI組件
           initializeStations();
           initializeAssemblyPlate();
+          
+          // 初始化用戶狀態指示器
+          initializeUserStatus();
           
           // 顯示歡迎提示
           showToast('遊戲開始！準備好大展身手吧！');
@@ -2172,10 +2188,13 @@
               }];
           }
           
-          // 7. 顯示提示
+          // 7. 初始化用戶狀態指示器
+          initializeUserStatus();
+          
+          // 8. 顯示提示
           showToast('界面已修復，請嘗試正常操作。如仍有問題，請刷新頁面。');
           
-          // 8. 記錄修復日誌
+          // 9. 記錄修復日誌
           console.log('緊急UI修復完成，當前狀態:', {
               gameState,
               uiElements: {
@@ -2211,6 +2230,24 @@
           console.error('未處理的Promise錯誤:', event.reason);
           showToast('發生非同步錯誤，請查看控制台獲取詳情。');
       });
+
+      // 初始化用戶狀態指示器
+      function initializeUserStatus() {
+          const userStatus = document.getElementById('userStatus');
+          const userStatusAvatar = document.getElementById('userStatusAvatar');
+          const userStatusName = document.getElementById('userStatusName');
+          
+          if (gameState.currentPlayer) {
+              userStatusAvatar.src = gameState.currentPlayer.avatar || '/images/a01girlmove.gif';
+              userStatusName.textContent = gameState.currentPlayer.username || 'Player';
+              userStatus.style.display = 'flex';
+              
+              // 添加點擊事件
+              userStatus.addEventListener('click', () => {
+                  window.location.href = `member-editor.html?userId=${gameState.currentPlayer.user_id}`;
+              });
+          }
+      }
     });
   </script>
 </body>
