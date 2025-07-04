@@ -2294,8 +2294,12 @@
         // 檢查當前訂單
         if (gameState.orders && gameState.orders.length > 0) {
           const currentOrder = gameState.orders[0];
-          const recipeName = getRecipeName(currentOrder.recipe);
-          taskHint.textContent = `當前任務：製作 ${recipeName}`;
+          if (currentOrder && currentOrder.recipe) {
+            const recipeName = getRecipeName(currentOrder.recipe);
+            taskHint.textContent = `當前任務：製作 ${recipeName}`;
+          } else {
+            taskHint.textContent = '等待新的訂單...';
+          }
         } else {
           taskHint.textContent = '等待新的訂單...';
         }
@@ -2318,7 +2322,7 @@
           taskHint.textContent = '需要更多食材，繼續拿取或烹飪';
         } else if (hasRawIngredients) {
           taskHint.textContent = '前往烹飪區處理食材';
-        } else if (gameState.orders && gameState.orders.length > 0) {
+        } else if (gameState.orders && gameState.orders.length > 0 && gameState.orders[0]) {
           taskHint.textContent = '拿取食材開始製作料理';
         }
       }

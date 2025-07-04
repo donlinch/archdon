@@ -1508,93 +1508,68 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
 
      }
 
+    // =================================================================
+    // 遊戲邏輯輔助函數 (V1 - 可能已部分棄用或需重構)
+    // =================================================================
+    
+    /**
+     * 計算訂單完成時獲得的分數
+     * @param {object} order - 訂單物件
+     * @returns {number} 分數
+     */
+    function calculateOrderPoints(order) {
+        // 基礎分數 + 時間獎勵
+        const basePoints = 50;
+        const timeBonus = Math.floor(order.timeRemaining / 10);
+        return basePoints + timeBonus;
+    }
+
+    /**
+     * 隨機生成一個新的遊戲訂單
+     * @returns {Promise<object|null>} 新的訂單物件或在錯誤時返回 null
+     */
+    async function generateOrder() {
+        // 在 V1 版本中，這個函式可能直接存取一個全域的 `pool` 變數
+        // 但現在它無法存取傳入 module.exports 的那個 pool
+        try {
+            const recipeResult = await pool.query(
+                'SELECT recipe_id FROM cook_recipes_v2 WHERE is_orderable = TRUE ORDER BY RANDOM() LIMIT 1'
+            );
+
+            if (recipeResult.rows.length === 0) {
+                console.warn('[COOK-GAME] 資料庫中沒有可訂購的食譜');
+                return null;
+            }
+            
+            const recipeId = recipeResult.rows[0].recipe_id;
+            const totalTime = 120; // 預設120秒
+
+            return {
+                id: `order_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+                recipe: recipeId,
+                totalTime: totalTime,
+                timeRemaining: totalTime,
+                createdAt: Date.now()
+            };
+        } catch (error) {
+            console.error('[COOK-GAME] 生成新訂單時發生資料庫錯誤:', error);
+            return null;
+        }
+    }
+
+    /**
+     * 重置玩家的烹飪相關狀態 (例如，當他們完成一個動作後)
+     * @param {object} player - 玩家物件
+     */
+    function resetPlayerCooking(player) {
+        player.isCooking = false;
+        player.cookingProgress = 0;
+        player.cookingStartTime = null;
+    }
+
+    // 最後，返回 Express app 和 WebSocket 處理函數
     return {
         cookGameApp,
         initCookGameWss
     };
 };
-
-// 輔助函數：計算訂單得分
-function calculateOrderPoints(order) {
-    // 基礎分數
-    let points = 50;
-    
-    // 根據剩餘時間獎勵額外分數
-    const timePercent = order.timeRemaining / order.totalTime;
-    if (timePercent > 0.7) {
-        points += 30; // 很快完成
-    } else if (timePercent > 0.4) {
-        points += 15; // 一般速度
-    }
-    
-    // 根據料理類型獎勵額外分數
-    switch (order.recipe) {
-        case 'burger_deluxe':
-            points += 30;
-            break;
-        case 'burger_cheese':
-            points += 15;
-            break;
-        case 'burger_basic':
-            points += 5;
-            break;
-    }
-    
-    return points;
-}
-
-// ★ V2 修改：異步生成新訂單
-async function generateOrder() {
-    try {
-        // 1. 從資料庫獲取所有可作為訂單的食譜 (即組合料理)
-        const recipesResult = await pool.query(`
-            SELECT r.recipe_id, r.time_limit, r.difficulty
-            FROM cook_recipes_v2 r
-            WHERE r.station_type = 'assembly' AND r.is_orderable = TRUE
-        `);
-        
-        const availableRecipes = recipesResult.rows;
-
-        if (availableRecipes.length === 0) {
-            console.error("[COOK-GAME] 資料庫中沒有可用的訂單食譜！");
-            return null; // 返回 null 表示無法生成訂單
-        }
-
-        // 2. 根據難度或其他權重隨機選擇一個食譜
-        // 此處簡化為隨機選擇
-        const recipe = availableRecipes[Math.floor(Math.random() * availableRecipes.length)];
-        
-        const totalTime = recipe.time_limit || 120; // 如果未設置，默認為120秒
-
-        return {
-            id: `order_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-            recipe: recipe.recipe_id, // recipe_id 現在是 item_id，例如 'burger_deluxe'
-            totalTime,
-            timeRemaining: totalTime,
-            createdAt: Date.now()
-        };
-    } catch (error) {
-        console.error("[COOK-GAME] 生成新訂單時發生資料庫錯誤:", error);
-        return null;
-    }
-}
-
-// 當玩家斷線時，重置他的烹飪狀態
-function resetPlayerCooking(player) {
-    if (player && player.cooking.isCooking) {
-        // 將未完成的烹飪物品歸還庫存
-        player.inventory.push({
-            id: player.cooking.itemId,
-            type: player.cooking.itemType,
-        });
-        player.cooking = {
-            isCooking: false,
-            itemId: null,
-            itemType: null,
-            station: null,
-            startTime: 0,
-            duration: 0,
-            outputType: null, // ★ V2: 重置
-        };
-    }
-}
