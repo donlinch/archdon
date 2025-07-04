@@ -640,20 +640,39 @@
     
     .toast {
       position: fixed;
-      top: 60px;
+      top: -100px; /* 初始位置在視窗外 */
       left: 50%;
       transform: translateX(-50%);
       background-color: rgba(0, 0, 0, 0.8);
       color: white;
-      padding: 10px 20px;
+      padding: 12px 24px;
       border-radius: 20px;
       z-index: 100;
       opacity: 0;
-      transition: opacity 0.3s;
+      transition: top 0.5s ease, opacity 0.3s ease;
+      max-width: 80%;
+      text-align: center;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
     }
     
     .toast.show {
+      top: 60px;
       opacity: 1;
+    }
+    
+    .toast.success {
+      border-left: 4px solid var(--success-color);
+    }
+    
+    .toast.error {
+      border-left: 4px solid var(--error-color);
+    }
+    
+    /* 添加脈動動畫 */
+    @keyframes pulse {
+      0% { transform: translateX(-50%) scale(1); }
+      50% { transform: translateX(-50%) scale(1.05); }
+      100% { transform: translateX(-50%) scale(1); }
     }
     
     /* 動畫 */
@@ -849,6 +868,147 @@
       text-align: center;
       max-width: 80%;
     }
+
+    /* 食材選擇菜單 */
+    .ingredients-menu {
+      position: fixed;
+      bottom: -100%;
+      left: 0;
+      width: 100%;
+      max-height: 70vh;
+      background-color: rgba(13, 17, 23, 0.95);
+      border-top: 2px solid var(--accent-color);
+      border-radius: 20px 20px 0 0;
+      z-index: 1000;
+      transition: bottom 0.4s ease-in-out;
+      box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(10px);
+      padding: 20px 15px;
+      overflow-y: auto;
+    }
+
+    .ingredients-menu.show {
+      bottom: 0;
+    }
+
+    .ingredients-menu-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .ingredients-menu-title {
+      font-size: 1.2em;
+      font-weight: bold;
+      color: var(--text-color);
+    }
+
+    .close-menu-btn {
+      background: none;
+      border: none;
+      color: var(--text-color);
+      font-size: 1.5em;
+      cursor: pointer;
+      padding: 5px;
+    }
+
+    .ingredients-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 15px;
+    }
+
+    .ingredient-item {
+      background-color: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 12px 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .ingredient-item:hover, .ingredient-item:active {
+      background-color: #30363d;
+      transform: translateY(-2px);
+    }
+
+    .ingredient-icon {
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+
+    .ingredient-name {
+      font-size: 0.9em;
+      text-align: center;
+      color: #c9d1d9;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+      display: none;
+    }
+
+    /* 烹飪方式選單 */
+    .cooking-methods {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: rgba(13, 17, 23, 0.95);
+      border: 2px solid var(--accent-color);
+      border-radius: 12px;
+      z-index: 1000;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+      padding: 15px;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      display: none;
+    }
+
+    .cooking-method {
+      background-color: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .cooking-method:hover {
+      background-color: #30363d;
+      transform: scale(1.05);
+    }
+
+    .cooking-method-icon {
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+
+    .cooking-method-label {
+      font-size: 1em;
+      color: #c9d1d9;
+    }
   </style>
 </head>
 <body>
@@ -951,6 +1111,17 @@
     
     <!-- 提示通知 -->
     <div class="toast" id="toast"></div>
+    
+    <!-- 食材選擇菜單 -->
+    <div class="ingredients-menu" id="ingredientsMenu">
+      <div class="ingredients-menu-header">
+        <div class="ingredients-menu-title">選擇食材</div>
+        <button class="close-menu-btn" id="closeIngredientsMenu">&times;</button>
+      </div>
+      <div class="ingredients-grid" id="ingredientsGrid">
+        <!-- 食材項目將由JavaScript動態生成 -->
+      </div>
+    </div>
   </div>
 
   <script>
@@ -1094,7 +1265,6 @@
 
       function connectWebSocket() {
           const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-          // 確保連接到遊戲專用的 WebSocket 路徑
           const wsUrl = `${protocol}//${window.location.host}/cook-ws`; 
           
           console.log(`[WebSocket] 正在嘗試連接到: ${wsUrl}`);
@@ -1120,18 +1290,16 @@
                           token: token
                       }));
                       
-                      // ★ 修改：不再在這裡解析 token，而是等待後端返回用戶資料
-                      // 這樣可以避免因 atob 函數處理非 ASCII 字符而導致的亂碼問題
                       console.log('[WebSocket] 等待後端返回用戶資料...');
                   } else {
                       console.error('[WebSocket] 錯誤：找不到 cookGameToken，無法進行認證。');
-                      showToast("認證失敗，請重新登入。");
+                      showToast("認證失敗，請重新登入。", 'error');
                       websocket.close();
                   }
               };
           } catch (error) {
               console.error('[WebSocket] 創建WebSocket實例失敗:', error);
-              showToast('無法連接到遊戲伺服器，請檢查網絡連接。');
+              showToast('無法連接到遊戲伺服器，請檢查網絡連接。', 'error');
           }
           
           websocket.onmessage = (event) => {
@@ -1153,13 +1321,13 @@
                   console.log(`[WebSocket] ${reconnectDelay / 1000}秒後嘗試第 ${reconnectAttempts} 次重連...`);
                   setTimeout(connectWebSocket, reconnectDelay);
               } else if (reconnectAttempts >= maxReconnectAttempts) {
-                  showToast('與伺服器的連接已斷開，請刷新頁面重試。');
+                  showToast('與伺服器的連接已斷開，請刷新頁面重試。', 'error');
               }
           };
           
           websocket.onerror = (error) => {
               console.error('[WebSocket] 發生錯誤:', error);
-              showToast('與伺服器的連接發生錯誤。');
+              showToast('與伺服器的連接發生錯誤。', 'error');
           };
       }
 
@@ -1269,14 +1437,13 @@
           case 'auth_success':
               console.log('認證成功，正在加入遊戲房間...');
               
-              // ★ 新增：在認證成功後立即隱藏載入畫面
-              // 這可以給玩家一個更快的反饋
+              // 隱藏載入畫面
               const loadingScreen = document.getElementById('loadingScreen');
               if (loadingScreen) {
                   loadingScreen.style.display = 'none';
               }
               
-              // ★ 修改：使用後端提供的用戶資料，完全覆蓋本地解析的數據
+              // 使用後端提供的用戶資料
               if (message.userData) {
                   console.log('[WebSocket] 收到後端用戶資料:', message.userData);
                   
@@ -1290,7 +1457,7 @@
                   
                   console.log('[WebSocket] 更新後的用戶資料:', gameState.currentPlayer);
                   
-                  // ★ 修改：確保在有完整用戶資料後才初始化用戶狀態指示器
+                  // 初始化用戶狀態指示器
                   initializeUserStatus();
               } else {
                   console.warn('[WebSocket] 後端未返回用戶資料，嘗試從 token 獲取基本資訊');
@@ -1303,14 +1470,14 @@
                           if (tokenParts.length === 3) {
                               const payload = JSON.parse(atob(tokenParts[1]));
                               
-                              // 只設置基本資訊，避免使用可能包含非 ASCII 字符的字段
+                              // 只設置基本資訊
                               gameState.currentPlayer = {
                                   user_id: payload.userId || payload.user_id,
-                                  username: payload.name || 'Player', // 使用更可能的字段名
-                                  display_name: payload.display_name || payload.name || 'Player' // 嘗試獲取顯示名稱
+                                  username: payload.name || 'Player',
+                                  display_name: payload.display_name || payload.name || 'Player'
                               };
                               
-                              // 即使是從 token 獲取的資料也初始化用戶狀態
+                              // 初始化用戶狀態
                               initializeUserStatus();
                           }
                       }
@@ -1319,144 +1486,115 @@
                   }
               }
               
+              // 通知初始化狀態機
+              if (typeof window.handleWsConnected === 'function') {
+                  window.handleWsConnected();
+              }
+              
               // 發送加入房間的請求
               websocket.send(JSON.stringify({
                   type: 'join_room',
                   roomId: roomId,
-                  userId: gameState.currentPlayer?.user_id // 使用可選鏈運算符避免錯誤
+                  userId: gameState.currentPlayer?.user_id
               }));
               break;
 
           case 'room_joined':
               console.log('成功加入房間:', message.roomId);
               
-              // ★ 新增：確保設置 websocket.currentRoomId
+              // 設置當前房間ID
               if (message.roomId) {
                   websocket.currentRoomId = message.roomId;
                   console.log(`[WebSocket] 設置當前房間ID: ${message.roomId}`);
-                  
-                  // 同時保存到 localStorage，以便在頁面刷新後恢復
                   localStorage.setItem('currentRoomId', message.roomId);
               }
               
-              // 如果後端沒有自動開始遊戲，可以在這裡手動初始化UI
+              // 如果有遊戲狀態，初始化遊戲
               if (message.gameState) {
-                  startGame(message.gameState);
+                  // 通知初始化狀態機
+                  if (typeof window.handleGameStateReceived === 'function') {
+                      window.handleGameStateReceived(message.gameState);
+                  } else {
+                      startGame(message.gameState);
+                  }
               } else {
                   console.log('房間已加入，但沒有收到遊戲狀態，等待game_started事件...');
-                  // 設置一個超時，如果一段時間後仍未收到game_started，則手動初始化
-                  setTimeout(() => {
-                      if (document.getElementById('loadingScreen').style.display !== 'none') {
-                          console.log('等待超時，手動初始化遊戲UI...');
-                          // 使用一個空的初始狀態
-                          startGame({
-                              inventory: new Array(8).fill(null),
-                              score: 0,
-                              orders: [],
-                              players: [gameState.currentPlayer],
-                              timeRemaining: 180 // 3分鐘
-                          });
-                      }
-                  }, 5000); // 5秒後檢查
               }
               break;
 
           case 'game_started':
-              // 這裡也可以再確認一次載入畫面是隱藏的
-              const loadingScreenOnStart = document.getElementById('loadingScreen');
-              if (loadingScreenOnStart) {
-                  loadingScreenOnStart.style.display = 'none';
-              }
-              startGame(message.gameState);
-              break;
-              
           case 'game_state':
-              // 新增：處理 game_state 訊息，與 game_started 做同樣的事情
               console.log('收到遊戲狀態更新，初始化遊戲UI');
-              const loadingScreenOnState = document.getElementById('loadingScreen');
-              if (loadingScreenOnState) {
-                  loadingScreenOnState.style.display = 'none';
+              
+              // 通知初始化狀態機
+              if (typeof window.handleGameStateReceived === 'function') {
+                  window.handleGameStateReceived(message.gameState);
+              } else {
+                  startGame(message.gameState);
               }
-              startGame(message.gameState);
               break;
-            
-          // 當後端每秒發送時間倒數時觸發
+        
+          // 其他消息處理...
           case 'game_tick':
               updateTimer(message.timeRemaining);
-              // 更新所有訂單的進度條
               updateOrderTimers(message.timeRemaining);
               break;
 
-          // 當有新訂單生成時觸發
           case 'new_order':
               if (message.order) {
-                  // 將新訂單添加到遊戲狀態
                   if (!gameState.orders) gameState.orders = [];
                   gameState.orders.push(message.order);
                   addOrder(message.order);
                   updateTaskHint();
-                  showToast('叮！收到新訂單!');
+                  showToast('叮！收到新訂單!', 'success');
               }
               break;
-    
-          // 當有訂單被完成時觸發（無論是誰完成的）
+
           case 'order_completed':
-              // 從訂單列表中移除已完成的訂單
               if (gameState.orders) {
                   gameState.orders = gameState.orders.filter(order => order.id !== message.orderId);
               }
               removeOrder(message.orderId);
               updateScore(message.newScore);
-              showToast(`訂單完成! +${message.points} 分 (由 ${message.playerName} 完成)`);
+              showToast(`訂單完成! +${message.points} 分 (由 ${message.playerName} 完成)`, 'success');
               updateTaskHint();
               break;
 
-          // 統一處理遊戲狀態更新
           case 'game_state_update':
               updateGameState(message.gameState);
               break;
 
-          // 玩家動作的反饋 - 現在統一由 game_state_update 處理
-          // 這些事件只用於顯示通知和動畫效果
           case 'ingredient_picked':
-              showToast(`已拿取 ${getItemName(message.ingredientType)}`);
+              showToast(`已拿取 ${getItemName(message.ingredientType)}`, 'success');
               break;
 
           case 'item_cooked':
-              showToast(`${getItemName(message.resultType)} 烹飪完成！`);
+              showToast(`${getItemName(message.resultType)} 烹飪完成！`, 'success');
               hideAllCookingAnimations();
               break;
 
           case 'items_assembled':
               clearAssemblyPlate();
-              showToast(`${getItemName(message.resultType)} 組合完成！`);
-              break;
-
-          case 'slot_selected':
-              // 僅更新 UI，實際狀態由 game_state_update 處理
+              showToast(`${getItemName(message.resultType)} 組合完成！`, 'success');
               break;
 
           case 'item_transferred':
               if (message.fromPlayerId === gameState.currentPlayer?.user_id) {
-                  showToast(`物品已成功傳遞給 ${message.toPlayerName}`);
+                  showToast(`物品已成功傳遞給 ${message.toPlayerName}`, 'success');
               } else {
-                  showToast(`收到了來自 ${message.fromPlayerName} 的物品！`);
+                  showToast(`收到了來自 ${message.fromPlayerName} 的物品！`, 'success');
               }
               break;
 
-          // 當遊戲時間到或滿足結束條件時觸發
           case 'game_over':
               endGame(message);
               break;
 
-          // 當任何操作在後端驗證失敗時觸發
           case 'error':
-              showToast(`錯誤: ${message.message}`);
-              // 如果是組合失敗，清空組合盤讓玩家可以重試
+              showToast(`錯誤: ${message.message}`, 'error');
               if (message.message && message.message.toLowerCase().includes('組合')) {
                   clearAssemblyPlate();
               }
-              // 如果是被踢出房間或房間不存在，跳回大廳
               if (message.message && message.message.includes('找不到房間')) {
                   alert('找不到對應的遊戲房間，將返回大廳。');
                   window.location.href = '/cook-lobby.html';
@@ -1464,7 +1602,6 @@
               hideAllCookingAnimations();
               break;
 
-          // 當玩家升級時觸發
           case 'level_up':
               showLevelUpNotification(message);
               break;
@@ -2062,51 +2199,98 @@
       function showIngredientMenu() {
           // 檢查當前槽位是否為空
           if (gameState.inventory[gameState.activeSlot]) {
-              showToast('這個槽位已經有物品了，請先清空或選擇一個空槽位');
+              showToast('這個槽位已經有物品了，請先清空或選擇一個空槽位', 'error');
               return;
           }
-          
-          // ★ 修改：調整篩選邏輯，適應多種可能的數據結構
-          console.log('正在篩選可用的基礎食材...');
           
           // 檢查 allItems 是否已加載
           if (!allItems || allItems.length === 0) {
               console.error('食材數據尚未加載完成');
-              showToast('食材數據尚未加載完成，請稍後再試');
+              showToast('食材數據尚未加載完成，請稍後再試', 'error');
               return;
           }
           
-          // 嘗試多種可能的篩選條件
+          // 篩選可用的基礎食材
           let availableIngredients = allItems.filter(item => 
-              // 條件1: 使用 item_type 為 'raw_ingredient' 或 'ingredient'
               (item.item_type === 'raw_ingredient' || item.item_type === 'ingredient') ||
-              // 條件2: 使用 is_base_item 標記
               item.is_base_item === true ||
-              // 條件3: 檢查物品ID是否包含 'raw' 關鍵字
               (item.item_id && item.item_id.includes('raw'))
           );
           
-          console.log(`找到 ${availableIngredients.length} 個可用食材:`, 
-              availableIngredients.map(i => i.item_id || i.id).join(', '));
-          
-          // 如果沒有可用食材，顯示錯誤
           if (!availableIngredients || availableIngredients.length === 0) {
               console.error('找不到可用的基礎食材，原始數據:', allItems);
-              showToast('目前沒有可用的食材');
+              showToast('目前沒有可用的食材', 'error');
               return;
           }
           
-          // 選擇一個隨機食材（簡化版，實際應該顯示選擇介面）
-          // 在實際遊戲中，這裡應該顯示一個對話框讓玩家選擇
-          const randomIngredient = availableIngredients[Math.floor(Math.random() * availableIngredients.length)];
+          // 獲取菜單元素
+          const ingredientsMenu = document.getElementById('ingredientsMenu');
+          const ingredientsGrid = document.getElementById('ingredientsGrid');
+          const modalBackdrop = document.getElementById('modalBackdrop') || createModalBackdrop();
           
-          // 發送拿取食材的請求
-          sendAction('pick_ingredient', {
-              ingredientType: randomIngredient.item_id,
-              slotIndex: gameState.activeSlot
+          // 清空現有內容
+          ingredientsGrid.innerHTML = '';
+          
+          // 填充食材列表
+          availableIngredients.forEach(ingredient => {
+              const itemElement = document.createElement('div');
+              itemElement.className = 'ingredient-item';
+              itemElement.innerHTML = `
+                  <div class="ingredient-icon">${getItemSymbol(ingredient.item_id)}</div>
+                  <div class="ingredient-name">${ingredient.item_name || getItemName(ingredient.item_id)}</div>
+              `;
+              
+              // 添加點擊事件
+              itemElement.addEventListener('click', () => {
+                  hideIngredientMenu();
+                  
+                  // 發送拿取食材的請求
+                  sendAction('pick_ingredient', {
+                      ingredientType: ingredient.item_id,
+                      slotIndex: gameState.activeSlot
+                  });
+                  
+                  showToast(`已選擇 ${ingredient.item_name || getItemName(ingredient.item_id)}`, 'success');
+              });
+              
+              ingredientsGrid.appendChild(itemElement);
           });
           
-          console.log(`已選擇食材: ${randomIngredient.item_id} (${randomIngredient.item_name || '未知'})`);
+          // 顯示菜單和背景
+          modalBackdrop.style.display = 'block';
+          ingredientsMenu.classList.add('show');
+          
+          // 綁定關閉按鈕事件
+          const closeBtn = document.getElementById('closeIngredientsMenu');
+          if (closeBtn) {
+              closeBtn.onclick = hideIngredientMenu;
+          }
+          
+          // 點擊背景也可關閉
+          modalBackdrop.onclick = hideIngredientMenu;
+      }
+
+      // 創建模態背景
+      function createModalBackdrop() {
+          const backdrop = document.createElement('div');
+          backdrop.id = 'modalBackdrop';
+          backdrop.className = 'modal-backdrop';
+          document.body.appendChild(backdrop);
+          return backdrop;
+      }
+
+      // 隱藏食材選擇菜單
+      function hideIngredientMenu() {
+          const ingredientsMenu = document.getElementById('ingredientsMenu');
+          const modalBackdrop = document.getElementById('modalBackdrop');
+          
+          if (ingredientsMenu) {
+              ingredientsMenu.classList.remove('show');
+          }
+          
+          if (modalBackdrop) {
+              modalBackdrop.style.display = 'none';
+          }
       }
 
       // 新增：結束遊戲
@@ -2347,145 +2531,180 @@
           return orderCard;
       }
 
+      // 遊戲初始化狀態機
+      const GameInitState = {
+        LOADING: 'loading',           // 初始狀態：加載中
+        DATA_READY: 'data_ready',     // 狀態A：靜態數據已加載
+        WS_CONNECTED: 'ws_connected', // 狀態B：WebSocket已連接並認證
+        GAME_READY: 'game_ready',     // 狀態C：已收到遊戲狀態
+        INITIALIZED: 'initialized'    // 最終狀態：完全初始化
+      };
+
       // 初始化遊戲
       async function initializeGame() {
-           console.log('開始初始化遊戲...');
-           
-           // 確保載入畫面顯示
-           const loadingScreen = document.getElementById('loadingScreen');
-           if (loadingScreen) {
-               loadingScreen.style.display = 'flex';
-           }
-           
-           // 添加緊急修復按鈕 - 用於在界面不顯示時手動修復
-           const emergencyFixBtn = document.createElement('button');
-           emergencyFixBtn.textContent = '修復界面';
-           emergencyFixBtn.className = 'dialog-button';
-           emergencyFixBtn.style.position = 'fixed';
-           emergencyFixBtn.style.bottom = '10px';
-           emergencyFixBtn.style.right = '10px';
-           emergencyFixBtn.style.zIndex = '9999';
-           emergencyFixBtn.style.display = 'none'; // 默認隱藏
-           
-           // 添加一個自動修復機制，在頁面載入後自動執行緊急修復
-           const autoFixTimeout = setTimeout(() => {
-               console.log('自動執行緊急UI修復...');
-               emergencyUIFix();
-           }, 3000); // 3秒後自動修復
-           
-           // 仍然保留手動按鈕，以防自動修復失敗
-           setTimeout(() => {
-               emergencyFixBtn.style.display = 'block';
-           }, 5000);
-           
-           emergencyFixBtn.addEventListener('click', emergencyUIFix);
-           document.body.appendChild(emergencyFixBtn);
-           
-           // 設置一個全局超時，如果超過時間仍未初始化完成，則顯示錯誤
-           const initTimeout = setTimeout(() => {
-               if (loadingScreen && loadingScreen.style.display !== 'none') {
-                   console.error('遊戲初始化超時!');
-                   const loadingText = document.querySelector('.loading-text');
-                   if (loadingText) {
-                       loadingText.textContent = '連接伺服器超時，請檢查網絡連接並刷新頁面。';
-                   }
-                   
-                   // 添加重試按鈕
-                   const retryButton = document.createElement('button');
-                   retryButton.textContent = '重試';
-                   retryButton.className = 'dialog-button';
-                   retryButton.style.marginTop = '15px';
-                   retryButton.addEventListener('click', () => {
-                       location.reload();
-                   });
-                   
-                   if (loadingScreen) {
-                       loadingScreen.appendChild(retryButton);
-                   }
-               }
-           }, 30000); // 30秒超時
-           
-           try {
-               // ★ 修改：先加載遊戲數據，確保數據加載完成後再連接WebSocket
-               console.log('開始加載遊戲數據...');
-               const dataLoaded = await fetchAllGameData();
-               console.log('遊戲數據加載結果:', dataLoaded);
-               
-               if (!dataLoaded) {
-                   throw new Error('遊戲數據加載失敗');
-               }
-               
-               // 初始化遊戲狀態
-               gameState = {
-                   inventory: new Array(8).fill(null),
-                   activeSlot: 0,
-                   score: 0,
-                   time: 0,
-                   orders: [],
-                   players: [],
-                   currentPlayer: {},
-                   dataReady: true // ★ 新增：標記數據已準備好
-               };
-               
-               console.log('開始連接WebSocket...');
-               // 連接WebSocket
-               connectWebSocket();
-               
-               // 如果WebSocket連接失敗，提供手動初始化選項
-               setTimeout(() => {
-                   if (loadingScreen && loadingScreen.style.display !== 'none' && 
-                       (!websocket || websocket.readyState !== WebSocket.OPEN)) {
-                       console.error('WebSocket連接失敗或超時!');
-                       const loadingText = document.querySelector('.loading-text');
-                       if (loadingText) {
-                           loadingText.textContent = 'WebSocket連接失敗，請檢查網絡連接。';
-                       }
-                       
-                       // 添加手動初始化按鈕
-                       const manualStartButton = document.createElement('button');
-                       manualStartButton.textContent = '手動開始遊戲';
-                       manualStartButton.className = 'dialog-button';
-                       manualStartButton.style.marginTop = '15px';
-                       manualStartButton.addEventListener('click', () => {
-                           // 使用一個空的初始狀態手動開始遊戲
-                           startGame({
-                               inventory: new Array(8).fill(null),
-                               score: 0,
-                               orders: [],
-                               players: [{
-                                   user_id: 'local',
-                                   username: '本地玩家'
-                               }],
-                               timeRemaining: 180 // 3分鐘
-                           });
-                       });
-                       
-                       if (loadingScreen) {
-                           loadingScreen.appendChild(manualStartButton);
-                       }
-                   }
-               }, 10000); // 10秒後檢查
-           } catch (error) {
-               // 如果數據加載失敗，顯示錯誤並可能提供重試按鈕
-               console.error("遊戲初始化過程中出錯:", error);
-               const loadingText = document.querySelector('.loading-text');
-               if (loadingText) {
-                   loadingText.textContent = '資源加載失敗，請刷新頁面重試。';
-               }
-               
-               // 添加重試按鈕
-               const retryButton = document.createElement('button');
-               retryButton.textContent = '重試';
-               retryButton.className = 'dialog-button';
-               retryButton.style.marginTop = '15px';
-               retryButton.addEventListener('click', () => {
-                   location.reload();
-               });
-               
-               if (loadingScreen) {
-                   loadingScreen.appendChild(retryButton);
-               }
-           }
+        console.log('開始初始化遊戲...');
+        
+        // 初始化狀態追蹤
+        let initState = {
+          current: GameInitState.LOADING,
+          dataReady: false,
+          wsConnected: false,
+          gameStateReceived: false
+        };
+        
+        // 顯示載入畫面
+        const loadingScreen = document.getElementById('loadingScreen');
+        if (loadingScreen) {
+          loadingScreen.style.display = 'flex';
+        }
+        
+        // 更新載入狀態顯示
+        function updateLoadingStatus(message) {
+          const loadingText = document.querySelector('.loading-text');
+          if (loadingText) {
+            loadingText.textContent = message;
+          }
+          console.log(`[初始化] ${message}`);
+        }
+        
+        // 狀態轉換函數
+        function updateInitState() {
+          // 檢查狀態轉換
+          if (initState.dataReady && !initState.wsConnected && !initState.gameStateReceived) {
+            initState.current = GameInitState.DATA_READY;
+            updateLoadingStatus('遊戲數據已加載，正在連接伺服器...');
+          }
+          else if (initState.dataReady && initState.wsConnected && !initState.gameStateReceived) {
+            initState.current = GameInitState.WS_CONNECTED;
+            updateLoadingStatus('已連接伺服器，等待遊戲數據...');
+          }
+          else if (initState.dataReady && initState.wsConnected && initState.gameStateReceived) {
+            initState.current = GameInitState.GAME_READY;
+            updateLoadingStatus('遊戲數據已就緒，正在初始化界面...');
+            
+            // 當所有條件滿足時，執行一次性的完整初始化
+            if (initState.current === GameInitState.GAME_READY) {
+              completeInitialization();
+              initState.current = GameInitState.INITIALIZED;
+            }
+          }
+        }
+        
+        // 完成初始化的函數 - 只會被調用一次
+        function completeInitialization() {
+          console.log('所有初始化條件已滿足，執行最終初始化...');
+          
+          // 隱藏載入畫面
+          if (loadingScreen) {
+            loadingScreen.style.display = 'none';
+          }
+          
+          // 確保遊戲UI顯示
+          const gameUI = document.getElementById('gameUI');
+          if (gameUI) {
+            gameUI.style.display = 'flex';
+            gameUI.style.visibility = 'visible';
+          }
+          
+          // 初始化UI組件
+          initializeStations();
+          initializeAssemblyPlate();
+          
+          // 初始化用戶狀態指示器
+          if (gameState.currentPlayer && gameState.currentPlayer.display_name) {
+            initializeUserStatus();
+          }
+          
+          // 更新訂單和任務提示
+          updateOrders();
+          updateTaskHint();
+          updateOrderTimers();
+          
+          // 顯示歡迎提示
+          showToast('遊戲開始！準備好大展身手吧！', 'success');
+          
+          console.log('遊戲初始化完成!');
+        }
+        
+        // 設置初始化超時保護
+        const initTimeout = setTimeout(() => {
+          if (initState.current !== GameInitState.INITIALIZED) {
+            console.error('遊戲初始化超時!');
+            updateLoadingStatus('初始化超時，請檢查網絡連接並刷新頁面');
+            
+            // 添加重試按鈕
+            const retryButton = document.createElement('button');
+            retryButton.textContent = '重試';
+            retryButton.className = 'dialog-button';
+            retryButton.style.marginTop = '15px';
+            retryButton.addEventListener('click', () => {
+              location.reload();
+            });
+            
+            if (loadingScreen) {
+              loadingScreen.appendChild(retryButton);
+            }
+          }
+        }, 30000); // 30秒超時
+        
+        try {
+          // 並行執行數據加載和WebSocket連接
+          updateLoadingStatus('正在加載遊戲數據...');
+          
+          // 初始化遊戲狀態
+          gameState = {
+            inventory: new Array(8).fill(null),
+            activeSlot: 0,
+            score: 0,
+            time: 0,
+            orders: [],
+            players: [],
+            currentPlayer: {}
+          };
+          
+          // 設置WebSocket消息處理器
+          window.handleGameStateReceived = function(gameStateData) {
+            console.log('收到初始遊戲狀態:', gameStateData);
+            updateGameState(gameStateData);
+            initState.gameStateReceived = true;
+            updateInitState();
+          };
+          
+          window.handleWsConnected = function() {
+            console.log('WebSocket已連接並認證成功');
+            initState.wsConnected = true;
+            updateInitState();
+          };
+          
+          // 並行加載數據和連接WebSocket
+          Promise.all([
+            // 任務1: 加載遊戲數據
+            fetchAllGameData().then(success => {
+              if (success) {
+                console.log('遊戲數據加載成功');
+                initState.dataReady = true;
+              } else {
+                throw new Error('遊戲數據加載失敗');
+              }
+              updateInitState();
+            }),
+            
+            // 任務2: 連接WebSocket (不需要等待結果，由事件驅動)
+            new Promise(resolve => {
+              console.log('開始連接WebSocket...');
+              connectWebSocket();
+              // 這個Promise會立即解析，實際的連接狀態由事件處理
+              resolve();
+            })
+          ]).catch(error => {
+            console.error('初始化過程中出錯:', error);
+            updateLoadingStatus('初始化出錯: ' + error.message);
+          });
+          
+        } catch (error) {
+          console.error('遊戲初始化過程中出錯:', error);
+          updateLoadingStatus('初始化出錯: ' + error.message);
+        }
       }
 
       // 緊急UI修復函數
@@ -2594,14 +2813,37 @@
           return false; // 阻止事件冒泡
       }
 
-      function showToast(message) {
+      function showToast(message, type = 'normal') {
         const toast = document.getElementById('toast');
         if (!toast) return;
+        
+        // 清除之前可能存在的計時器
+        if (toast.hideTimeout) {
+          clearTimeout(toast.hideTimeout);
+        }
+        
+        // 清除之前可能存在的類別
+        toast.classList.remove('show', 'success', 'error');
+        
+        // 設置消息內容
         toast.textContent = message;
-        toast.classList.add('show');
+        
+        // 添加類型樣式
+        if (type === 'success') {
+          toast.classList.add('success');
+        } else if (type === 'error') {
+          toast.classList.add('error');
+        }
+        
+        // 顯示提示
         setTimeout(() => {
-            toast.classList.remove('show');
-        }, 2500);
+          toast.classList.add('show');
+        }, 10); // 小延遲確保過渡效果正常
+        
+        // 設置自動隱藏計時器
+        toast.hideTimeout = setTimeout(() => {
+          toast.classList.remove('show');
+        }, 3000);
       }
 
       initializeGame();
@@ -2730,6 +2972,55 @@ function updateOrderTimers(gameTimeRemaining) {
         timerText.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
     });
 }
+
+      // 更新庫存顯示
+      function updateInventoryDisplay() {
+          const playerInventory = document.getElementById('playerInventory');
+          if (!playerInventory) {
+              console.error('找不到庫存容器元素');
+              return;
+          }
+          
+          console.log('更新庫存顯示，當前庫存:', gameState.inventory);
+          
+          // 清空現有的庫存顯示
+          playerInventory.innerHTML = '';
+          
+          // 創建 8 個物品槽 (2x4 布局)
+          for (let i = 0; i < 8; i++) {
+              const slot = document.createElement('div');
+              slot.className = 'inventory-slot';
+              
+              // 添加活動槽位高亮
+              if (i === gameState.activeSlot) {
+                  slot.classList.add('active');
+              }
+              
+              // 添加物品內容（如果有）
+              const item = gameState.inventory[i];
+              if (item) {
+                  slot.innerHTML = getItemSymbol(item.type);
+                  slot.title = getItemName(item.type);
+                  slot.dataset.itemType = item.type;
+                  
+                  // 添加動畫效果
+                  slot.classList.add('game-item');
+              }
+              
+              // 添加槽位索引屬性
+              slot.dataset.slotIndex = i;
+              
+              // 添加點擊事件
+              slot.addEventListener('click', () => {
+                  console.log(`點擊庫存槽 ${i}`);
+                  sendAction('select_slot', { slotIndex: i });
+              });
+              
+              playerInventory.appendChild(slot);
+          }
+          
+          console.log('庫存顯示已更新');
+      }
     });
   </script>
 </body>
