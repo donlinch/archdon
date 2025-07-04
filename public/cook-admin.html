@@ -85,14 +85,14 @@
             // 獲取所有物品資料
             async function fetchItems() {
                 try {
-                    const token = localStorage.getItem('token');
+                    const token = localStorage.getItem('cookGameToken');
                     if (!token) {
                         alert('請先登入');
                         sqlOutput.textContent = '錯誤：未找到認證令牌，請以管理員身份登入。';
                         return;
                     }
 
-                    const response = await fetch('/cook-api/admin/all-items', {
+                    const response = await fetch('/admin/all-items', {
                         headers: {
                             'Authorization': `Bearer ${token}`
                         }
@@ -127,13 +127,13 @@
             // 獲取所有食譜資料
             async function fetchRecipes() {
                 try {
-                    const token = localStorage.getItem('token');
+                    const token = localStorage.getItem('cookGameToken');
                      if (!token) {
                         // fetchItems 已經檢查過，這裡可以省略
                         return;
                     }
 
-                    const response = await fetch('/cook-api/admin/all-recipes', {
+                    const response = await fetch('/admin/all-recipes', {
                          headers: {
                             'Authorization': `Bearer ${token}`
                         }
@@ -173,44 +173,40 @@
 
             // 導出 SQL
             function exportSql() {
-                if(allItems.length === 0 || allRecipes.length === 0) {
+                if(allItems.length === 0) { // 只需檢查 allItems 即可，因為食譜依賴物品
                     sqlOutput.textContent = '資料尚未載入或載入失敗，無法導出。';
                     return;
                 }
 
                 let sql = '-- ========= COOK ITEMS =========\n';
+                sql += 'TRUNCATE TABLE cook_items, cook_recipes_v2, cook_recipe_requirements_v2 RESTART IDENTITY CASCADE;\n\n';
+                sql += '-- ========= COOK ITEMS =========\n';
                 sql += 'INSERT INTO cook_items (id, item_id, item_name, item_type, base_points, is_dish) VALUES\n';
                 const itemValues = allItems.map(i => 
                     `(${i.id}, '${i.item_id}', '${i.item_name}', '${i.item_type}', ${i.base_points}, ${i.is_dish})`
                 ).join(',\n');
-                sql += itemValues + ' ON CONFLICT (id) DO UPDATE SET item_id = EXCLUDED.item_id, item_name = EXCLUDED.item_name, item_type = EXCLUDED.item_type, base_points = EXCLUDED.base_points, is_dish = EXCLUDED.is_dish;\n\n';
+                sql += itemValues + ';\n\n';
 
                 sql += '-- ========= COOK RECIPES V2 =========\n';
-                sql += 'INSERT INTO cook_recipes_v2 (recipe_id, recipe_name, station_type, output_item_id, cook_time_seconds, is_orderable, difficulty) VALUES\n';
+                sql += 'INSERT INTO cook_recipes_v2 (id, recipe_id, recipe_name, station_type, output_item_id, cook_time_seconds, is_orderable, difficulty) VALUES\n';
                 const recipeValues = allRecipes.map(r => {
                     const outputItem = allItems.find(i => i.id === r.output_item_id);
-                    // 注意：此處的 recipe_name 只是示意
                     const recipeName = `${r.output_item_name}食譜`;
-                    // 假設 is_orderable 和 difficulty
                     const isOrderable = outputItem ? outputItem.is_dish : false;
                     const difficulty = 1; 
-                    return `('${r.recipe_id}', '${recipeName}', '${r.station_type}', ${r.output_item_id}, ${r.cook_time_seconds || 'NULL'}, ${isOrderable}, ${difficulty})`;
+                    // 使用從後端傳來的 recipe_db_id
+                    return `(${r.recipe_db_id}, '${r.recipe_id}', '${recipeName}', '${r.station_type}', ${r.output_item_id}, ${r.cook_time_seconds || 'NULL'}, ${isOrderable}, ${difficulty})`;
                 }).join(',\n');
-                sql += recipeValues + ' ON CONFLICT (recipe_id) DO UPDATE SET recipe_name = EXCLUDED.recipe_name, station_type = EXCLUDED.station_type, output_item_id = EXCLUDED.output_item_id, cook_time_seconds = EXCLUDED.cook_time_seconds, is_orderable = EXCLUDED.is_orderable, difficulty = EXCLUDED.difficulty;\n\n';
+                sql += recipeValues + ';\n\n';
                 
                 sql += '-- ========= COOK RECIPE REQUIREMENTS V2 =========\n';
-                sql += '-- 注意：由於 recipe_id 在資料庫中是 foreign key to an auto-incrementing id, 直接重建這部分 SQL 較為複雜。\n';
-                sql += '-- 以下指令假設您會先清空 requirements 表，並搭配上面的 recipe 表一起重新插入。\n';
-                sql += 'DELETE FROM cook_recipe_requirements_v2;\n';
                 sql += 'INSERT INTO cook_recipe_requirements_v2 (recipe_id, required_item_id, quantity) VALUES\n';
                 
                 let reqValues = [];
                 allRecipes.forEach(r => {
-                    // 這裡需要一個方法從 recipe_id (string) 映射到資料庫的 recipe.id (integer)
-                    // 為了簡化，我們先假設一個查詢邏輯
-                    const recipeDbId = `(SELECT id FROM cook_recipes_v2 WHERE recipe_id = '${r.recipe_id}')`;
                     r.requirements.forEach(req => {
-                        reqValues.push(`(${recipeDbId}, ${req.item_id}, ${req.quantity})`);
+                        // 使用 recipe_db_id 和 req.item_id
+                        reqValues.push(`(${r.recipe_db_id}, ${req.item_id}, ${req.quantity})`);
                     });
                 });
                 sql += reqValues.join(',\n') + ';\n\n';
