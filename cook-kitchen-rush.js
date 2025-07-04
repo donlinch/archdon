@@ -203,43 +203,64 @@ const isAdmin = async (req, res, next) => {
             res.status(500).json({ success: false, error: '無法獲取物品列表' });
         }
     });
-    
-    // API: 獲取所有食譜及其需求
-    cookGameApp.get('/admin/all-recipes', authenticateToken, isAdmin, async (req, res) => {
-        try {
-            const query = `
-                SELECT 
-                    r.id AS recipe_db_id,
-                    r.recipe_id, 
-                    r.station_type, 
-                    r.output_item_id, 
-                    r.cook_time_seconds,
-                    i_out.item_name AS output_item_name,
-                    -- 使用 JSON_AGG 聚合所有需求
-                    COALESCE(
-                        (
-                            SELECT json_agg(json_build_object(
-                                'item_id', i_req.id,
-                                'item_name', i_req.item_name,
-                                'quantity', req.quantity
-                            ))
-                            FROM cook_recipe_requirements_v2 req
-                            JOIN cook_items i_req ON req.required_item_id = i_req.id
-                            WHERE req.recipe_id = r.id
-                        ),
-                        '[]'::json
-                    ) as requirements
-                FROM cook_recipes_v2 r
-                JOIN cook_items i_out ON r.output_item_id = i_out.id
-                ORDER BY r.id ASC
-            `;
-            const recipesResult = await pool.query(query);
-            res.json(recipesResult.rows);
-        } catch (error) {
-            console.error('Error fetching all recipes:', error);
-            res.status(500).json({ success: false, error: '無法獲取食譜列表' });
-        }
-    });
+    // API: 獲取所有食譜及其需求 (修正版)
+cookGameApp.get('/admin/all-recipes', authenticateToken, isAdmin, async (req, res) => {
+    const client = await pool.connect();
+    try {
+        // 1. 獲取所有食譜的基礎資料，並 JOIN 產出物的名稱
+        const recipesResult = await client.query(`
+            SELECT 
+                r.id AS recipe_db_id,
+                r.recipe_id, 
+                r.station_type, 
+                r.output_item_id, 
+                r.cook_time_seconds,
+                i_out.item_name AS output_item_name
+            FROM cook_recipes_v2 r
+            JOIN cook_items i_out ON r.output_item_id = i_out.id
+            ORDER BY r.id ASC
+        `);
+        const recipes = recipesResult.rows;
+
+        // 2. 獲取所有食譜的需求，並 JOIN 需求物品的名稱
+        const requirementsResult = await client.query(`
+            SELECT 
+                req.recipe_id, -- 這裡是關聯到 cook_recipes_v2 的數字 id
+                req.required_item_id,
+                req.quantity,
+                i_req.item_name AS item_name
+            FROM cook_recipe_requirements_v2 req
+            JOIN cook_items i_req ON req.required_item_id = i_req.id
+        `);
+        const allRequirements = requirementsResult.rows;
+
+        // 3. 在 Node.js 中將需求組合到對應的食譜中
+        const recipesWithRequirements = recipes.map(recipe => {
+            const requirements = allRequirements
+                // 關鍵：用 recipe_db_id (數字) 來匹配
+                .filter(req => req.recipe_id === recipe.recipe_db_id) 
+                .map(req => ({
+                    item_id: req.required_item_id, // 前端關聯用
+                    item_name: req.item_name,       // 前端顯示用
+                    quantity: req.quantity
+                }));
+            
+            // 返回給前端的格式
+            return {
+                ...recipe, // 包含 recipe_db_id, recipe_id, station_type 等所有欄位
+                requirements: requirements
+            };
+        });
+
+        res.json(recipesWithRequirements);
+
+    } catch (error) {
+        console.error('Error fetching all recipes:', error);
+        res.status(500).json({ success: false, error: '無法獲取食譜列表', detail: error.message });
+    } finally {
+        client.release();
+    }
+});
 
     const activeConnections = new Map(); // 用於追蹤 userId -> ws 的對應關係
 
