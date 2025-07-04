@@ -1017,100 +1017,122 @@
       // =================================================================
       let ws;
       let assemblyPlateItems = [null, null]; // [ {item, slotElement}, {item, slotElement} ]
-// =================================================================
-// WebSocket 連接與處理
-// =================================================================
-let websocket = null; // 將 websocket 變數提升到外面，方便全局訪問
-let reconnectAttempts = 0;
-const maxReconnectAttempts = 5;
-const reconnectDelay = 3000;
 
-function connectWebSocket() {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    // 確保連接到遊戲專用的 WebSocket 路徑
-    const wsUrl = `${protocol}//${window.location.host}/cook-ws`; 
-    
-    console.log(`[WebSocket] 正在嘗試連接到: ${wsUrl}`);
-    
-    // 如果已有連線，先關閉
-    if (websocket && websocket.readyState !== WebSocket.CLOSED) {
-        websocket.close();
-    }
+      // =================================================================
+      // WebSocket 連接與處理
+      // =================================================================
+      let websocket = null; // 將 websocket 變數提升到外面，方便全局訪問
+      let reconnectAttempts = 0;
+      const maxReconnectAttempts = 5;
+      const reconnectDelay = 3000;
 
-    websocket = new WebSocket(wsUrl);
-    
-    websocket.onopen = () => {
-        console.log('[WebSocket] 連接已成功建立');
-        reconnectAttempts = 0; // 重置重連嘗試次數
-        
-        // 發送認證訊息
-        const token = localStorage.getItem('cookGameToken');
-        if (token) {
-            websocket.send(JSON.stringify({
-                type: 'authenticate',
-                token: token
-            }));
-        } else {
-            console.error('[WebSocket] 錯誤：找不到 cookGameToken，無法進行認證。');
-            showToast("認證失敗，請重新登入。");
-            websocket.close();
-        }
-    };
-    
-    websocket.onmessage = (event) => {
-        try {
-            const message = JSON.parse(event.data);
-            handleWebsocketMessage(message); // 將收到的訊息交給處理函數
-        } catch (error) {
-            console.error('[WebSocket] 解析訊息時出錯:', error);
-        }
-    };
-    
-    websocket.onclose = (event) => {
-        console.log(`[WebSocket] 連接已關閉。代碼: ${event.code}, 原因: ${event.reason}`);
-        
-        // 如果不是正常關閉，則嘗試重連
-        if (event.code !== 1000 && reconnectAttempts < maxReconnectAttempts) {
-            reconnectAttempts++;
-            console.log(`[WebSocket] ${reconnectDelay / 1000}秒後嘗試第 ${reconnectAttempts} 次重連...`);
-            setTimeout(connectWebSocket, reconnectDelay);
-        } else if (reconnectAttempts >= maxReconnectAttempts) {
-            showToast('與伺服器的連接已斷開，請刷新頁面重試。');
-        }
-    };
-    
-    websocket.onerror = (error) => {
-        console.error('[WebSocket] 發生錯誤:', error);
-        showToast('與伺服器的連接發生錯誤。');
-    };
-}
+      function connectWebSocket() {
+          const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+          // 確保連接到遊戲專用的 WebSocket 路徑
+          const wsUrl = `${protocol}//${window.location.host}/cook-ws`; 
+          
+          console.log(`[WebSocket] 正在嘗試連接到: ${wsUrl}`);
+          
+          // 如果已有連線，先關閉
+          if (websocket && websocket.readyState !== WebSocket.CLOSED) {
+              websocket.close();
+          }
+
+          websocket = new WebSocket(wsUrl);
+          
+          websocket.onopen = () => {
+              console.log('[WebSocket] 連接已成功建立');
+              reconnectAttempts = 0; // 重置重連嘗試次數
+              
+              // 發送認證訊息
+              const token = localStorage.getItem('cookGameToken');
+              if (token) {
+                  websocket.send(JSON.stringify({
+                      type: 'authenticate',
+                      token: token
+                  }));
+                  
+                  // 同時解析 token 以獲取用戶資訊（這應該與後端驗證匹配）
+                  try {
+                      const tokenPayload = JSON.parse(atob(token.split('.')[1]));
+                      // 初始化用戶資訊
+                      gameState.currentPlayer = {
+                          user_id: tokenPayload.userId || tokenPayload.user_id,
+                          username: tokenPayload.username || tokenPayload.name || 'Player'
+                      };
+                  } catch (error) {
+                      console.error('[WebSocket] 解析 token 失敗:', error);
+                  }
+              } else {
+                  console.error('[WebSocket] 錯誤：找不到 cookGameToken，無法進行認證。');
+                  showToast("認證失敗，請重新登入。");
+                  websocket.close();
+              }
+          };
+          
+          websocket.onmessage = (event) => {
+              try {
+                  const message = JSON.parse(event.data);
+                  handleWebsocketMessage(message); // 將收到的訊息交給處理函數
+              } catch (error) {
+                  console.error('[WebSocket] 解析訊息時出錯:', error);
+              }
+          };
+          
+          websocket.onclose = (event) => {
+              console.log(`[WebSocket] 連接已關閉。代碼: ${event.code}, 原因: ${event.reason}`);
+              
+              // 如果不是正常關閉，則嘗試重連
+              if (event.code !== 1000 && reconnectAttempts < maxReconnectAttempts) {
+                  reconnectAttempts++;
+                  console.log(`[WebSocket] ${reconnectDelay / 1000}秒後嘗試第 ${reconnectAttempts} 次重連...`);
+                  setTimeout(connectWebSocket, reconnectDelay);
+              } else if (reconnectAttempts >= maxReconnectAttempts) {
+                  showToast('與伺服器的連接已斷開，請刷新頁面重試。');
+              }
+          };
+          
+          websocket.onerror = (error) => {
+              console.error('[WebSocket] 發生錯誤:', error);
+              showToast('與伺服器的連接發生錯誤。');
+          };
+      }
 
       function sendAction(action, payload = {}) {
-          if (ws && ws.readyState === WebSocket.OPEN) {
-              ws.send(JSON.stringify({ type: 'player_action', action, payload }));
+          if (websocket && websocket.readyState === WebSocket.OPEN) {
+              websocket.send(JSON.stringify({ type: 'player_action', action, payload }));
+          } else {
+              showToast('無法發送請求，連線已斷開。');
           }
       }
 
       function handleWebsocketMessage(message) {
         switch (message.type) {
           case 'auth_success':
-        console.log('認證成功，正在加入遊戲房間...');
-        
-        // ★ 新增：在認證成功後立即隱藏載入畫面
-        // 這可以給玩家一個更快的反饋
-        const loadingScreen = document.getElementById('loadingScreen');
-        if (loadingScreen) {
-            loadingScreen.style.display = 'none';
-        }
-        
-        // 發送加入房間的請求
-        websocket.send(JSON.stringify({
-          type: 'join_room',
-          roomId: roomId,
-          userId: gameState.currentPlayer.user_id // 確保 gameState.currentPlayer 已被設置
-        }));
-        break;
-             
+              console.log('認證成功，正在加入遊戲房間...');
+              
+              // ★ 新增：在認證成功後立即隱藏載入畫面
+              // 這可以給玩家一個更快的反饋
+              const loadingScreen = document.getElementById('loadingScreen');
+              if (loadingScreen) {
+                  loadingScreen.style.display = 'none';
+              }
+              
+              // 更新用戶信息（如果後端提供）
+              if (message.userData) {
+                  gameState.currentPlayer = {
+                      ...gameState.currentPlayer,
+                      ...message.userData
+                  };
+              }
+              
+              // 發送加入房間的請求
+              websocket.send(JSON.stringify({
+                  type: 'join_room',
+                  roomId: roomId,
+                  userId: gameState.currentPlayer?.user_id // 使用可選鏈運算符避免錯誤
+              }));
+              break;
 
     case 'game_started':
         // 這裡也可以再確認一次載入畫面是隱藏的
@@ -1344,6 +1366,305 @@ case 'level_up':
           return itemDetails[type] ? itemDetails[type].name : '未知物品';
       }
 
+      // 新增：獲取物品符號
+      function getItemSymbol(type) {
+          // 優先從 allItems (後端數據) 查找
+          const item = allItems.find(i => i.item_id === type);
+          if (item && item.symbol) {
+              return item.symbol;
+          }
+          // 如果找不到，則使用前端的備用數據
+          return itemDetails[type] ? itemDetails[type].symbol : '❓';
+      }
+
+      // 新增：獲取配方名稱
+      function getRecipeName(recipeId) {
+          const recipe = allRecipes.find(r => r.recipe_id === recipeId);
+          if (recipe) {
+              return recipe.recipe_name;
+          }
+          // 如果找不到，嘗試使用前端備用數據
+          return itemDetails[recipeId] ? itemDetails[recipeId].name : '未知料理';
+      }
+
+      // 新增：更新庫存 UI 顯示
+      function updateInventory(inventory) {
+          const playerInventory = document.getElementById('playerInventory');
+          if (!playerInventory) return;
+          
+          // 清空現有的庫存顯示
+          playerInventory.innerHTML = '';
+          
+          // 創建 8 個物品槽 (2x4 布局)
+          for (let i = 0; i < 8; i++) {
+              const slot = document.createElement('div');
+              slot.className = 'inventory-slot';
+              if (i === gameState.activeSlot) {
+                  slot.classList.add('active');
+              }
+              
+              // 添加物品內容（如果有）
+              if (inventory[i]) {
+                  slot.innerHTML = getItemSymbol(inventory[i].type);
+                  slot.title = getItemName(inventory[i].type);
+              }
+              
+              // 添加點擊事件
+              slot.addEventListener('click', () => {
+                  sendAction('select_slot', { slotIndex: i });
+              });
+              
+              playerInventory.appendChild(slot);
+          }
+      }
+
+      // 新增：開始遊戲
+      function startGame(initialState) {
+          // 隱藏載入畫面
+          document.getElementById('loadingScreen').style.display = 'none';
+          
+          // 設置初始遊戲狀態
+          gameState = {
+              ...gameState,
+              ...initialState,
+              inventory: initialState.inventory || new Array(8).fill(null),
+              score: initialState.score || 0,
+              orders: initialState.orders || [],
+              currentPlayer: initialState.currentPlayer || {},
+              players: initialState.players || []
+          };
+          
+          console.log('遊戲開始，初始狀態:', gameState);
+          
+          // 更新 UI 組件
+          updateInventory(gameState.inventory);
+          updateOrders();
+          updateScore(gameState.score);
+          updateTimer(initialState.timeRemaining || 180); // 默認 3 分鐘
+          updateTaskHint();
+          
+          // 初始化工作站
+          initializeStations();
+          
+          // 初始化組合盤事件監聽
+          initializeAssemblyPlate();
+          
+          // 顯示用戶資訊
+          if (gameState.currentPlayer) {
+              document.getElementById('userStatusName').textContent = gameState.currentPlayer.username;
+              document.getElementById('userStatus').style.display = 'flex';
+          }
+          
+          // 顯示歡迎提示
+          showToast('遊戲開始！準備好大展身手吧！');
+      }
+
+      // 新增：初始化工作站
+      function initializeStations() {
+          const stations = [
+              { id: 'grill', name: '烤架', icon: '🔥' },
+              { id: 'chopping_board', name: '切菜板', icon: '🔪' },
+              { id: 'ingredient_storage', name: '食材庫', icon: '🥕' },
+              { id: 'plate', name: '上菜區', icon: '🍽️' }
+          ];
+          
+          const stationsContainer = document.getElementById('stationsContainer');
+          if (!stationsContainer) return;
+          
+          stationsContainer.innerHTML = '';
+          
+          stations.forEach(station => {
+              const stationElement = document.createElement('div');
+              stationElement.className = 'station';
+              stationElement.innerHTML = `
+                  <div class="station-icon">${station.icon}</div>
+                  <div class="station-label">${station.name}</div>
+              `;
+              
+              // 添加點擊事件
+              stationElement.addEventListener('click', () => {
+                  if (station.id === 'ingredient_storage') {
+                      // 食材庫特殊處理 - 顯示食材選擇菜單
+                      showIngredientMenu();
+                  } else {
+                      // 其他工作站互動
+                      interactWithStation(station.id);
+                  }
+              });
+              
+              stationsContainer.appendChild(stationElement);
+          });
+      }
+
+      // 新增：初始化組合盤
+      function initializeAssemblyPlate() {
+          // 綁定組合盤槽位點擊事件
+          const plateSlots = document.querySelectorAll('.plate-slot');
+          plateSlots.forEach((slot, index) => {
+              slot.id = `plate-slot-${index + 1}`;
+              slot.addEventListener('click', () => handlePlateSlotClick(index));
+              slot.innerHTML = ''; // 清空槽位
+          });
+          
+          // 綁定組合按鈕點擊事件
+          const assembleBtn = document.getElementById('assembleBtn');
+          if (assembleBtn) {
+              assembleBtn.addEventListener('click', handleAssembleClick);
+          }
+      }
+
+      // 新增：顯示食材選擇菜單
+      function showIngredientMenu() {
+          // 檢查當前槽位是否為空
+          if (gameState.inventory[gameState.activeSlot]) {
+              showToast('這個槽位已經有物品了，請先清空或選擇一個空槽位');
+              return;
+          }
+          
+          // 獲取可用的基礎食材（這裡可以根據後端數據篩選）
+          const availableIngredients = allItems.filter(item => 
+              item.item_type === 'ingredient' && item.is_base_item
+          );
+          
+          // 如果沒有可用食材，顯示錯誤
+          if (!availableIngredients || availableIngredients.length === 0) {
+              showToast('目前沒有可用的食材');
+              return;
+          }
+          
+          // 選擇一個隨機食材（簡化版，實際應該顯示選擇介面）
+          // 在實際遊戲中，這裡應該顯示一個對話框讓玩家選擇
+          const randomIngredient = availableIngredients[Math.floor(Math.random() * availableIngredients.length)];
+          
+          // 發送拿取食材的請求
+          sendAction('pick_ingredient', {
+              ingredientType: randomIngredient.item_id,
+              slotIndex: gameState.activeSlot
+          });
+      }
+
+      // 新增：結束遊戲
+      function endGame(gameOverData) {
+          console.log('遊戲結束，結算數據:', gameOverData);
+          
+          // 更新結算畫面數據
+          document.getElementById('finalScore').textContent = gameOverData.teamScore || 0;
+          document.getElementById('completedOrders').textContent = gameOverData.completedOrders || 0;
+          document.getElementById('personalScore').textContent = gameOverData.personalScore || 0;
+          
+          // 如果有獎勵數據，更新獎勵區域
+          if (gameOverData.rewards) {
+              document.getElementById('basePoints').textContent = gameOverData.rewards.basePoints || 0;
+              document.getElementById('questReward').textContent = gameOverData.rewards.questReward || 0;
+              document.getElementById('expGained').textContent = gameOverData.rewards.expGained || 0;
+              
+              // 如果有等級進度，顯示進度條
+              if (gameOverData.rewards.levelProgress) {
+                  document.getElementById('levelProgress').textContent = 
+                      `${gameOverData.rewards.levelProgress.current}/${gameOverData.rewards.levelProgress.next}`;
+                  document.getElementById('levelProgressBar').style.width = 
+                      `${(gameOverData.rewards.levelProgress.current / gameOverData.rewards.levelProgress.next) * 100}%`;
+                  document.getElementById('levelProgressContainer').style.display = 'block';
+              }
+          }
+          
+          // 顯示結算對話框
+          document.getElementById('gameOverDialog').style.display = 'flex';
+          
+          // 綁定返回大廳按鈕事件
+          document.getElementById('returnToLobbyBtn').onclick = () => {
+              window.location.href = '/cook-lobby.html';
+          };
+      }
+
+      // 新增：顯示升級通知
+      function showLevelUpNotification(levelUpData) {
+          // 創建一個臨時的升級通知對話框
+          const levelUpDialog = document.createElement('div');
+          levelUpDialog.className = 'dialog';
+          levelUpDialog.style.zIndex = '2000'; // 確保顯示在最上層
+          
+          levelUpDialog.innerHTML = `
+              <div class="dialog-content" style="background-color: #2a5a34;">
+                  <div class="dialog-title" style="color: #FFD700;">恭喜升級！</div>
+                  <div class="dialog-text">
+                      <p>你的料理等級提升至 <span style="font-size: 1.5em; color: #FFD700;">${levelUpData.newLevel}</span> 級</p>
+                      <p style="margin-top: 10px;">解鎖新物品：</p>
+                      <div style="display: flex; justify-content: center; gap: 10px; margin-top: 10px;">
+                          ${levelUpData.unlockedItems?.map(item => 
+                              `<div style="text-align: center;">
+                                  <div style="font-size: 2em;">${getItemSymbol(item.id)}</div>
+                                  <div>${getItemName(item.id)}</div>
+                              </div>`
+                          ).join('') || '暫無新物品'}
+                      </div>
+                  </div>
+                  <button class="dialog-button" style="background-color: #4CAF50;">好的</button>
+              </div>
+          `;
+          
+          // 添加到頁面
+          document.body.appendChild(levelUpDialog);
+          
+          // 綁定確認按鈕
+          const confirmButton = levelUpDialog.querySelector('.dialog-button');
+          confirmButton.onclick = () => {
+              levelUpDialog.remove();
+          };
+          
+          // 自動關閉（5秒後）
+          setTimeout(() => {
+              if (document.body.contains(levelUpDialog)) {
+                  levelUpDialog.remove();
+              }
+          }, 5000);
+      }
+
+      function updateTimer(seconds) {
+          if (seconds < 0) seconds = 0;
+          const gameTimer = document.getElementById('gameTimer');
+          const minutes = Math.floor(seconds / 60);
+          const remainingSeconds = seconds % 60;
+          if(gameTimer) gameTimer.textContent = `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+      }
+
+      function updateScore(newScore) {
+          const gameScore = document.getElementById('gameScore');
+          if(gameScore) gameScore.textContent = `分數: ${newScore}`;
+      }
+
+      function addOrder(order) {
+          const ordersContainer = document.getElementById('ordersContainer');
+          if (!order || !ordersContainer) return;
+          const orderElement = createOrderElement(order);
+          ordersContainer.appendChild(orderElement);
+      }
+
+      function removeOrder(orderId) {
+          const orderElement = document.getElementById(`order-${orderId}`);
+          if (orderElement) {
+              orderElement.style.transition = 'opacity 0.5s';
+              orderElement.style.opacity = '0';
+              setTimeout(() => orderElement.remove(), 500);
+          }
+      }
+
+      function updateTaskHint() {
+          const taskHint = document.getElementById('taskHint');
+          if (!taskHint) return;
+          
+          if (gameState.orders && gameState.orders.length > 0) {
+              const currentOrder = gameState.orders[0];
+              if (currentOrder && currentOrder.recipe) {
+                  taskHint.textContent = `當前任務：製作 ${getRecipeName(currentOrder.recipe)}`;
+              } else {
+                  taskHint.textContent = '等待新的訂單...';
+              }
+          } else {
+              taskHint.textContent = '太棒了！所有訂單都完成了！';
+          }
+      }
+
       function createOrderElement(order) {
           const orderCard = document.createElement('div');
           orderCard.className = 'order-card';
@@ -1399,7 +1720,7 @@ case 'level_up':
                   ordersContainer.appendChild(orderElement);
               } else {
                   console.warn('接收到無效的訂單(null)，已略過。');
-          }
+              }
         });
       }
       
@@ -1414,6 +1735,16 @@ case 'level_up':
               // 如果數據加載失敗，顯示錯誤並可能提供重試按鈕
               document.querySelector('.loading-text').textContent = '資源加載失敗，請刷新頁面重試。';
           }
+      }
+
+      function showToast(message) {
+        const toast = document.getElementById('toast');
+        if (!toast) return;
+        toast.textContent = message;
+        toast.classList.add('show');
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 2500);
       }
 
       initializeGame();

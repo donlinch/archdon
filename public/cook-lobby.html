@@ -638,27 +638,79 @@
         };
     }
 
-    // 處理WebSocket消息
-    function handleSocketMessage(message) {
-        switch (message.type) {
-            case 'auth_success':
-                console.log('WebSocket認證成功');
-                break;
-                
-            case 'auth_error':
-                console.error('WebSocket認證失敗:', message.message);
-                // 可能需要重新登入
-                break;
-                
-            case 'room_updated':
-                // 更新房間列表
-                fetchGameRooms();
-                break;
-                
-            // 其他消息類型處理...
-        }
-    }
+  // 處理WebSocket消息 (cook-lobby.html 完整版)
+function handleSocketMessage(message) {
+    console.log('[Lobby WS] 收到訊息:', message);
 
+    switch (message.type) {
+        case 'auth_success':
+            console.log('WebSocket 認證成功');
+            // 可以在這裡做一些事，例如顯示一個綠色的連線成功圖示
+            break;
+            
+        case 'auth_error':
+            console.error('WebSocket 認證失敗:', message.message);
+            alert('與伺服器的安全連線失敗，請嘗試重新登入。');
+            // 可能需要重新導向到登入頁
+            break;
+        
+       
+        // 當後端通知房間列表有變動時（例如有人創建/刪除房間）
+        case 'room_list_updated':
+            console.log('收到房間列表更新通知，正在重新獲取...');
+            fetchGameRooms(); // 自動重新整理房間列表，無需玩家手動點擊
+            break;
+
+        // 當後端廣播一條全服系統訊息時
+        case 'system_broadcast':
+            // 可以在頁面頂部顯示一個短暫的通知橫幅
+            showSystemBroadcast(message.text); 
+            break;
+        
+        // 當玩家自己的數據有更新時（例如，因為其他地方的行為獲得了點數）
+        case 'user_profile_updated':
+            console.log('收到個人資料更新通知。');
+            // 可以在這裡更新頁面上顯示的玩家等級或點數（如果大廳頁面有顯示的話）
+            // 例如：document.getElementById('userLevelDisplay').textContent = `Lv. ${message.newLevel}`;
+            break;
+        
+        default:
+            // 對於大廳頁面不關心的訊息（例如 'game_tick'），可以忽略
+            // console.log('[Lobby WS] 收到未處理的訊息類型:', message.type);
+            break;
+    }
+}
+
+// 輔助函數：顯示系統廣播
+function showSystemBroadcast(text) {
+    let broadcastDiv = document.getElementById('system-broadcast-banner');
+    if (!broadcastDiv) {
+        broadcastDiv = document.createElement('div');
+        broadcastDiv.id = 'system-broadcast-banner';
+        Object.assign(broadcastDiv.style, {
+            position: 'fixed',
+            top: '0',
+            left: '0',
+            width: '100%',
+            backgroundColor: 'var(--accent-color)',
+            color: 'white',
+            textAlign: 'center',
+            padding: '10px',
+            zIndex: '1001',
+            transform: 'translateY(-100%)',
+            transition: 'transform 0.5s ease-in-out'
+        });
+        document.body.prepend(broadcastDiv);
+    }
+    
+    broadcastDiv.textContent = text;
+    broadcastDiv.style.transform = 'translateY(0)';
+
+    // 5秒後自動隱藏
+    setTimeout(() => {
+        broadcastDiv.style.transform = 'translateY(-100%)';
+    }, 5000);
+}
     // 獲取遊戲房間列表
     function fetchGameRooms() {
         const token = localStorage.getItem('cookGameToken');
