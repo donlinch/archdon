@@ -891,42 +891,43 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
                                 ws.send(JSON.stringify({ type: 'error', message: '無效的庫存槽位' }));
                                 break;
                             }
-
+                        
                             const item = player.inventory[slotIndex];
                             if (!item) {
                                 ws.send(JSON.stringify({ type: 'error', message: '庫存槽為空' }));
                                 break;
                             }
-
+                        
                             // ★ V2 修改：使用 findCookingRecipe 查找食譜
+                            // 我們假設前端點擊「烹飪區」時，cookingMethod 是 'grill'
                             const recipe = await findCookingRecipe(item.type, cookingMethod || 'grill');
-
+                        
                             if (!recipe) {
                                 ws.send(JSON.stringify({ type: 'error', message: '此物品無法在此烹飪站處理' }));
                                 break;
                             }
                             
-                            // 更新物品狀態
+                            // 根據食譜更新物品狀態
                             player.inventory[slotIndex] = {
                                 ...item,
-                                type: recipe.output_item_id_str, // 使用食譜的產出
+                                type: recipe.output_item_id_str, // 使用食譜的產出物 ID
                                 state: 'cooked' // 狀態可根據食譜定義，此處簡化
                             };
                             
                             gameState.players[playerIndex] = player;
-
+                        
                             // 保存遊戲狀態
                             await client.query('UPDATE cook_game_rooms SET game_state = $1 WHERE room_id = $2', [gameState, roomId]);
                             await client.query('COMMIT');
-
-                            // 通知玩家烹飪成功
+                        
+                            // 通知操作的玩家烹飪成功
                             ws.send(JSON.stringify({
                                 type: 'item_cooked',
                                 slotIndex,
                                 resultType: recipe.output_item_id_str
                             }));
-
-                            // 廣播給其他玩家
+                        
+                            // 廣播給房間內其他玩家
                             broadcastToRoom(roomId, {
                                 type: 'player_action',
                                 playerId: userId,
@@ -943,6 +944,11 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
                             const inventory = player.inventory;
                             const ingredientItemTypes = inventory.filter(item => item !== null).map(item => item.type);
                             
+                            if (ingredientItemTypes.length === 0) {
+                                ws.send(JSON.stringify({ type: 'error', message: '庫存中沒有物品可供組裝' }));
+                                break;
+                            }
+
                             const recipe = await findAssemblyRecipe(ingredientItemTypes);
                             
                             if (!recipe) {
@@ -974,7 +980,6 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
                             // 在第一個空槽位放入組裝好的料理
                             const emptySlot = inventoryCopy.findIndex(item => item === null);
                             if (emptySlot === -1) {
-                                // 理論上不應該發生，因為我們剛移除了原料
                                 ws.send(JSON.stringify({ type: 'error', message: '沒有空的庫存槽來放置組裝好的料理' }));
                                 break;
                             }
@@ -1529,29 +1534,32 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
      * @returns {Promise<object|null>} 新的訂單物件或在錯誤時返回 null
      */
     async function generateOrder() {
-        // 在 V1 版本中，這個函式可能直接存取一個全域的 `pool` 變數
-        // 但現在它無法存取傳入 module.exports 的那個 pool
         try {
-            const recipeResult = await pool.query(
-                'SELECT recipe_id FROM cook_recipes_v2 WHERE is_orderable = TRUE ORDER BY RANDOM() LIMIT 1'
+            const itemResult = await pool.query(
+                `SELECT i.item_id 
+                 FROM cook_items i
+                 JOIN cook_recipes_v2 r ON i.id = r.output_item_id
+                 WHERE r.is_orderable = TRUE 
+                 ORDER BY RANDOM() LIMIT 1`
             );
 
-            if (recipeResult.rows.length === 0) {
+            if (itemResult.rows.length === 0) {
                 console.warn('[COOK-GAME] 資料庫中沒有可訂購的食譜');
                 return null;
             }
             
-            const recipeId = recipeResult.rows[0].recipe_id;
+            const dishItemId = itemResult.rows[0].item_id;
             const totalTime = 120; // 預設120秒
 
             return {
                 id: `order_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-                recipe: recipeId,
+                recipe: dishItemId, // ★ 關鍵修改：儲存的是最終物品的 ID
                 totalTime: totalTime,
                 timeRemaining: totalTime,
                 createdAt: Date.now()
             };
-        } catch (error) {
+        } catch (error)
+        {
             console.error('[COOK-GAME] 生成新訂單時發生資料庫錯誤:', error);
             return null;
         }
