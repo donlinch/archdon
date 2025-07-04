@@ -111,18 +111,38 @@
       grid-column: 2;
     }
     
-    /* 新的計時器樣式 */
     .game-timer {
-      display: inline-flex;
-      padding: 5px 10px;
-      border-radius: 5px;
-      font-family: monospace;
-      font-weight: bold;
-      color: var(--accent-color);
-      background-color: rgba(0, 0, 0, 0.3);
-      justify-self: end;
-      grid-column: 3;
-    }
+    display: flex; /* 改為 flex 佈局 */
+    align-items: center; /* 垂直居中 */
+    justify-content: center; /* 水平居中 */
+    
+    width: 90px; /* ★ 固定寬度 */
+    height: 35px; /* ★ 固定高度 */
+    
+    background-color: #32a852; /* ★ 綠色背景 (外框) */
+    border-radius: 8px; /* ★ 圓角 */
+    padding: 4px; /* ★ 內邊距，創造出邊框效果 */
+    
+    /* 移除舊的邊框和 padding */
+    border: none;
+    
+    justify-self: end; /* 在 grid 中靠右對齊 */
+    grid-column: 3;
+}
+
+/* ★ 新增一個內部元素來做深色背景 */
+.game-timer-inner {
+    width: 100%;
+    height: 100%;
+    background-color: #3e2723; /* 深棕色背景 */
+    color: #a5d6a7; /* 淺綠色數字 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4em;
+    font-family: 'DS-Digital', monospace; /* 嘗試使用數字字體 */
+    border-radius: 4px;
+}
 
     /* 添加脈動動畫 */
     @keyframes pulse {
@@ -842,13 +862,12 @@
   <!-- 遊戲UI -->
   <div class="game-ui" id="gameUI">
     <div class="game-header">
-      <div class="user-status" id="userStatus" style="display: none;">
-        <img id="userStatusAvatar" src="/images/a01girlmove.gif" alt="User">
-        <span id="userStatusName" class="username"></span>
-      </div>
+      <div id="userStatus" ...> ... </div>
       <div class="game-score" id="gameScore">分數: 0</div>
-      <div class="game-timer" id="gameTimer">03:00</div>
-    </div>
+      <div class="game-timer">
+          <div id="gameTimerInner" class="game-timer-inner">03:00</div>
+      </div>
+  </div>
       
       <div class="game-main">
         <div class="task-hint" id="taskHint">請拿取食材開始製作料理</div>
@@ -1202,75 +1221,44 @@
       function updateGameState(newState) {
           console.log('更新遊戲狀態:', newState);
           
-          // ★ 修改：保存客戶端維護的關鍵狀態
-          const clientSideFlags = {
-              dataReady: gameState.dataReady || false
-          };
-          
-          // 深度合併新狀態到當前狀態
-          if (newState) {
-              // 更新分數
-              if (newState.score !== undefined) {
-                  gameState.score = newState.score;
-                  updateScore(gameState.score);
-              }
-              
-              // 更新訂單
-              if (newState.orders) {
-                  gameState.orders = newState.orders;
-                  updateOrders();
-                  updateTaskHint();
-                  // 更新訂單進度條
-                  updateOrderTimers();
-              }
-              
-              // 更新庫存
-              if (newState.inventory) {
-                  gameState.inventory = newState.inventory;
-                  updateInventory(gameState.inventory);
-              }
-              
-              // 更新時間
-              if (newState.timeRemaining !== undefined) {
-                  updateTimer(newState.timeRemaining);
-              }
-              
-              // 更新玩家列表
-              if (newState.players) {
-                  gameState.players = newState.players;
-              }
-              
-              // 更新當前玩家
-              if (newState.currentPlayer) {
-                  gameState.currentPlayer = {
-                      ...gameState.currentPlayer,
-                      ...newState.currentPlayer
-                  };
-                  
-                  // 更新用戶狀態顯示
-                  if (gameState.currentPlayer.username) {
-                      document.getElementById('userStatusName').textContent = gameState.currentPlayer.username;
-                      document.getElementById('userStatus').style.display = 'flex';
-                  }
-              }
-              
-              // 更新活動槽位
-              if (newState.activeSlot !== undefined) {
-                  gameState.activeSlot = newState.activeSlot;
-                  // 更新UI高亮效果
-                  document.querySelectorAll('.inventory-slot').forEach((slot, index) => {
-                      slot.classList.toggle('active', index === gameState.activeSlot);
-                  });
-              }
-              
-              // ★ 修改：恢復客戶端維護的關鍵狀態
-              gameState.dataReady = clientSideFlags.dataReady;
+          // 更新玩家資料
+          if (newState.currentPlayer) {
+              gameState.currentPlayer = { ...gameState.currentPlayer, ...newState.currentPlayer };
           }
           
-          // ★ 新增：檢查數據是否已準備好，如果還沒準備好但數據已加載，則標記為準備好
-          if (!gameState.dataReady && allItems && allItems.length > 0 && allRecipes && allRecipes.length > 0) {
-              console.log('數據已加載完成，標記 dataReady 為 true');
-              gameState.dataReady = true;
+          // 更新玩家庫存
+          if (newState.inventory !== undefined) {
+              gameState.inventory = newState.inventory;
+              updateInventoryDisplay();
+          }
+          
+          // 更新訂單
+          if (newState.orders !== undefined) {
+              gameState.orders = newState.orders;
+              updateOrders();
+              updateTaskHint();
+              updateOrderTimers(); // 確保訂單進度條也被更新
+          }
+          
+          // 更新遊戲設置
+          if (newState.settings !== undefined) {
+              gameState.settings = { ...gameState.settings, ...newState.settings };
+          }
+          
+          // 更新遊戲統計
+          if (newState.stats !== undefined) {
+              gameState.stats = { ...gameState.stats, ...newState.stats };
+              updateGameStats();
+          }
+          
+          // 更新遊戲狀態
+          if (newState.gameStatus !== undefined) {
+              gameState.gameStatus = newState.gameStatus;
+          }
+          
+          // 更新其他玩家
+          if (newState.players !== undefined) {
+              gameState.players = newState.players;
           }
       }
 
@@ -1301,6 +1289,9 @@
                   };
                   
                   console.log('[WebSocket] 更新後的用戶資料:', gameState.currentPlayer);
+                  
+                  // ★ 修改：確保在有完整用戶資料後才初始化用戶狀態指示器
+                  initializeUserStatus();
               } else {
                   console.warn('[WebSocket] 後端未返回用戶資料，嘗試從 token 獲取基本資訊');
                   
@@ -1315,17 +1306,18 @@
                               // 只設置基本資訊，避免使用可能包含非 ASCII 字符的字段
                               gameState.currentPlayer = {
                                   user_id: payload.userId || payload.user_id,
-                                  username: 'Player' // 使用安全的默認值
+                                  username: payload.name || 'Player', // 使用更可能的字段名
+                                  display_name: payload.display_name || payload.name || 'Player' // 嘗試獲取顯示名稱
                               };
+                              
+                              // 即使是從 token 獲取的資料也初始化用戶狀態
+                              initializeUserStatus();
                           }
                       }
                   } catch (e) {
                       console.error('[WebSocket] 從 token 獲取用戶資料失敗:', e);
                   }
               }
-              
-              // 初始化用戶狀態指示器
-              initializeUserStatus();
               
               // 發送加入房間的請求
               websocket.send(JSON.stringify({
@@ -1846,8 +1838,11 @@
               initializeStations();
               initializeAssemblyPlate();
               
-              // 初始化用戶狀態指示器
-              initializeUserStatus();
+              // 初始化用戶狀態指示器 - 確保在遊戲開始時也能正確顯示用戶資料
+              if (gameState.currentPlayer && gameState.currentPlayer.display_name) {
+                  console.log('在遊戲開始時初始化用戶狀態，用戶資料:', gameState.currentPlayer);
+                  initializeUserStatus();
+              }
               
               // 顯示歡迎提示
               showToast('遊戲開始！準備好大展身手吧！');
@@ -2192,35 +2187,16 @@
       }
 
       function updateTimer(seconds) {
-          if (seconds < 0) seconds = 0;
-          const gameTimer = document.getElementById('gameTimer');
-          const minutes = Math.floor(seconds / 60);
-          const remainingSeconds = seconds % 60;
-          
-          if (gameTimer) {
-              // 更新計時器文本
-              gameTimer.textContent = `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-              
-              // 根據剩餘時間更新顏色
-              if (seconds < 30) {
-                  gameTimer.style.color = 'var(--error-color)';
-                  gameTimer.style.borderColor = 'var(--error-color)';
-              } else if (seconds < 60) {
-                  gameTimer.style.color = 'var(--accent-color)';
-                  gameTimer.style.borderColor = 'var(--accent-color)';
-              } else {
-                  gameTimer.style.color = 'var(--success-color)';
-                  gameTimer.style.borderColor = 'var(--success-color)';
-              }
-              
-              // 添加脈動動畫效果
-              if (seconds < 30) {
-                  gameTimer.style.animation = 'pulse 1s infinite';
-              } else {
-                  gameTimer.style.animation = 'none';
-              }
-          }
-      }
+    if (seconds < 0) seconds = 0;
+    // ★ 修改：選擇內部元素來更新
+    const gameTimerInner = document.getElementById('gameTimerInner'); 
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    
+    if (gameTimerInner) {
+        gameTimerInner.textContent = `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    }
+}
 
       function updateScore(newScore) {
           const gameScore = document.getElementById('gameScore');
@@ -2648,7 +2624,14 @@
           const userStatusAvatar = document.getElementById('userStatusAvatar');
           const userStatusName = document.getElementById('userStatusName');
           
+          if (!userStatus || !userStatusAvatar || !userStatusName) {
+              console.error('找不到用戶狀態UI元素，無法初始化用戶狀態指示器');
+              return;
+          }
+          
           if (gameState.currentPlayer) {
+              console.log('初始化用戶狀態指示器，當前用戶資料:', gameState.currentPlayer);
+              
               // 確保頭像URL有效
               const avatarUrl = gameState.currentPlayer.avatar || 
                               gameState.currentPlayer.user_profile_image_url || 
@@ -2659,10 +2642,13 @@
               let displayName = '';
               if (gameState.currentPlayer.display_name) {
                   displayName = gameState.currentPlayer.display_name;
+                  console.log('使用 display_name 顯示用戶名:', displayName);
               } else if (gameState.currentPlayer.username) {
                   displayName = gameState.currentPlayer.username;
+                  console.log('使用 username 顯示用戶名:', displayName);
               } else {
                   displayName = 'Player';
+                  console.warn('找不到有效的用戶名，使用默認值:', displayName);
               }
               
               // 不再進行額外的編碼處理，直接使用原始值
