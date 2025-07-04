@@ -1688,13 +1688,21 @@
         }
         
         orders.forEach(order => {
-          const orderElement = createOrderElement(order);
-          ordersContainer.appendChild(orderElement);
+          if (order) { // 防呆，避免 server 送來 null 的 order
+            const orderElement = createOrderElement(order);
+            ordersContainer.appendChild(orderElement);
+          } else {
+            console.warn('接收到無效的訂單(null)，已略過。');
+          }
         });
       }
       
       // 添加訂單
       function addOrder(order) {
+        if (!order) {
+          console.warn('接收到無效的新訂單(null)，已略過。');
+          return;
+        }
         gameState.orders.push(order);
         
         const orderElement = createOrderElement(order);
