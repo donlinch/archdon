@@ -1099,11 +1099,6 @@
             }
             break;
             
-          case 'cooking_progress':
-            // 顯示烹飪進度
-            showCookingProgress(message.slotIndex, message.progress);
-            break;
-            
           case 'item_transferred':
             // 處理物品傳遞
             if (message.success) {
@@ -1352,7 +1347,7 @@
         stationsContainer.innerHTML = '';
         
         // 食材站
-        const ingredientTypes = ['beef', 'lettuce', 'tomato', 'onion', 'bread', 'cheese'];
+        const ingredientTypes = ['beef_patty_raw', 'lettuce_raw', 'tomato_raw', 'onion_raw', 'bread_slice_raw', 'cheese_slice_raw'];
         ingredientTypes.forEach(type => {
           const station = createStation('ingredient', type);
           stationsContainer.appendChild(station);
@@ -1433,26 +1428,16 @@
         }
         // 烹飪站互動
         else if (type === 'cooking') {
-          // 檢查當前選中的庫存槽是否有可烹飪的食材
           const currentItem = gameState.inventory[gameState.activeSlot];
-          if (currentItem && isCookable(currentItem.type)) {
-            // ★ 重構：不再由前端計時，直接發送請求給伺服器
-            showToast(`正在烹飪${getItemName(currentItem.type)}...`);
-            sendAction('start_cooking', {
+          if (currentItem) {
+            // ★ 重構：直接發送 cook_item 動作
+            showToast(`正在處理 ${getItemName(currentItem.type)}...`);
+            sendAction('cook_item', {
               slotIndex: gameState.activeSlot,
-              cookingMethod: 'grill' // 預設烹飪方法
+              cookingMethod: 'grill' // 'grill' is the station type for the cooking station
             });
-
-            // 顯示一個等待伺服器回應的通用動畫
-            const slot = document.querySelectorAll('.inventory-slot')[gameState.activeSlot];
-            if (slot) {
-                displayCookingAnimation(slot, true);
-            }
-
-          } else if (currentItem) {
-            showToast(`${getItemName(currentItem.type)}不可烹飪！`);
           } else {
-            showToast('請先拿取可烹飪的食材');
+            showToast('請先選擇一個物品');
           }
         }
         // 組裝站互動
@@ -1508,12 +1493,12 @@
         switch (type) {
           case 'ingredient':
             switch (subtype) {
-              case 'beef': return '🥩';
-              case 'lettuce': return '🥬';
-              case 'tomato': return '🍅';
-              case 'onion': return '🧅';
-              case 'bread': return '🍞';
-              case 'cheese': return '🧀';
+              case 'beef_patty_raw': return '🥩';
+              case 'lettuce_raw': return '🥬';
+              case 'tomato_raw': return '🍅';
+              case 'onion_raw': return '🧅';
+              case 'bread_slice_raw': return '🍞';
+              case 'cheese_slice_raw': return '🧀';
               default: return '?';
             }
           case 'cooking': return '🔥';
@@ -1528,12 +1513,12 @@
         switch (type) {
           case 'ingredient':
             switch (subtype) {
-              case 'beef': return '牛肉';
-              case 'lettuce': return '生菜';
-              case 'tomato': return '番茄';
-              case 'onion': return '洋蔥';
-              case 'bread': return '麵包';
-              case 'cheese': return '起司';
+              case 'beef_patty_raw': return '牛肉';
+              case 'lettuce_raw': return '生菜';
+              case 'tomato_raw': return '番茄';
+              case 'onion_raw': return '洋蔥';
+              case 'bread_slice_raw': return '麵包';
+              case 'cheese_slice_raw': return '起司';
               default: return '?';
             }
           case 'cooking': return '烹飪區';
@@ -1546,13 +1531,13 @@
       // 獲取物品圖標
       function getItemSymbol(type) {
         switch (type) {
-          case 'beef': return '🥩';
-          case 'beef_cooked': return '🍖';
-          case 'lettuce': return '🥬';
-          case 'tomato': return '🍅';
-          case 'onion': return '🧅';
-          case 'bread': return '🍞';
-          case 'cheese': return '🧀';
+          case 'beef_patty_raw': return '🥩';
+          case 'beef_patty_cooked': return '🍖';
+          case 'lettuce_raw': return '🥬';
+          case 'tomato_raw': return '🍅';
+          case 'onion_raw': return '🧅';
+          case 'bread_slice_raw': return '🍞';
+          case 'cheese_slice_raw': return '🧀';
           case 'plate': return '🍽️';
           case 'burger_basic': return '🍔';
           case 'burger_cheese': return '🍔';
@@ -1955,16 +1940,16 @@
       // 獲取物品名稱
       function getItemName(type) {
         switch (type) {
-          case 'beef': return '牛肉';
-          case 'beef_cooked': return '熟牛肉';
-          case 'lettuce': return '生菜';
-          case 'tomato': return '番茄';
+          case 'beef_patty_raw': return '生牛肉餅';
+          case 'beef_patty_cooked': return '烤牛肉餅';
+          case 'lettuce_raw': return '生菜葉';
+          case 'tomato_raw': return '番茄片';
           case 'tomato_grilled': return '烤番茄';
-          case 'onion': return '洋蔥';
+          case 'onion_raw': return '洋蔥圈';
           case 'onion_grilled': return '烤洋蔥';
-          case 'bread': return '麵包';
-          case 'bread_toasted': return '烤麵包';
-          case 'cheese': return '起司';
+          case 'bread_slice_raw': return '麵包片';
+          case 'bread_slice_toasted': return '烤麵包片';
+          case 'cheese_slice_raw': return '起司片';
           case 'plate': return '盤子';
           case 'burger_basic': return '經典漢堡';
           case 'burger_cheese': return '起司漢堡';
@@ -1976,8 +1961,8 @@
       // 檢查是否有可組裝的食材
       function hasAssemblableItems() {
         // 檢查是否有足夠的材料做基本漢堡
-        const hasBread = gameState.inventory.some(item => item && (item.type === 'bread' || item.type === 'bread_toasted'));
-        const hasCookedBeef = gameState.inventory.some(item => item && item.type === 'beef_cooked');
+        const hasBread = gameState.inventory.some(item => item && (item.type === 'bread_slice_raw' || item.type === 'bread_slice_toasted'));
+        const hasCookedBeef = gameState.inventory.some(item => item && item.type === 'beef_patty_cooked');
         
         return hasBread && hasCookedBeef;
       }
