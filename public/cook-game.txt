@@ -1,4 +1,3 @@
-
 # 料理急先鋒 - 項目執行說明
 
 ## 項目安裝與執行
@@ -118,25 +117,15 @@ sunnyyummy-app/
 # 2. 系統架構與資料表設計
 
 ## 2.1 資料表設計
--   **box_users / cook_players**: 會員資訊與遊戲相關數據。核心會員資料（如帳號、密碼）儲存於主系統的 `box_users` 表。遊戲相關的延伸資料（如等級 `level`、點數 `points`、成就 `achievements`）則儲存在 `cook_players` 表，並透過 `user_id` 與主表關聯。
--   **cook_roles**: 會員角色與權限
-    -   role_id, role_name, role_description, permission_level
--   **cook_recipes (已棄用)**: 遊戲內可製作的料理配方。**此表已在後端重構中被 `cook_recipes_v2` 取代。**
-    -   recipe_id, recipe_name, recipe_description, difficulty, ingredients_json
--   **cook_ingredients (已棄用)**: 遊戲內可用的食材。**此表已在後端重構中被 `cook_items` 取代，所有遊戲物品（包括食材、半成品、最終料理）統一管理。**
-    -   ingredient_id, ingredient_name, ingredient_type, ascii_symbol
--   **cook_items (新)**: 遊戲中所有可互動的物品，包括基礎食材、半成品及最終料理。
-    -   `item_id`, `item_type` (e.g., 'raw_ingredient', 'cooked_item', 'assembled_dish'), `item_name`, `ascii_symbol`, `base_points` (用於計分), `properties_json` (例如烹飪時間、效果等額外屬性)。
--   **cook_recipes_v2 (新)**: 資料庫驅動的食譜定義，包含烹飪及組合配方。
-    -   `recipe_id`, `recipe_type` ('cooking' 或 'assembly'), `recipe_name`, `description`, `ingredients_json` (JSONB，詳細說明輸入食材及其數量、類型，例如 `[{ "item_id": "beef_raw", "quantity": 1, "state": "any" }]`)，`result_item_id` (烹飪或組合後產生的 `cook_items` 中的物品 ID)，`cook_station` (針對烹飪食譜，指定所需工作站，如 'oven', 'stove', 'fryer')，`cook_time_seconds` (針對烹飪食譜，所需烹飪時間)，`difficulty` (難度等級，1-10)。
--   **cook_achievements**: 會員可解鎖的成就
-    -   achievement_id, achievement_name, description, condition_json
--   **cook_user_achievements**: 會員已獲得的成就關聯表
-    -   user_id, achievement_id, unlock_date, display_status
--   **cook_game_rooms**: 遊戲對局記錄。此表取代了原有的 `cook_game_sessions` 和 `cook_session_players`。它不僅記錄房間基本資訊，還透過一個 `game_state` (JSONB) 欄位儲存了遊戲進行中的所有動態資料，包括玩家列表、庫存、訂單、分數等。
-    -   room_id, room_name, status, creator_id, game_state
--   **cook_user_devices**: 使用者裝置資訊
-    -   user_id, device_type, screen_size, last_login_device
+box_users: 主系統使用者表，提供使用者基本資料 (user_id, username) 及管理員權限 (is_admin)。
+cook_players: 遊戲玩家的核心數據，包括等級 (level)、經驗 (exp)、點數 (points)、任務進度等，透過 user_id 與 box_users 關聯。
+cook_items: [核心] 遊戲物品總表。定義了遊戲中所有可互動的物品，包括基礎食材 (raw_ingredient)、加工後食材 (cooked_item)、半成品 (assembled_dish) 及最終料理 (final_dish)。每個物品都有唯一的 item_id (程式碼用) 和 item_name (顯示用)。
+cook_recipes_v2: [核心] 遊戲食譜總表。定義了所有**烹飪 (cooking)和組合 (assembly)**的配方規則。它詳細說明了在哪个工作站 (station_type)、使用什麼原料可以產出哪個物品 (output_item_id)。
+cook_recipe_requirements_v2: [核心] 食譜原料需求表。精確定義了每一個食譜需要哪些 cook_items 以及各需要多少數量 (quantity)，是實現階層式合成的關鍵。
+cook_game_rooms: 遊戲房間與狀態表。取代了舊的 sessions 表，使用一個強大的 game_state (JSONB) 欄位來即時儲存遊戲中的所有動態資料，包括玩家列表、庫存、訂單和分數。
+cook_roles / cook_user_roles: 完整的使用者角色與權限系統，透過 role_id=6 來識別系統管理員。
+cook_player_quests: 玩家任務系統，用於記錄和追蹤玩家的個人挑戰與進度。
+cook_achievements / cook_player_achievements: 遊戲內的成就系統。
 
 ## 2.2 會員認證機制
 -   **使用JWT令牌**: 與主系統共用登入憑證，確保遊戲安全性

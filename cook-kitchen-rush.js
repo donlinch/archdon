@@ -1300,7 +1300,7 @@ cookGameApp.get('/admin/all-recipes', authenticateToken, isAdmin, async (req, re
         }
     }
     
-    // ... 其他路由和函數 ...
+   
     
     cookGameApp.get(`/games/rooms`, authenticateToken, async (req, res) => {
         try {
@@ -1480,7 +1480,7 @@ cookGameApp.get('/admin/all-recipes', authenticateToken, isAdmin, async (req, re
       }
     });
     
-    // ... 其他遊戲邏輯函數 ...
+   
 
     function initCookGameWss(wss) { // 參數是 wss
  
