@@ -940,40 +940,33 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
                             break;
                         }
                         case 'assemble_items': {
-                            // ★ V2 修改：使用 findAssemblyRecipe 查找食譜
-                            const inventory = player.inventory;
-                            const ingredientItemTypes = inventory.filter(item => item !== null).map(item => item.type);
+                            // actionData.ingredientItemTypes 應該是像 ['beef_patty_cooked', 'bread_slice_toasted'] 這樣的陣列
+                            const { ingredientItemTypes } = actionData;
                             
-                            if (ingredientItemTypes.length === 0) {
-                                ws.send(JSON.stringify({ type: 'error', message: '庫存中沒有物品可供組裝' }));
+                            if (!ingredientItemTypes || !Array.isArray(ingredientItemTypes) || ingredientItemTypes.length === 0) {
+                                ws.send(JSON.stringify({ type: 'error', message: '未提供用於組裝的物品' }));
                                 break;
                             }
-
+                        
+                            // 查找匹配的組合食譜
                             const recipe = await findAssemblyRecipe(ingredientItemTypes);
                             
                             if (!recipe) {
-                                ws.send(JSON.stringify({ type: 'error', message: '沒有可用的組裝配方' }));
+                                ws.send(JSON.stringify({ type: 'error', message: '這些物品無法組合在一起' }));
                                 break;
                             }
-
-                            // 查詢此食譜需要的所有原料，以正確移除它們
-                            const requirementsResult = await client.query(
-                                `SELECT i.item_id, req.quantity 
-                                 FROM cook_recipe_requirements_v2 req
-                                 JOIN cook_items i ON req.required_item_id = i.id
-                                 WHERE req.recipe_id = $1`,
-                                [recipe.id]
-                            );
-                            const requiredItems = requirementsResult.rows;
-
+                        
                             // 從庫存中移除已使用的食材
-                            let inventoryCopy = [...inventory];
-                            for (const required of requiredItems) {
-                                for (let i = 0; i < required.quantity; i++) {
-                                    const slotIndex = inventoryCopy.findIndex(item => item && item.type === required.item_id);
-                                    if (slotIndex !== -1) {
-                                        inventoryCopy[slotIndex] = null;
-                                    }
+                            let inventoryCopy = [...player.inventory];
+                            let itemsToRemove = [...ingredientItemTypes];
+                        
+                            for (let i = 0; i < inventoryCopy.length; i++) {
+                                if (inventoryCopy[i] && itemsToRemove.includes(inventoryCopy[i].type)) {
+                                    // 從移除列表中刪除一個匹配項
+                                    const indexToRemove = itemsToRemove.indexOf(inventoryCopy[i].type);
+                                    itemsToRemove.splice(indexToRemove, 1);
+                                    // 將庫存槽清空
+                                    inventoryCopy[i] = null;
                                 }
                             }
                             
@@ -981,29 +974,30 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
                             const emptySlot = inventoryCopy.findIndex(item => item === null);
                             if (emptySlot === -1) {
                                 ws.send(JSON.stringify({ type: 'error', message: '沒有空的庫存槽來放置組裝好的料理' }));
+                                // 注意：理論上不應該發生，因為我們剛移除了原料。但作為防呆。
                                 break;
                             }
-
+                        
                             inventoryCopy[emptySlot] = {
                                 id: `item_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-                                type: recipe.output_item_id_str,
+                                type: recipe.output_item_id_str, // 來自食譜的產出物
                                 state: 'assembled'
                             };
-
+                        
                             player.inventory = inventoryCopy;
                             gameState.players[playerIndex] = player;
-
+                        
                             // 保存遊戲狀態
                             await client.query('UPDATE cook_game_rooms SET game_state = $1 WHERE room_id = $2', [gameState, roomId]);
                             await client.query('COMMIT');
-
+                        
                             // 通知玩家組裝成功
                             ws.send(JSON.stringify({
                                 type: 'items_assembled',
                                 newInventory: player.inventory,
                                 resultType: recipe.output_item_id_str
                             }));
-
+                        
                             // 廣播給其他玩家
                             broadcastToRoom(roomId, {
                                 type: 'player_action',

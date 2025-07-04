@@ -728,6 +728,70 @@
       font-weight: bold;
       color: var(--secondary-color);
     }
+
+    .assembly-plate {
+        background-color: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 15px 0;
+        text-align: center;
+    }
+    .plate-title {
+        color: var(--accent-color);
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+    .plate-slots-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+    .plate-slot {
+        width: 60px;
+        height: 60px;
+        background: #010409;
+        border: 2px dashed #30363d;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .plate-slot:hover {
+        border-color: var(--accent-color);
+    }
+    .plate-slot.filled {
+        border-style: solid;
+        border-color: var(--secondary-color);
+    }
+    .plate-operator, .plate-result {
+        font-size: 24px;
+        font-weight: bold;
+        color: #8b949e;
+    }
+    .plate-button {
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        font-weight: bold;
+        cursor: pointer;
+        width: 100%;
+        font-size: 1em;
+    }
+    .plate-button:disabled {
+        background-color: #555;
+        cursor: not-allowed;
+    }
+    .inventory-slot.selected-for-assembly {
+        box-shadow: 0 0 10px var(--accent-color);
+        transform: scale(1.05);
+    }
   </style>
 </head>
 <body>
@@ -758,6 +822,19 @@
         </div>
         <div class="stations-container" id="stationsContainer">
           <!-- 工作站將由JavaScript動態生成 -->
+        </div>
+
+        <!-- 新增：出餐盤/組合區 -->
+        <div class="assembly-plate" id="assemblyPlate">
+            <div class="plate-title">組合區</div>
+            <div class="plate-slots-container">
+                <div class="plate-slot" data-slot-index="0"></div>
+                <div class="plate-operator">+</div>
+                <div class="plate-slot" data-slot-index="1"></div>
+                <div class="plate-operator">=</div>
+                <div class="plate-result">?</div>
+            </div>
+            <button id="assembleBtn" class="plate-button">組合</button>
         </div>
       </div>
       
@@ -874,6 +951,9 @@
         status: 'waiting'
       };
       
+      let assemblyPlateItems = [null, null]; // 用於存放準備組合的2個物品
+      let selectedInventoryItem = null; // 用於存放玩家從物品欄中選中的物品
+
       // WebSocket連接
       let websocket = null;
       let reconnectAttempts = 0;
@@ -1199,6 +1279,11 @@
         // 添加傳遞按鈕
         addTransferButtons();
         
+        document.querySelectorAll('.plate-slot').forEach(slot => {
+            slot.addEventListener('click', handlePlateSlotClick);
+        });
+        document.getElementById('assembleBtn').addEventListener('click', handleAssembleClick);
+        
         // 顯示教學
         showTutorial();
         
@@ -1277,13 +1362,20 @@
           slot.dataset.index = i;
           
           slot.addEventListener('click', () => {
-            // 切換活動槽
-            document.querySelectorAll('.inventory-slot').forEach(s => s.classList.remove('active'));
-            slot.classList.add('active');
-            gameState.activeSlot = i;
-            
-            // 通知服務器
-            sendAction('select_slot', { slotIndex: i });
+            const itemIndex = parseInt(slot.dataset.index, 10);
+            const item = gameState.inventory[itemIndex];
+        
+            // 如果點擊的是有物品的槽，則"選中"該物品
+            if (item) {
+                // 清除之前所有槽的選中高亮
+                document.querySelectorAll('.inventory-slot, .plate-slot').forEach(s => s.classList.remove('selected-for-assembly'));
+                
+                // 高亮當前選中的物品欄
+                slot.classList.add('selected-for-assembly');
+                
+                selectedInventoryItem = { item: item, fromSlotIndex: itemIndex };
+                showToast(`已選中 ${getItemName(item.type)}，請點擊組合區的空格放置。`);
+            }
           });
           
           playerInventory.appendChild(slot);
@@ -1394,6 +1486,8 @@
         // 為烹飪站添加特殊描述
         if (type === 'cooking') {
           label.innerHTML = '烹飪區<br><small>(需等待10秒)</small>';
+        } else if (type === 'assembly') {
+          station.style.display = 'none'; // 隱藏舊的組裝區按鈕
         }
         
         station.appendChild(label);
@@ -1442,23 +1536,7 @@
         }
         // 組裝站互動
         else if (type === 'assembly') {
-          // 檢查是否有足夠的食材可以組裝
-          if (hasAssemblableItems()) {
-            sendAction('assemble_items', {});
-            
-            // 添加組裝動畫效果
-            const slots = document.querySelectorAll('.inventory-slot');
-            slots.forEach(slot => {
-              const item = slot.querySelector('.game-item');
-              if (item) {
-                item.style.animation = 'shake 0.5s';
-              }
-            });
-            
-            showToast('正在組裝食材...');
-          } else {
-            showToast('需要更多處理好的食材才能組裝');
-          }
+          // 這個邏輯現在由新的組合盤處理，所以此處留空或移除
         }
         // 盤子站互動 - 上菜
         else if (type === 'plate') {
@@ -1965,6 +2043,56 @@
         const hasCookedBeef = gameState.inventory.some(item => item && item.type === 'beef_patty_cooked');
         
         return hasBread && hasCookedBeef;
+      }
+      
+      // 處理點擊組合盤槽位的事件
+      function handlePlateSlotClick(event) {
+          if (!selectedInventoryItem) {
+              showToast('請先從下方物品欄選擇一個物品。');
+              return;
+          }
+      
+          const plateSlotIndex = parseInt(event.currentTarget.dataset.slotIndex, 10);
+      
+          // 將選中的物品放入組合盤
+          assemblyPlateItems[plateSlotIndex] = selectedInventoryItem;
+          
+          // 更新組合盤 UI
+          const plateSlotElement = event.currentTarget;
+          plateSlotElement.innerHTML = `<div class="game-item">${getItemSymbol(selectedInventoryItem.item.type)}</div>`;
+          plateSlotElement.classList.add('filled');
+          
+          // 從物品欄 UI 中移除該物品（暫時性）
+          const inventorySlotElement = document.querySelector(`.inventory-slot[data-index="${selectedInventoryItem.fromSlotIndex}"]`);
+          if(inventorySlotElement) inventorySlotElement.innerHTML = ''; // 清空顯示
+      
+          // 清除選中狀態
+          document.querySelectorAll('.selected-for-assembly').forEach(s => s.classList.remove('selected-for-assembly'));
+          selectedInventoryItem = null;
+      }
+      
+      // 處理點擊"組合"按鈕的事件
+      function handleAssembleClick() {
+          const itemsToAssemble = assemblyPlateItems
+              .filter(itemInfo => itemInfo !== null)
+              .map(itemInfo => itemInfo.item.type);
+      
+          if (itemsToAssemble.length < 2) { // 或者根據你的配方需求調整
+              showToast('請先將至少兩個物品放入組合區。');
+              return;
+          }
+      
+          // 發送組合請求到後端
+          sendAction('assemble_items', {
+              ingredientItemTypes: itemsToAssemble
+          });
+      
+          // 清空組合盤狀態和 UI (等待後端回傳更新)
+          assemblyPlateItems = [null, null];
+          document.querySelectorAll('.plate-slot').forEach(slot => {
+              slot.innerHTML = '';
+              slot.classList.remove('filled');
+          });
       }
       
       // 添加傳遞按鈕到界面
