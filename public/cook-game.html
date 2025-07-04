@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>料理急先鋒 - 遊戲進行中</title>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#333333">
@@ -728,6 +728,47 @@
       font-weight: bold;
       color: var(--secondary-color);
     }
+
+    #sharedWorkspace {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 15px;
+        background-color: #e0e0e0;
+        border-radius: 10px;
+        margin: 15px auto;
+        flex-wrap: wrap;
+        border: 2px dashed #a0a0a0;
+        min-height: 80px;
+    }
+    .workspace-slot {
+        width: 50px;
+        height: 50px;
+        background-color: #f0f0f0;
+        border: 2px solid #ccc;
+        border-radius: 8px;
+        margin: 5px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+    .workspace-slot:hover {
+        background-color: #d8d8d8;
+    }
+    .workspace-slot .game-item {
+        cursor: default;
+    }
+    .workspace-hint {
+        font-size: 0.8em;
+        color: #888;
+        text-align: center;
+    }
+    #serveDishBtn {
+        padding: 10px 15px;
+        font-size: 1em;
+    }
   </style>
 </head>
 <body>
@@ -753,12 +794,8 @@
       
       <div class="game-main">
         <div class="task-hint" id="taskHint">請拿取食材開始製作料理</div>
-        <div class="shared-workspace" id="sharedWorkspace">
-          <!-- 工作區槽位將由JS動態生成，或預先定義 -->
-          <div class="workspace-slot" data-slot-index="0"></div>
-          <div class="workspace-slot" data-slot-index="1"></div>
-          <div class="workspace-slot" data-slot-index="2"></div>
-          <div class="workspace-slot" data-slot-index="3"></div>
+        <div id="sharedWorkspace" style="display: none;">
+          <!-- JS動態生成 -->
         </div>
         <div class="orders-container" id="ordersContainer">
           <!-- 訂單卡片將由JavaScript動態生成 -->
@@ -870,6 +907,7 @@
       const personalScore = document.getElementById('personalScore');
       const returnToLobbyBtn = document.getElementById('returnToLobbyBtn');
       const toast = document.getElementById('toast');
+      const sharedWorkspace = document.getElementById('sharedWorkspace');
       
       // 遊戲狀態
       let gameState = {
@@ -1169,6 +1207,17 @@
             updateInventory(gameState.inventory);
             break;
             
+          case 'game_state_update':
+            updateGameState(message.gameState);
+            break;
+
+          case 'assembly_puzzle_update':
+            if (message.puzzle) {
+                gameState.assembly_puzzle = message.puzzle;
+                updateWorkspace(message.puzzle);
+            }
+            break;
+
           default:
             console.log('未處理的訊息類型:', message.type);
         }
@@ -1235,21 +1284,28 @@
       
       // 更新遊戲狀態
       function updateGameState(newState) {
-        gameState = { ...gameState, ...newState };
+        if (!newState) return;
         
-        // 更新計時器
-        updateTimer(gameState.timeRemaining);
+        gameState.score = newState.score;
+        gameState.timeRemaining = newState.timeRemaining;
+        gameState.orders = newState.orders;
+        gameState.players = newState.players;
         
-        // 更新分數
-        updateScore(gameState.score);
+        // Find self in the new player list
+        const self = newState.players.find(p => p.id === parseInt(userId));
+        if (self) {
+            gameState.inventory = self.inventory;
+            gameState.activeSlot = self.activeSlot;
+        }
         
-        // 更新訂單
-        updateOrders(gameState.orders);
-        
-        // 更新庫存
-        updateInventory(gameState.inventory);
-        
-        // 更新任務提示
+        if (newState.assembly_puzzle) {
+            gameState.assembly_puzzle = newState.assembly_puzzle;
+            updateWorkspace(newState.assembly_puzzle);
+        }
+
+        updateTopBar();
+        updatePlayerArea();
+        updateInventory(gameState.inventory, gameState.activeSlot);
         updateTaskHint();
       }
       
@@ -1298,51 +1354,27 @@
       }
       
       // 更新庫存顯示
-      function updateInventory(inventory) {
-        console.log('更新物品欄:', inventory);
-        const slots = playerInventory.querySelectorAll('.inventory-slot');
-        
+      function updateInventory(inventory, activeSlot) {
+        inventoryDiv.innerHTML = '';
         inventory.forEach((item, index) => {
-          const slot = slots[index];
-          if (!slot) return;
-          
-          // 清空槽
-          slot.innerHTML = '';
-          
-          if (item) {
-            // 創建物品圖標
-            const itemIcon = document.createElement('div');
-            itemIcon.className = 'game-item';
-            itemIcon.textContent = getItemSymbol(item.type);
-            itemIcon.style.position = 'relative';
-            itemIcon.style.width = '50px';
-            itemIcon.style.height = '50px';
-            itemIcon.style.backgroundColor = getItemColor(item.type);
-            
-            // 添加物品名稱標籤
-            const itemLabel = document.createElement('div');
-            itemLabel.style.position = 'absolute';
-            itemLabel.style.bottom = '-20px';
-            itemLabel.style.left = '0';
-            itemLabel.style.width = '100%';
-            itemLabel.style.textAlign = 'center';
-            itemLabel.style.fontSize = '0.8em';
-            itemLabel.style.color = '#fff';
-            itemLabel.textContent = getItemName(item.type);
-            itemIcon.appendChild(itemLabel);
-            
-            slot.appendChild(itemIcon);
-
-            // 添加物品動畫效果
-            itemIcon.style.animation = 'itemAppear 0.3s ease-out';
-          } else {
-            // 如果槽位為空，添加提示文字
-            const emptyText = document.createElement('div');
-            emptyText.style.color = 'rgba(255, 255, 255, 0.3)';
-            emptyText.style.fontSize = '0.8em';
-            emptyText.textContent = '空槽';
-            slot.appendChild(emptyText);
-          }
+            const slot = document.createElement('div');
+            slot.className = 'inventory-slot';
+            slot.dataset.slot = index;
+            if (index === activeSlot) {
+                slot.classList.add('active');
+            }
+            if (item) {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'game-item';
+                itemDiv.textContent = getItemSymbol(item.type);
+                itemDiv.style.backgroundColor = getItemColor(item.type);
+                itemDiv.title = getItemName(item.type);
+                slot.appendChild(itemDiv);
+            }
+            slot.addEventListener('click', () => {
+                sendAction('set_active_slot', { slot: index });
+            });
+            inventoryDiv.appendChild(slot);
         });
       }
       
@@ -1412,192 +1444,19 @@
       
       // 與工作站互動
       function interactWithStation(type, subtype) {
-        if (!gameState.isRunning) return;
+        // ★ 修正：組裝區的點擊邏輯已失效，現在透過組合區互動
+        if (type === 'assembly') {
+            showToast("請將物品放到上方的中央組合區來進行組裝。");
+            return;
+        }
         
-        // 食材站互動 - 拿取食材
-        if (type === 'ingredient') {
-          // 檢查當前選中的庫存槽是否為空
-          if (gameState.inventory[gameState.activeSlot] === null) {
-            // 發送拿取食材的動作
-            sendAction('pick_ingredient', { 
-              ingredientType: subtype,
-              slotIndex: gameState.activeSlot 
-            });
-            
-            // 顯示提示
-            showToast(`正在拿取${getStationName(type, subtype)}...`);
-          } else {
-            showToast('庫存槽已有物品，請先清空或選擇其他槽位');
-          }
+        const activeItem = gameState.inventory[gameState.activeSlot];
+        if (!activeItem) {
+            showToast('手上沒有東西，無法使用。');
+            return;
         }
-        // 烹飪站互動
-        else if (type === 'cooking') {
-          // 檢查當前選中的庫存槽是否有可烹飪的食材
-          const currentItem = gameState.inventory[gameState.activeSlot];
-          if (currentItem && isCookable(currentItem.type)) {
-            // 顯示烹飪動畫
-            const slot = document.querySelectorAll('.inventory-slot')[gameState.activeSlot];
-            if (slot) {
-              // 創建烹飪動畫容器
-              const cookingAnimationContainer = document.createElement('div');
-              cookingAnimationContainer.className = 'cooking-animation-container';
-              
-              // 創建六角形動畫
-              const socketDiv = document.createElement('div');
-              socketDiv.className = 'socket';
-              socketDiv.innerHTML = `
-                <div class="gel center-gel">
-                  <div class="hex-brick h1"></div>
-                  <div class="hex-brick h2"></div>
-                  <div class="hex-brick h3"></div>
-                </div>
-                <div class="gel c1 r1">
-                  <div class="hex-brick h1"></div>
-                  <div class="hex-brick h2"></div>
-                  <div class="hex-brick h3"></div>
-                </div>
-                <div class="gel c2 r1">
-                  <div class="hex-brick h1"></div>
-                  <div class="hex-brick h2"></div>
-                  <div class="hex-brick h3"></div>
-                </div>
-                <div class="gel c3 r1">
-                  <div class="hex-brick h1"></div>
-                  <div class="hex-brick h2"></div>
-                  <div class="hex-brick h3"></div>
-                </div>
-                <div class="gel c4 r1">
-                  <div class="hex-brick h1"></div>
-                  <div class="hex-brick h2"></div>
-                  <div class="hex-brick h3"></div>
-                </div>
-                <div class="gel c5 r1">
-                  <div class="hex-brick h1"></div>
-                  <div class="hex-brick h2"></div>
-                  <div class="hex-brick h3"></div>
-                </div>
-                <div class="gel c6 r1">
-                  <div class="hex-brick h1"></div>
-                  <div class="hex-brick h2"></div>
-                  <div class="hex-brick h3"></div>
-                </div>
-                <div class="gel c7 r2">
-                  <div class="hex-brick h1"></div>
-                  <div class="hex-brick h2"></div>
-                  <div class="hex-brick h3"></div>
-                </div>
-                <div class="gel c8 r2">
-                  <div class="hex-brick h1"></div>
-                  <div class="hex-brick h2"></div>
-                  <div class="hex-brick h3"></div>
-                </div>
-                <div class="gel c9 r2">
-                  <div class="hex-brick h1"></div>
-                  <div class="hex-brick h2"></div>
-                  <div class="hex-brick h3"></div>
-                </div>
-                <div class="gel c10 r2">
-                  <div class="hex-brick h1"></div>
-                  <div class="hex-brick h2"></div>
-                  <div class="hex-brick h3"></div>
-                </div>
-                <div class="gel c11 r2">
-                  <div class="hex-brick h1"></div>
-                  <div class="hex-brick h2"></div>
-                  <div class="hex-brick h3"></div>
-                </div>
-                <div class="gel c12 r2">
-                  <div class="hex-brick h1"></div>
-                  <div class="hex-brick h2"></div>
-                  <div class="hex-brick h3"></div>
-                </div>
-              `;
-              
-              // 創建烹飪計時器
-              const cookingTimer = document.createElement('div');
-              cookingTimer.className = 'cooking-timer';
-              cookingTimer.textContent = '烹飪中... 10秒';
-              
-              // 將動畫和計時器添加到容器
-              cookingAnimationContainer.appendChild(socketDiv);
-              cookingAnimationContainer.appendChild(cookingTimer);
-              
-              // 將容器添加到槽位
-              slot.appendChild(cookingAnimationContainer);
-              
-              // 設置10秒倒計時
-              let timeLeft = 10;
-              const timerInterval = setInterval(() => {
-                timeLeft--;
-                if (timeLeft <= 0) {
-                  clearInterval(timerInterval);
-                  // 移除動畫容器
-                  cookingAnimationContainer.remove();
-                  
-                  // 發送烹飪食材的動作
-                  sendAction('cook_item', {
-                    slotIndex: gameState.activeSlot,
-                    cookingMethod: 'grill' // 預設烹飪方法
-                  });
-                } else {
-                  cookingTimer.textContent = `烹飪中... ${timeLeft}秒`;
-                }
-              }, 1000);
-            }
-            
-            showToast(`正在烹飪${getItemName(currentItem.type)}...需要等待10秒`);
-          } else if (currentItem) {
-            showToast(`${getItemName(currentItem.type)}不可烹飪！`);
-          } else {
-            showToast('請先拿取可烹飪的食材');
-          }
-        }
-        // 組裝站互動
-        else if (type === 'assembly') {
-          // 檢查是否有足夠的食材可以組裝
-          if (hasAssemblableItems()) {
-            sendAction('assemble_items', {});
-            
-            // 添加組裝動畫效果
-            const slots = document.querySelectorAll('.inventory-slot');
-            slots.forEach(slot => {
-              const item = slot.querySelector('.game-item');
-              if (item) {
-                item.style.animation = 'shake 0.5s';
-              }
-            });
-            
-            showToast('正在組裝食材...');
-          } else {
-            showToast('需要更多處理好的食材才能組裝');
-          }
-        }
-        // 盤子站互動 - 上菜
-        else if (type === 'plate') {
-          // 檢查當前選中的庫存槽是否有完整料理
-          const currentItem = gameState.inventory[gameState.activeSlot];
-          if (currentItem && isCompleteDish(currentItem.type)) {
-            // 發送上菜的動作
-            sendAction('serve_dish', { 
-              slotIndex: gameState.activeSlot
-            });
-            
-            // 添加上菜動畫效果
-            const slot = document.querySelectorAll('.inventory-slot')[gameState.activeSlot];
-            if (slot) {
-              const item = slot.querySelector('.game-item');
-              if (item) {
-                item.style.animation = 'bounce 0.5s';
-              }
-            }
-            
-            showToast(`正在上菜${getItemName(currentItem.type)}...`);
-          } else if (currentItem) {
-            showToast('這不是一道完整的料理，無法上菜！');
-          } else {
-            showToast('請先準備完整的料理');
-          }
-        }
+        
+        sendAction('use_station', { type, subtype });
       }
       
       // 獲取工作站圖標
@@ -2258,16 +2117,14 @@
 
       // ★ 修改：更新解謎盤UI的函數
       function updateWorkspace(puzzle) {
-        const workspaceContainer = document.getElementById('sharedWorkspace');
-        workspaceContainer.innerHTML = ''; // 清空
+        sharedWorkspace.innerHTML = ''; 
 
         if (!puzzle || !puzzle.required_items) {
-            workspaceContainer.style.display = 'none';
+            sharedWorkspace.style.display = 'none';
             return;
         }
-        workspaceContainer.style.display = 'flex';
+        sharedWorkspace.style.display = 'flex';
         
-        // 顯示目標
         const targetDishName = getRecipeName(puzzle.target_recipe_id) || '組合料理';
         const targetTitle = document.createElement('div');
         targetTitle.className = 'workspace-title';
@@ -2276,84 +2133,84 @@
         targetTitle.style.textAlign = 'center';
         targetTitle.style.marginBottom = '10px';
         targetTitle.style.fontWeight = 'bold';
-        workspaceContainer.appendChild(targetTitle);
+        sharedWorkspace.appendChild(targetTitle);
 
-        // 顯示材料槽
         puzzle.required_items.forEach((slotData, index) => {
             const slotElement = document.createElement('div');
             slotElement.className = 'workspace-slot';
             slotElement.dataset.slotIndex = index;
 
             if (slotData.filled) {
-                // 如果已填充，顯示物品圖示
                 const itemIcon = document.createElement('div');
                 itemIcon.className = 'game-item';
                 itemIcon.textContent = getItemSymbol(slotData.filled.type);
                 itemIcon.style.backgroundColor = getItemColor(slotData.filled.type);
+                itemIcon.title = `${getItemName(slotData.filled.type)} (由 ${slotData.filled.username} 放置)`;
                 slotElement.appendChild(itemIcon);
             } else {
-                // 如果未填充，顯示所需物品的提示
                 const hint = document.createElement('div');
                 hint.className = 'workspace-hint';
-                hint.textContent = getItemName(slotData.type);
-                hint.style.fontSize = '0.7em';
-                hint.style.color = '#888';
+                hint.textContent = `需要\n${getItemName(slotData.type)}`;
                 slotElement.appendChild(hint);
             }
-            workspaceContainer.appendChild(slotElement);
+            sharedWorkspace.appendChild(slotElement);
 
-            // 添加加號
             if (index < puzzle.required_items.length - 1) {
                 const plus = document.createElement('div');
                 plus.textContent = '+';
+                plus.style.margin = '0 5px';
                 plus.style.alignSelf = 'center';
-                workspaceContainer.appendChild(plus);
+                sharedWorkspace.appendChild(plus);
             }
         });
 
-        // 顯示箭頭和出餐按鈕
         const arrow = document.createElement('div');
         arrow.textContent = '→';
         arrow.style.alignSelf = 'center';
         arrow.style.margin = '0 10px';
-        workspaceContainer.appendChild(arrow);
+        sharedWorkspace.appendChild(arrow);
         
         const serveButton = document.createElement('button');
         serveButton.id = 'serveDishBtn';
-        serveButton.textContent = getRecipeName(puzzle.target_recipe_id);
+        serveButton.textContent = "出餐";
         serveButton.className = 'dialog-button';
         if (puzzle.status !== 'ready_to_serve') {
             serveButton.disabled = true;
             serveButton.style.backgroundColor = '#555';
+            serveButton.style.cursor = 'not-allowed';
+        } else {
+            serveButton.style.animation = 'pulse 1.5s infinite';
         }
         serveButton.addEventListener('click', () => {
+            if (serveButton.disabled) return;
             sendAction('serve_final_dish', {});
         });
-        workspaceContainer.appendChild(serveButton);
+        sharedWorkspace.appendChild(serveButton);
         
-        // 重新綁定點擊事件
         setupWorkspaceInteraction();
       }
 
-      // 添加工作區傳遞功能
+      // ★★★ 新增：為組合區的槽位添加事件監聽 ★★★
       function setupWorkspaceInteraction() {
-        const workspaceSlots = document.querySelectorAll('.workspace-slot');
-        
-        workspaceSlots.forEach((slot, index) => {
-          slot.addEventListener('click', () => {
-            const selectedItem = gameState.inventory[gameState.activeSlot];
-            
-            // 點擊空格，且手上有東西，嘗試放置
-            if (selectedItem) {
-              sendAction('place_on_assembly_plate', {
-                fromSlot: gameState.activeSlot,
-                plateSlotIndex: index
+          const workspaceSlots = document.querySelectorAll('.workspace-slot');
+          
+          workspaceSlots.forEach((slot, index) => {
+            // 只有在槽位為空時才添加點擊事件
+            if (!slot.querySelector('.game-item')) {
+              slot.addEventListener('click', () => {
+                const selectedItem = gameState.inventory[gameState.activeSlot];
+                
+                if (selectedItem) {
+                  sendAction('place_on_assembly_plate', {
+                    fromSlot: gameState.activeSlot,
+                    plateSlotIndex: index
+                  });
+                } else {
+                  showToast("你手上沒有東西可以放上去");
+                }
               });
-            } else {
-              showToast("你手上沒有東西可以放上去");
             }
           });
-        });
       }
     });
   </script>

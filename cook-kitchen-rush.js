@@ -586,6 +586,223 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
     async function handleAuthenticatedMessage(ws, data, userId, username, userProfile) {
         const { type, roomId } = data;
 
+        // ★ 新增：將 player action 的處理邏輯移到最前，因其最頻繁
+        if (type === 'player_action') {
+            const { action, payload } = data;
+            const client = await pool.connect();
+            try {
+                await client.query('BEGIN');
+                const roomResult = await client.query('SELECT * FROM cook_game_rooms WHERE room_id = $1 FOR UPDATE', [roomId]);
+                if (roomResult.rows.length === 0) throw new Error("找不到房間");
+        
+                let room = roomResult.rows[0];
+                let gameState = room.game_state;
+                if (room.status !== 'playing') throw new Error("遊戲尚未開始或已結束");
+        
+                const playerIndex = gameState.players.findIndex(p => p.id === userId);
+                if (playerIndex === -1) throw new Error("找不到玩家");
+                let player = gameState.players[playerIndex];
+        
+                switch (action) {
+                    case 'place_on_assembly_plate': {
+                        const { fromSlot, plateSlotIndex } = payload;
+                        
+                        const assemblyPuzzle = gameState.assembly_puzzle;
+                        if (!assemblyPuzzle || assemblyPuzzle.status !== 'incomplete') {
+                            throw new Error("組合區目前無法放置物品");
+                        }
+        
+                        if (plateSlotIndex < 0 || plateSlotIndex >= assemblyPuzzle.required_items.length) {
+                            throw new Error("無效的組合區位置");
+                        }
+                        if (assemblyPuzzle.required_items[plateSlotIndex].filled) {
+                            ws.send(JSON.stringify({ type: 'toast', message: '這個位置已經有東西了' }));
+                            await client.query('ROLLBACK');
+                            client.release();
+                            return; // 直接返回，不拋出錯誤
+                        }
+        
+                        const itemToPlace = player.inventory[fromSlot];
+                        if (!itemToPlace) {
+                            throw new Error("你的手上沒有東西");
+                        }
+                        
+                        const requiredItemType = assemblyPuzzle.required_items[plateSlotIndex].type;
+                        if (itemToPlace.type !== requiredItemType) {
+                            // ★ 修正: 使用 getItemName 讓提示更友好
+                            const requiredName = await getItemName(requiredItemType);
+                            const placedName = await getItemName(itemToPlace.type);
+                            throw new Error(`這裡需要 ${requiredName}, 不是 ${placedName}`);
+                        }
+        
+                        // 成功放置
+                        assemblyPuzzle.required_items[plateSlotIndex].filled = { type: itemToPlace.type, placedBy: userId, username: player.username };
+                        player.inventory[fromSlot] = null;
+                        
+                        const allFilled = assemblyPuzzle.required_items.every(slot => slot.filled);
+                        if (allFilled) {
+                            assemblyPuzzle.status = 'ready_to_serve';
+                        }
+        
+                        gameState.players[playerIndex] = player;
+                        await client.query('UPDATE cook_game_rooms SET game_state = $1 WHERE room_id = $2', [gameState, roomId]);
+        
+                        // 廣播更新
+                        broadcastToRoom(roomId, { type: 'assembly_puzzle_update', puzzle: assemblyPuzzle });
+                        
+                        const playerWs = activeConnections.get(userId);
+                        if(playerWs) {
+                            playerWs.send(JSON.stringify({ type: 'inventory_update', inventory: player.inventory, activeSlot: player.activeSlot }));
+                        }
+        
+                        break;
+                    }
+                    case 'serve_final_dish': {
+                        const assemblyPuzzle = gameState.assembly_puzzle;
+                        if (!assemblyPuzzle || assemblyPuzzle.status !== 'ready_to_serve') {
+                            throw new Error("還沒準備好出餐！");
+                        }
+        
+                        // 計算分數
+                        const order = gameState.orders.find(o => o.recipe === assemblyPuzzle.target_recipe_id);
+                        if (!order) throw new Error("找不到對應的訂單");
+
+                        const points = calculateOrderPoints(order);
+                        gameState.score += points;
+                        gameState.completedOrders = (gameState.completedOrders || 0) + 1;
+                        
+                        const contributors = new Set(assemblyPuzzle.required_items.map(item => item.filled.placedBy));
+                        contributors.forEach(contributorId => {
+                            const pIndex = gameState.players.findIndex(p => p.id === contributorId);
+                            if(pIndex !== -1) {
+                                gameState.players[pIndex].score = (gameState.players[pIndex].score || 0) + Math.ceil(points / contributors.size);
+                            }
+                        });
+
+                        broadcastToRoom(roomId, { type: 'toast', message: `成功出餐！團隊獲得 ${points} 分！`, style: 'success' });
+        
+                        // 產生下一個訂單
+                        const newOrder = await generateOrder();
+                        if (!newOrder) { 
+                            await endGame(roomId); // 沒有新訂單就結束遊戲
+                            break;
+                        }
+        
+                        const requiredItemsData = await getAssemblyRecipeData(newOrder.recipe);
+                        if (!requiredItemsData) throw new Error(`無法獲取訂單 ${newOrder.recipe} 的配方`);
+                        
+                        const requiredItemsForPuzzle = requiredItemsData.flatMap(req => Array(req.quantity).fill({ type: req.item_id, filled: null }));
+                        
+                        gameState.orders.shift(); // 移除已完成的訂單
+                        gameState.orders.push(newOrder); // 加入新訂單
+                        gameState.assembly_puzzle = {
+                            target_recipe_id: newOrder.recipe,
+                            required_items: requiredItemsForPuzzle,
+                            status: 'incomplete'
+                        };
+        
+                        await client.query('UPDATE cook_game_rooms SET game_state = $1 WHERE room_id = $2', [gameState, roomId]);
+                        
+                        broadcastToRoom(roomId, { type: 'game_state_update', gameState: gameState });
+        
+                        break;
+                    }
+                    case 'use_station': {
+                        const { type: stationType } = payload;
+                        const activeItem = player.inventory[player.activeSlot];
+        
+                        if (!activeItem) {
+                            throw new Error("你手上沒有東西，無法使用工作站");
+                        }
+                        
+                        const recipe = await findCookingRecipe(activeItem.type, stationType);
+                        if (!recipe) {
+                            const itemName = await getItemName(activeItem.type);
+                            throw new Error(`${itemName} 不能在 ${stationType} 上使用`);
+                        }
+        
+                        const outputItemData = await getItemData(recipe.result_item_id);
+                        if (!outputItemData) {
+                            throw new Error(`找不到結果物品: ${recipe.result_item_id}`);
+                        }
+                        
+                        // ★ 新增: 處理烹飪時間
+                        const cookingTime = (recipe.cook_time || 5) * 1000;
+                        player.isCooking = true;
+                        player.cookingProgress = 0;
+                        
+                        broadcastToRoom(roomId, { 
+                            type: 'player_started_cooking', 
+                            playerId: userId,
+                            duration: cookingTime
+                        });
+
+                        // 模擬烹飪過程
+                        setTimeout(async () => {
+                            const currentRoomState = await pool.query('SELECT game_state FROM cook_game_rooms WHERE room_id = $1', [roomId]);
+                            const currentPlayerState = currentRoomState.rows[0].game_state.players.find(p => p.id === userId);
+                            
+                            if (currentPlayerState) {
+                                currentPlayerState.inventory[currentPlayerState.activeSlot] = { type: outputItemData.item_id, quality: 100 };
+                                currentPlayerState.isCooking = false;
+
+                                await pool.query('UPDATE cook_game_rooms SET game_state = $1 WHERE room_id = $2', [currentRoomState.rows[0].game_state, roomId]);
+                                
+                                const playerWs = activeConnections.get(userId);
+                                if(playerWs) {
+                                    playerWs.send(JSON.stringify({ type: 'inventory_update', inventory: currentPlayerState.inventory, activeSlot: currentPlayerState.activeSlot }));
+                                    playerWs.send(JSON.stringify({ type: 'toast', message: `完成了 ${await getItemName(outputItemData.item_id)}！`, style: 'success' }));
+                                }
+                            }
+                        }, cookingTime);
+                        break;
+                    }
+                    case 'pick_up_ingredient': {
+                         const { ingredientId } = payload;
+                         const targetSlot = player.inventory.findIndex(slot => slot === null);
+                         if (targetSlot === -1) {
+                             throw new Error("你的物品欄滿了！");
+                         }
+                         const itemData = await getItemData(ingredientId);
+                         if (!itemData || !itemData.is_base_ingredient) {
+                             throw new Error("無法拿取這個物品");
+                         }
+        
+                         player.inventory[targetSlot] = { type: itemData.item_id, quality: 100 };
+                         
+                         gameState.players[playerIndex] = player;
+                         await client.query('UPDATE cook_game_rooms SET game_state = $1 WHERE room_id = $2', [gameState, roomId]);
+        
+                         const playerWs = activeConnections.get(userId);
+                         if(playerWs) {
+                             playerWs.send(JSON.stringify({ type: 'inventory_update', inventory: player.inventory, activeSlot: player.activeSlot }));
+                         }
+                         break;
+                    }
+                    case 'set_active_slot': {
+                        const { slot } = payload;
+                        if (slot >= 0 && slot < player.inventory.length) {
+                            player.activeSlot = slot;
+                            gameState.players[playerIndex] = player;
+                            await client.query('UPDATE cook_game_rooms SET game_state = $1 WHERE room_id = $2', [gameState, roomId]);
+                            // 不需要廣播，只通知自己
+                            ws.send(JSON.stringify({ type: 'inventory_update', inventory: player.inventory, activeSlot: player.activeSlot }));
+                        }
+                        break;
+                    }
+                }
+        
+                await client.query('COMMIT');
+            } catch (error) {
+                await client.query('ROLLBACK');
+                console.error(`[Player Action Error] 處理玩家 ${userId} 動作失敗:`, error);
+                ws.send(JSON.stringify({ type: 'error', message: error.message }));
+            } finally {
+                client.release();
+            }
+            return; // ★ player_action 處理完畢，直接返回
+        }
+
         switch (type) {
             case 'join_room': {
                 if (!roomId) {
@@ -759,7 +976,8 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
                 break;
             }
             case 'start_game': {
-                 if (!roomId) {
+                // ★★★ 核心修正點 ★★★
+                if (!roomId) {
                     ws.send(JSON.stringify({ type: 'error', message: '未提供房間ID' }));
                     return;
                 }
@@ -767,579 +985,82 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
                 try {
                     await client.query('BEGIN');
                     const roomResult = await client.query('SELECT * FROM cook_game_rooms WHERE room_id = $1 FOR UPDATE', [roomId]);
-
+    
                     if (roomResult.rows.length === 0) {
-                        ws.send(JSON.stringify({ type: 'error', message: '找不到房間' }));
-                        await client.query('ROLLBACK');
-                        return;
+                        throw new Error("找不到房間");
                     }
-
+    
                     const room = roomResult.rows[0];
                     if (room.creator_id !== userId) {
-                         ws.send(JSON.stringify({ type: 'error', message: '只有房主可以開始遊戲' }));
-                         await client.query('ROLLBACK');
-                         return;
+                         throw new Error("只有房主可以開始遊戲");
                     }
                     
                     const gameState = room.game_state;
                     const allReady = gameState.players.every(p => p.ready);
                     
+                    // ★ 修正：允許單人遊戲，長度 >= 1
                     if (allReady && gameState.players.length >= 1) { 
                         
                         await client.query("UPDATE cook_game_rooms SET status = 'starting' WHERE room_id = $1", [roomId]);
-                        await client.query('COMMIT');
                         
                         broadcastToRoom(roomId, { type: 'game_starting', countdown: 3 });
                         
+                        // ★★★ 使用 try...catch 包裝異步操作 ★★★
                         setTimeout(async () => {
                             try {
                                 const initialOrder = await generateOrder();
                                 if (!initialOrder) throw new Error("無法生成初始訂單");
 
-                                // ★ 修改：產生初始遊戲狀態，包含解謎機制
-                                const requiredItems = await getAssemblyRecipeData(initialOrder.recipe);
-                                if (!requiredItems) throw new Error(`無法獲取訂單 ${initialOrder.recipe} 的配方`);
+                                const requiredItemsData = await getAssemblyRecipeData(initialOrder.recipe);
+                                if (!requiredItemsData) throw new Error(`無法獲取訂單 ${initialOrder.recipe} 的配方`);
                                 
+                                const requiredItemsForPuzzle = requiredItemsData.flatMap(req => Array(req.quantity).fill({ type: req.item_id, filled: null }));
+
                                 const initialGameState = {
                                     timeRemaining: 180,
                                     score: 0,
+                                    completedOrders: 0,
                                     orders: [initialOrder],
                                     assembly_puzzle: {
                                         target_recipe_id: initialOrder.recipe,
-                                        required_items: requiredItems.map(type => ({ type: type, filled: null })),
+                                        required_items: requiredItemsForPuzzle,
                                         status: 'incomplete'
                                     },
-                                    players: gameState.players.map(p => ({ ...p, inventory: Array(8).fill(null), activeSlot: 0 }))
+                                    players: gameState.players.map(p => ({ 
+                                        ...p, 
+                                        inventory: Array(8).fill(null), 
+                                        activeSlot: 0, 
+                                        score: 0,
+                                        isCooking: false, // ★ 新增
+                                        cookingProgress: 0 // ★ 新增
+                                    }))
                                 };
 
                                 await pool.query("UPDATE cook_game_rooms SET status = 'playing', game_state = $2, updated_at = NOW() WHERE room_id = $1", [roomId, initialGameState]);
+                                
                                 console.log(`[COOK-GAME] 遊戲 ${roomId} 已正式開始`);
                                 broadcastToRoom(roomId, { type: 'game_started', roomId: roomId, gameState: initialGameState });
                                 
-                                // ★ 新增：啟動遊戲計時器
                                 startGameTimer(roomId, initialGameState.timeRemaining);
+
                             } catch (startError) {
                                 console.error(`[COOK-GAME] 開始遊戲 ${roomId} 失敗:`, startError);
+                                // ★ 新增：通知客戶端開始失敗
+                                broadcastToRoom(roomId, { type: 'error', message: `開始遊戲失敗: ${startError.message}` });
+                                broadcastToRoom(roomId, { type: 'game_start_failed' });
+                                // 將房間狀態重置回 'waiting'
+                                await pool.query("UPDATE cook_game_rooms SET status = 'waiting' WHERE room_id = $1", [roomId]);
                             }
                         }, 3000);
 
                     } else {
-                        ws.send(JSON.stringify({ type: 'error', message: '所有玩家都必須準備好才能開始遊戲' }));
-                        await client.query('ROLLBACK');
+                        throw new Error("所有玩家都必須準備好才能開始遊戲");
                     }
+                    await client.query('COMMIT');
                 } catch (error) {
                     await client.query('ROLLBACK');
                     console.error(`[COOK-GAME] 開始遊戲錯誤:`, error);
-                    ws.send(JSON.stringify({ type: 'error', message: '開始遊戲時發生後端錯誤' }));
-                } finally {
-                    client.release();
-                }
-                break;
-            }
-            case 'player_action': {
-                if (!roomId) {
-                    ws.send(JSON.stringify({ type: 'error', message: '未提供房間ID' }));
-                    return;
-                }
-
-                const { action, data: actionData } = data;
-                const client = await pool.connect();
-                
-                try {
-                    await client.query('BEGIN');
-                    const roomResult = await client.query('SELECT * FROM cook_game_rooms WHERE room_id = $1 FOR UPDATE', [roomId]);
-                    
-                    if (roomResult.rows.length === 0) {
-                        ws.send(JSON.stringify({ type: 'error', message: '找不到房間' }));
-                        await client.query('ROLLBACK');
-                        return;
-                    }
-
-                    const room = roomResult.rows[0];
-                    if (room.status !== 'playing') {
-                        ws.send(JSON.stringify({ type: 'error', message: '遊戲尚未開始' }));
-                        await client.query('ROLLBACK');
-                        return;
-                    }
-
-                    let gameState = room.game_state;
-                    const playerIndex = gameState.players.findIndex(p => p.id === userId);
-                    
-                    if (playerIndex === -1) {
-                        ws.send(JSON.stringify({ type: 'error', message: '找不到玩家資料' }));
-                        await client.query('ROLLBACK');
-                        return;
-                    }
-
-                    const player = gameState.players[playerIndex];
-
-                    // 處理不同類型的玩家動作
-                    switch (action) {
-                        case 'place_on_assembly_plate': {
-                            const { fromSlot, plateSlotIndex } = actionData;
-                            const item = player.inventory[fromSlot];
-                            const puzzle = gameState.assembly_puzzle;
-
-                            if (!item) {
-                                ws.send(JSON.stringify({ type: 'error', message: '你手上沒有東西' }));
-                                break;
-                            }
-                            if (!puzzle || !puzzle.required_items[plateSlotIndex]) {
-                                ws.send(JSON.stringify({ type: 'error', message: '無效的盤子位置' }));
-                                break;
-                            }
-                            if (puzzle.required_items[plateSlotIndex].filled) {
-                                ws.send(JSON.stringify({ type: 'error', message: '該位置已有物品' }));
-                                break;
-                            }
-                            if (item.type !== puzzle.required_items[plateSlotIndex].type) {
-                                ws.send(JSON.stringify({ type: 'error', message: '物品不符合要求！' }));
-                                break;
-                            }
-
-                            // 執行放置
-                            puzzle.required_items[plateSlotIndex].filled = item;
-                            player.inventory[fromSlot] = null;
-                            
-                            // 檢查是否所有物品都已放置
-                            const allFilled = puzzle.required_items.every(slot => slot.filled);
-                            if (allFilled) {
-                                puzzle.status = 'ready_to_serve';
-                            }
-
-                            // 廣播謎題更新並更新玩家庫存
-                            broadcastToRoom(roomId, { type: 'assembly_puzzle_update', puzzle: puzzle });
-                            ws.send(JSON.stringify({ type: 'inventory_update', inventory: player.inventory }));
-                            
-                            console.log(`[COOK-GAME] 玩家 ${username} 將 ${item.type} 放置到解謎盤上`);
-                            break;
-                        }
-                        case 'serve_final_dish': {
-                            const puzzle = gameState.assembly_puzzle;
-                            if (!puzzle || puzzle.status !== 'ready_to_serve') {
-                                ws.send(JSON.stringify({ type: 'error', message: '還沒準備好，無法出餐！' }));
-                                break;
-                            }
-
-                            // 分數計算與訂單完成邏輯 (簡化)
-                            const order = gameState.orders[0];
-                            const points = calculateOrderPoints(order);
-                            gameState.score += points;
-                            gameState.completedOrders = (gameState.completedOrders || 0) + 1;
-                            player.score = (player.score || 0) + points;
-                            
-                            broadcastToRoom(roomId, {
-                                type: 'order_completed',
-                                orderId: order.id,
-                                points: points,
-                                newScore: gameState.score,
-                                playerName: username
-                            });
-                            
-                            // 生成新訂單和新謎題
-                            const newOrder = await generateOrder();
-                            if(newOrder) {
-                                const requiredItems = await getAssemblyRecipeData(newOrder.recipe);
-                                gameState.orders = [newOrder];
-                                gameState.assembly_puzzle = {
-                                    target_recipe_id: newOrder.recipe,
-                                    required_items: requiredItems.map(type => ({ type: type, filled: null })),
-                                    status: 'incomplete'
-                                };
-                                broadcastToRoom(roomId, { type: 'new_order', order: newOrder });
-                                broadcastToRoom(roomId, { type: 'assembly_puzzle_update', puzzle: gameState.assembly_puzzle });
-                            } else {
-                                // 遊戲結束或沒有更多訂單
-                                endGame(roomId);
-                            }
-
-                            console.log(`[COOK-GAME] 玩家 ${username} 成功出餐 ${puzzle.target_recipe_id}`);
-                            break;
-                        }
-                        case 'pick_ingredient': {
-                            const { ingredientType, slotIndex } = actionData;
-                            if (slotIndex < 0 || slotIndex >= player.inventory.length) {
-                                ws.send(JSON.stringify({ type: 'error', message: '無效的庫存槽位' }));
-                                break;
-                            }
-
-                            if (player.inventory[slotIndex] !== null) {
-                                ws.send(JSON.stringify({ type: 'error', message: '庫存槽已有物品' }));
-                                break;
-                            }
-
-                            // 創建食材物品
-                            const newItem = {
-                                id: `item_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-                                type: ingredientType,
-                                state: 'raw'
-                            };
-
-                            // 更新玩家庫存
-                            player.inventory[slotIndex] = newItem;
-                            gameState.players[playerIndex] = player;
-
-                            // 保存遊戲狀態
-                            await client.query('UPDATE cook_game_rooms SET game_state = $1 WHERE room_id = $2', [gameState, roomId]);
-                            await client.query('COMMIT');
-
-                            // 通知玩家拿取食材成功
-                            ws.send(JSON.stringify({
-                                type: 'ingredient_picked',
-                                ingredientType,
-                                slotIndex,
-                                itemId: newItem.id
-                            }));
-
-                            // 廣播給其他玩家
-                            broadcastToRoom(roomId, {
-                                type: 'player_action',
-                                playerId: userId,
-                                playerName: username,
-                                action: 'pick_ingredient',
-                                data: { ingredientType, slotIndex }
-                            }, ws);
-                            
-                            console.log(`[COOK-GAME] 玩家 ${username} 拿取了 ${ingredientType}`);
-                            break;
-                        }
-                        case 'cook_item': {
-                            const { slotIndex, cookingMethod } = actionData;
-                            if (slotIndex < 0 || slotIndex >= player.inventory.length) {
-                                ws.send(JSON.stringify({ type: 'error', message: '無效的庫存槽位' }));
-                                break;
-                            }
-
-                            const item = player.inventory[slotIndex];
-                            if (!item) {
-                                ws.send(JSON.stringify({ type: 'error', message: '庫存槽為空' }));
-                                break;
-                            }
-
-                            // ★ V2 修改：使用 findCookingRecipe 查找食譜
-                            const recipe = await findCookingRecipe(item.type, cookingMethod || 'grill');
-
-                            if (!recipe) {
-                                ws.send(JSON.stringify({ type: 'error', message: '此物品無法在此烹飪站處理' }));
-                                break;
-                            }
-                            
-                            // 更新物品狀態
-                            player.inventory[slotIndex] = {
-                                ...item,
-                                type: recipe.output_item_id_str, // 使用食譜的產出
-                                state: 'cooked' // 狀態可根據食譜定義，此處簡化
-                            };
-                            
-                            gameState.players[playerIndex] = player;
-
-                            // 保存遊戲狀態
-                            await client.query('UPDATE cook_game_rooms SET game_state = $1 WHERE room_id = $2', [gameState, roomId]);
-                            await client.query('COMMIT');
-
-                            // 通知玩家烹飪成功
-                            ws.send(JSON.stringify({
-                                type: 'item_cooked',
-                                slotIndex,
-                                resultType: recipe.output_item_id_str
-                            }));
-
-                            // 廣播給其他玩家
-                            broadcastToRoom(roomId, {
-                                type: 'player_action',
-                                playerId: userId,
-                                playerName: username,
-                                action: 'cook_item',
-                                data: { slotIndex, resultType: recipe.output_item_id_str }
-                            }, ws);
-                            
-                            console.log(`[COOK-GAME] 玩家 ${username} 根據食譜 ${recipe.recipe_id} 將 ${item.type} 烹飪成 ${recipe.output_item_id_str}`);
-                            break;
-                        }
-                        case 'assemble_items': {
-                            // ★ V2 修改：使用 findAssemblyRecipe 查找食譜
-                            const inventory = player.inventory;
-                            const ingredientItemTypes = inventory.filter(item => item !== null).map(item => item.type);
-                            
-                            const recipe = await findAssemblyRecipe(ingredientItemTypes);
-                            
-                            if (!recipe) {
-                                ws.send(JSON.stringify({ type: 'error', message: '沒有可用的組裝配方' }));
-                                break;
-                            }
-
-                            // 查詢此食譜需要的所有原料，以正確移除它們
-                            const requirementsResult = await client.query(
-                                `SELECT i.item_id, req.quantity 
-                                 FROM cook_recipe_requirements_v2 req
-                                 JOIN cook_items i ON req.required_item_id = i.id
-                                 WHERE req.recipe_id = $1`,
-                                [recipe.id]
-                            );
-                            const requiredItems = requirementsResult.rows;
-
-                            // 從庫存中移除已使用的食材
-                            let inventoryCopy = [...inventory];
-                            for (const required of requiredItems) {
-                                for (let i = 0; i < required.quantity; i++) {
-                                    const slotIndex = inventoryCopy.findIndex(item => item && item.type === required.item_id);
-                                    if (slotIndex !== -1) {
-                                        inventoryCopy[slotIndex] = null;
-                                    }
-                                }
-                            }
-                            
-                            // 在第一個空槽位放入組裝好的料理
-                            const emptySlot = inventoryCopy.findIndex(item => item === null);
-                            if (emptySlot === -1) {
-                                // 理論上不應該發生，因為我們剛移除了原料
-                                ws.send(JSON.stringify({ type: 'error', message: '沒有空的庫存槽來放置組裝好的料理' }));
-                                break;
-                            }
-
-                            inventoryCopy[emptySlot] = {
-                                id: `item_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-                                type: recipe.output_item_id_str,
-                                state: 'assembled'
-                            };
-
-                            player.inventory = inventoryCopy;
-                            gameState.players[playerIndex] = player;
-
-                            // 保存遊戲狀態
-                            await client.query('UPDATE cook_game_rooms SET game_state = $1 WHERE room_id = $2', [gameState, roomId]);
-                            await client.query('COMMIT');
-
-                            // 通知玩家組裝成功
-                            ws.send(JSON.stringify({
-                                type: 'items_assembled',
-                                newInventory: player.inventory,
-                                resultType: recipe.output_item_id_str
-                            }));
-
-                            // 廣播給其他玩家
-                            broadcastToRoom(roomId, {
-                                type: 'player_action',
-                                playerId: userId,
-                                playerName: username,
-                                action: 'assemble_items',
-                                data: { resultType: recipe.output_item_id_str }
-                            }, ws);
-                            
-                            console.log(`[COOK-GAME] 玩家 ${username} 根據食譜 ${recipe.recipe_id} 組裝了 ${recipe.output_item_id_str}`);
-                            break;
-                        }
-                        case 'serve_dish': {
-                            const { slotIndex, dishType } = actionData;
-                            if (slotIndex < 0 || slotIndex >= player.inventory.length) {
-                                ws.send(JSON.stringify({ type: 'error', message: '無效的庫存槽位' }));
-                                break;
-                            }
-
-                            const dish = player.inventory[slotIndex];
-                             if (!dish) {
-                                ws.send(JSON.stringify({ type: 'error', message: '庫存槽為空' }));
-                                break;
-                            }
-
-                            // ★ V2 修改：使用 getItemData 判斷是否為完整料理
-                            const itemData = await getItemData(dish.type);
-
-                            if (!itemData || !itemData.is_dish) {
-                                ws.send(JSON.stringify({ type: 'error', message: '此物品不是完整的料理' }));
-                                break;
-                            }
-
-                            // 檢查是否有匹配的訂單
-                            // ★ V2 修改：使用 dish.type (item_id) 與 order.recipe (recipe_id) 進行比較
-                            const orderIndex = gameState.orders.findIndex(order => order.recipe === dish.type);
-                            if (orderIndex === -1) {
-                                ws.send(JSON.stringify({ type: 'error', message: '沒有匹配的訂單' }));
-                                break;
-                            }
-
-                            // 移除訂單和料理
-                            const order = gameState.orders.splice(orderIndex, 1)[0];
-                            player.inventory[slotIndex] = null;
-                            
-                            // ★ V2 修改：直接在此計算得分
-                            let points = itemData.base_points || 20; // 從資料庫獲取基礎分數，若無則默認為 20
-                            const timePercent = order.timeRemaining / order.totalTime;
-                            if (timePercent > 0.7) {
-                                points += Math.floor(points * 0.5); // 獎勵 50%
-                            } else if (timePercent > 0.4) {
-                                points += Math.floor(points * 0.2); // 獎勵 20%
-                            }
-                            
-                            gameState.score += points;
-                            
-                            // ★ 新增：記錄完成的訂單數量
-                            if (!gameState.completedOrders) {
-                                gameState.completedOrders = 0;
-                            }
-                            gameState.completedOrders += 1;
-                            
-                            // ★ 新增：記錄玩家個人分數
-                            if (!player.score) {
-                                player.score = 0;
-                            }
-                            player.score += points;
-                            
-                            gameState.players[playerIndex] = player;
-
-                            // 保存遊戲狀態
-                            await client.query('UPDATE cook_game_rooms SET game_state = $1 WHERE room_id = $2', [gameState, roomId]);
-                            await client.query('COMMIT');
-
-                            // 通知玩家上菜成功
-                            ws.send(JSON.stringify({
-                                type: 'dish_served',
-                                success: true,
-                                slotIndex,
-                                orderId: order.id,
-                                points,
-                                newScore: gameState.score
-                            }));
-
-                            // 廣播給所有玩家
-                            broadcastToRoom(roomId, {
-                                type: 'order_completed',
-                                orderId: order.id,
-                                points,
-                                newScore: gameState.score,
-                                playerName: username
-                            });
-                            
-                            console.log(`[COOK-GAME] 玩家 ${username} 完成了訂單 ${order.id}，獲得 ${points} 分`);
-                            
-                            // 如果訂單數量不足，生成新訂單
-                            if (gameState.orders.length < 3) {
-                                setTimeout(async () => {
-                                    try {
-                                        const newOrder = await generateOrder();
-                                        
-                                        // 更新遊戲狀態
-                                        const updateResult = await pool.query('SELECT game_state FROM cook_game_rooms WHERE room_id = $1', [roomId]);
-                                        if (updateResult.rows.length > 0) {
-                                            let updatedGameState = updateResult.rows[0].game_state;
-                                            updatedGameState.orders.push(newOrder);
-                                            
-                                            await pool.query('UPDATE cook_game_rooms SET game_state = $1 WHERE room_id = $2', [updatedGameState, roomId]);
-                                            
-                                            // 廣播新訂單
-                                            broadcastToRoom(roomId, {
-                                                type: 'new_order',
-                                                order: newOrder
-                                            });
-                                            
-                                            console.log(`[COOK-GAME] 房間 ${roomId} 生成了新訂單 ${newOrder.id}`);
-                                        }
-                                    } catch (error) {
-                                        console.error(`[COOK-GAME] 生成新訂單錯誤:`, error);
-                                    }
-                                }, 2000);
-                            }
-                            break;
-                        }
-                        case 'select_slot': {
-                            const { slotIndex } = actionData;
-                            if (slotIndex < 0 || slotIndex >= player.inventory.length) {
-                                ws.send(JSON.stringify({ type: 'error', message: '無效的庫存槽位' }));
-                                break;
-                            }
-
-                            // 更新玩家當前選中的槽位
-                            player.activeSlot = slotIndex;
-                            gameState.players[playerIndex] = player;
-
-                            // 保存遊戲狀態
-                            await client.query('UPDATE cook_game_rooms SET game_state = $1 WHERE room_id = $2', [gameState, roomId]);
-                            await client.query('COMMIT');
-
-                            // 通知玩家選擇槽位成功
-                            ws.send(JSON.stringify({
-                                type: 'slot_selected',
-                                slotIndex
-                            }));
-                            
-                            console.log(`[COOK-GAME] 玩家 ${username} 選擇了庫存槽 ${slotIndex}`);
-                            break;
-                        }
-                        case 'transfer_item': {
-                            const { fromSlot, toPlayerId } = actionData;
-                            if (fromSlot < 0 || fromSlot >= player.inventory.length) {
-                                ws.send(JSON.stringify({ type: 'error', message: '無效的庫存槽位' }));
-                                break;
-                            }
-
-                            const item = player.inventory[fromSlot];
-                            if (!item) {
-                                ws.send(JSON.stringify({ type: 'error', message: '庫存槽為空' }));
-                                break;
-                            }
-
-                            // 找到目標玩家
-                            const toPlayerIndex = gameState.players.findIndex(p => p.id === toPlayerId);
-                            if (toPlayerIndex === -1) {
-                                ws.send(JSON.stringify({ type: 'error', message: '找不到目標玩家' }));
-                                break;
-                            }
-
-                            const toPlayer = gameState.players[toPlayerIndex];
-                            
-                            // 找到目標玩家的空槽位
-                            const toSlot = toPlayer.inventory.findIndex(item => item === null);
-                            if (toSlot === -1) {
-                                ws.send(JSON.stringify({ type: 'error', message: '目標玩家沒有空的庫存槽' }));
-                                break;
-                            }
-
-                            // 轉移物品
-                            toPlayer.inventory[toSlot] = item;
-                            player.inventory[fromSlot] = null;
-                            
-                            gameState.players[playerIndex] = player;
-                            gameState.players[toPlayerIndex] = toPlayer;
-
-                            // 保存遊戲狀態
-                            await client.query('UPDATE cook_game_rooms SET game_state = $1 WHERE room_id = $2', [gameState, roomId]);
-                            await client.query('COMMIT');
-
-                            // 通知雙方玩家
-                            ws.send(JSON.stringify({
-                                type: 'item_transferred',
-                                success: true,
-                                fromSlot,
-                                toPlayerId,
-                                toPlayerName: toPlayer.username
-                            }));
-
-                            const toPlayerWs = activeConnections.get(toPlayerId);
-                            if (toPlayerWs && toPlayerWs.readyState === WebSocket.OPEN) {
-                                toPlayerWs.send(JSON.stringify({
-                                    type: 'item_transferred',
-                                    success: true,
-                                    fromPlayerId: userId,
-                                    fromPlayerName: username,
-                                    toSlot,
-                                    itemType: item.type,
-                                    itemId: item.id
-                                }));
-                            }
-                            
-                            console.log(`[COOK-GAME] 玩家 ${username} 將物品 ${item.type} 傳給了玩家 ${toPlayer.username}`);
-                            break;
-                        }
-                        default:
-                            ws.send(JSON.stringify({ type: 'error', message: '未知的玩家動作' }));
-                            await client.query('ROLLBACK');
-                            return;
-                    }
-
-                } catch (error) {
-                    await client.query('ROLLBACK');
-                    console.error(`[COOK-GAME] 處理玩家動作錯誤:`, error);
-                    ws.send(JSON.stringify({ type: 'error', message: '處理玩家動作時發生後端錯誤' }));
+                    ws.send(JSON.stringify({ type: 'error', message: `開始遊戲時發生後端錯誤: ${error.message}` }));
                 } finally {
                     client.release();
                 }
