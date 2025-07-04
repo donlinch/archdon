@@ -1194,6 +1194,7 @@ case 'item_cooked':
         showToast(`${getItemName(message.resultType)} 烹飪完成！`);
         updateTaskHint();
     }
+    hideAllCookingAnimations(); // 隱藏動畫
     break;
 
 // 當你成功組合物品後
@@ -1245,11 +1246,31 @@ case 'error':
         alert('找不到對應的遊戲房間，將返回大廳。');
         window.location.href = '/cook-lobby.html';
     }
+    hideAllCookingAnimations(); // 無論何種錯誤，都清除動畫
     break;
 
 // 當玩家升級時觸發
 case 'level_up':
     showLevelUpNotification(message);
+    break;
+
+case 'game_state_update':
+    console.log("收到遊戲狀態更新:", message.gameState);
+    // 在不完全重置的情況下更新遊戲狀態
+    if (message.gameState.score !== undefined) {
+        updateScore(message.gameState.score);
+    }
+    if (message.gameState.orders) {
+        gameState.orders = message.gameState.orders;
+        updateOrders();
+    }
+    if (message.gameState.inventory) {
+        gameState.inventory = message.gameState.inventory;
+        updateInventory(gameState.inventory);
+    }
+    if (message.gameState.timeRemaining !== undefined) {
+        updateTimer(message.gameState.timeRemaining);
+    }
     break;
 
           }
@@ -1263,17 +1284,18 @@ case 'level_up':
           const currentItem = gameState.inventory[gameState.activeSlot];
 
           if (type === 'grill' || type === 'fryer' || type === 'chopping_board') {
-          if (currentItem) {
+              if (currentItem) {
                   showToast(`在 ${type} 上烹飪 ${getItemName(currentItem.type)}...`);
-            sendAction('cook_item', {
+                  showCookingAnimation(type); // 顯示烹飪動畫
+                  sendAction('cook_item', {
                       stationType: type,
                       slotIndex: gameState.activeSlot 
-            });
-          } else {
+                  });
+              } else {
                   showToast('請先選擇一個食材！');
+              }
           }
-        }
-        else if (type === 'plate') {
+          else if (type === 'plate') {
               if (currentItem) {
                   showToast(`正在嘗試送出 ${getItemName(currentItem.type)}...`);
                   // 直接發送請求，讓後端來驗證
@@ -1480,6 +1502,7 @@ case 'level_up':
                   <div class="station-icon">${station.icon}</div>
                   <div class="station-label">${station.name}</div>
               `;
+              stationElement.dataset.stationId = station.id; // 為動畫效果添加 ID
               
               // 添加點擊事件
               stationElement.addEventListener('click', () => {
@@ -1494,6 +1517,38 @@ case 'level_up':
               
               stationsContainer.appendChild(stationElement);
           });
+      }
+
+      // 新增：為工作站顯示烹飪動畫
+      function showCookingAnimation(stationId) {
+        const stationElement = document.querySelector(`.station[data-station-id="${stationId}"]`);
+        if (!stationElement) return;
+
+        // 如果已有動畫，則不重複添加
+        if (stationElement.querySelector('.cooking-animation-container')) return;
+
+        const animationContainer = document.createElement('div');
+        animationContainer.className = 'cooking-animation-container';
+        
+        // 使用現有的 .socket 動畫 HTML 結構，並調整大小
+        animationContainer.innerHTML = `
+          <div class="socket" style="transform: scale(0.6);">
+            <div class="gel center-gel">
+              <div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div>
+            </div>
+            <div class="gel c1 r1"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+            <div class="gel c2 r2"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+            <div class="gel c3 r3"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+          </div>
+        `;
+        
+        stationElement.style.position = 'relative'; // 確保動畫相對於工作站定位
+        stationElement.appendChild(animationContainer);
+      }
+
+      // 新增：隱藏所有烹飪動畫
+      function hideAllCookingAnimations() {
+          document.querySelectorAll('.cooking-animation-container').forEach(anim => anim.remove());
       }
 
       // 新增：初始化組合盤
