@@ -866,312 +866,390 @@
     <div class="toast" id="toast"></div>
   </div>
 
+  <script src="/socket.io/socket.io.js"></script>
   <script>
+    // Global state variables
+    let socket = null;
+    let gameState = null;
+    let currentPlayerId = null;
+    let selectedInventoryItem = null; // To track which item is selected from inventory
+
     document.addEventListener('DOMContentLoaded', () => {
-      // 檢查是否有登入令牌，若無則導回登入頁
-      const token = localStorage.getItem('cookGameToken');
+      const token = localStorage.getItem('token');
       if (!token) {
-        window.location.href = '/cook-login.html';
+        window.location.href = '/login.html';
         return;
       }
-      
-      const urlParams = new URLSearchParams(window.location.search);
-      const roomId = urlParams.get('id');
-      
-      if (!roomId) {
-        alert('找不到房間ID，將返回遊戲大廳');
-        window.location.href = '/cook-lobby.html';
-        return;
-      }
-      
-      document.body.addEventListener('touchmove', function(e) {
-        e.preventDefault();
-      }, { passive: false });
-      
-      const gameUI = document.getElementById('gameUI');
-      const loadingScreen = document.getElementById('loadingScreen');
-      const gameTimer = document.getElementById('gameTimer');
-      const gameScore = document.getElementById('gameScore');
-      const stationsContainer = document.getElementById('stationsContainer');
-      const ordersContainer = document.getElementById('ordersContainer');
-      const playerInventory = document.getElementById('playerInventory');
-      const gameOverDialog = document.getElementById('gameOverDialog');
-      const finalScore = document.getElementById('finalScore');
-      const completedOrders = document.getElementById('completedOrders');
-      const personalScore = document.getElementById('personalScore');
-      const returnToLobbyBtn = document.getElementById('returnToLobbyBtn');
-      const toast = document.getElementById('toast');
-      const taskHint = document.getElementById('taskHint');
 
-      // 遊戲狀態
-      let gameState = {
-        activeSlot: 0,
-        inventory: Array(8).fill(null),
-        orders: [],
-        stations: {},
-        players: [],
-        status: 'waiting',
-        currentPlayer: null,
-        isRunning: false
-      };
-      
-      let websocket = null;
-      let reconnectAttempts = 0;
-      const maxReconnectAttempts = 5;
-      const reconnectDelay = 3000;
-      let gameTickInterval = null; // 用於訂單計時器
-
-      // 獲取用戶資料，然後啟動WebSocket
-      fetch('/cook-api/users/profile', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      .then(response => response.ok ? response.json() : Promise.reject('無法驗證使用者身份'))
-      .then(data => {
-        gameState.currentPlayer = data.user;
-        const userStatus = document.getElementById('userStatus');
-        userStatus.querySelector('img').src = data.user.user_profile_image_url || '/images/a01girlmove.gif';
-        userStatus.querySelector('.username').textContent = data.user.display_name || data.user.username;
-        userStatus.style.display = 'flex';
-        userStatus.onclick = () => window.location.href = `member-editor.html?userId=${data.user.user_id}`;
-        connectWebsocket();
-      })
-      .catch(error => {
-        console.error('獲取用戶資料失敗:', error);
-        alert('獲取用戶資料失敗，將返回大廳。');
-        window.location.href = 'cook-lobby.html';
+      socket = io({
+        auth: {
+          token
+        }
       });
 
-      function connectWebsocket() {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/cook-ws`;
-        websocket = new WebSocket(wsUrl);
-        
-        websocket.onopen = () => {
-          console.log('[COOK-GAME WS] WebSocket連接已建立');
-          reconnectAttempts = 0;
-          websocket.send(JSON.stringify({ type: 'authenticate', token: token }));
-        };
-        
-        websocket.onmessage = (event) => {
-          try {
-            const message = JSON.parse(event.data);
-            handleWebsocketMessage(message);
-          } catch (error) {
-            console.error('解析WebSocket訊息出錯:', error, event.data);
-          }
-        };
-        
-        websocket.onclose = () => {
-          console.log('[COOK-GAME WS] WebSocket連接已關閉');
-          if (reconnectAttempts < maxReconnectAttempts) {
-            reconnectAttempts++;
-            setTimeout(connectWebsocket, reconnectDelay);
-          } else {
-            showToast('與伺服器的連接已斷開，請刷新頁面重試');
-          }
-        };
-        
-        websocket.onerror = (error) => console.error('[COOK-GAME WS] WebSocket錯誤:', error);
-      }
-      
-      function handleWebsocketMessage(message) {
-        console.log("收到訊息:", message);
-        switch (message.type) {
-          case 'auth_success':
-            console.log("認證成功，正在加入遊戲房間...");
-            websocket.send(JSON.stringify({ type: 'join_room', roomId: roomId }));
-            break;
-          
-          case 'game_started':
-          case 'game_state':
-            startGame(message.gameState);
-            break;
-
-          case 'game_tick':
-            updateTimer(message.timeRemaining);
-            break;
-
-          case 'new_order':
-            if (message.order) gameState.orders.push(message.order);
-            updateOrdersUI();
-            updateTaskHint();
-            showToast('收到新訂單!');
-            break;
-
-          case 'order_completed':
-            gameState.orders = gameState.orders.filter(o => o.id !== message.orderId);
-            updateOrdersUI();
-            updateScore(message.newScore);
-            updateTaskHint();
-            showToast(`訂單完成! +${message.points}分`);
-            break;
-          
-          case 'inventory_update':
-            gameState.inventory = message.inventory;
-            updateInventoryUI();
-            updateTaskHint();
-            break;
-
-          case 'assembly_puzzle_update':
-            if (message.puzzle) {
-                gameState.assembly_puzzle = message.puzzle;
-                updateWorkspaceUI(message.puzzle);
-            }
-            break;
-
-          case 'game_over':
-            endGame(message);
-            break;
-
-          case 'error':
-            showToast(`錯誤: ${message.message}`);
-            if (message.message.includes('找不到房間')) {
-              alert('找不到遊戲房間，將返回大廳。');
-              window.location.href = '/cook-lobby.html';
-            }
-            break;
-
-          default:
-            console.log('未處理的訊息類型:', message.type);
-        }
-      }
-
-      function startGame(initialState) {
-        console.log("遊戲開始，初始狀態:", initialState);
-        loadingScreen.style.display = 'none';
-        gameUI.style.visibility = 'visible';
-        
-        Object.assign(gameState, initialState);
-        gameState.isRunning = true;
-        
-        // ★ 修正錯誤：使用 gameState.currentPlayer.user_id
-        const playerInfo = gameState.players.find(p => p.id === gameState.currentPlayer.user_id);
-        if (playerInfo) {
-            gameState.inventory = playerInfo.inventory;
-            gameState.activeSlot = playerInfo.activeSlot;
-        }
-
-        // 渲染整個UI
-        initStations();
-        initInventory();
-        updateOrdersUI();
-        updateScore(gameState.score);
-        updateTimer(gameState.timeRemaining);
-        updateTaskHint();
-        if(gameState.assembly_puzzle) {
-            updateWorkspaceUI(gameState.assembly_puzzle);
-        }
-
-        if(gameTickInterval) clearInterval(gameTickInterval);
-        gameTickInterval = setInterval(updateOrderTimersUI, 1000);
-      }
-      
-      function updateOrdersUI() {
-        ordersContainer.innerHTML = '';
-        if (!gameState.orders) return;
-        gameState.orders.forEach(order => {
-          if(order) ordersContainer.appendChild(createOrderElement(order));
-        });
-      }
-
-      function initStations() {
-        stationsContainer.innerHTML = '';
-        const stationData = [
-            { type: 'ingredient', subtype: 'beef', symbol: '🥩', name: '牛肉' },
-            { type: 'ingredient', subtype: 'lettuce', symbol: '🥬', name: '生菜' },
-            { type: 'ingredient', subtype: 'tomato', symbol: '🍅', name: '番茄' },
-            { type: 'ingredient', subtype: 'bread', symbol: '🍞', name: '麵包' },
-            { type: 'ingredient', subtype: 'cheese', symbol: '🧀', name: '起司' },
-            { type: 'ingredient', subtype: 'onion', symbol: '🧅', name: '洋蔥' },
-            { type: 'cooking', subtype: 'grill', symbol: '🔥', name: '烹飪區' },
-            { type: 'plate', subtype: 'serve', symbol: '🍽️', name: '上菜區' }
-        ];
-        stationData.forEach(data => {
-            const station = document.createElement('div');
-            station.className = `station ${data.type}-station`;
-            station.innerHTML = `<div>${data.symbol}</div><div class="station-label">${data.name}</div>`;
-            station.onclick = () => interactWithStation(data.type, data.subtype);
-            stationsContainer.appendChild(station);
-        });
-      }
-
-      function initInventory() {
-        playerInventory.innerHTML = '';
-        for (let i = 0; i < 8; i++) {
-          const slot = document.createElement('div');
-          slot.className = 'inventory-slot';
-          slot.dataset.index = i;
-          slot.onclick = () => selectSlot(i);
-          playerInventory.appendChild(slot);
-        }
-        updateInventoryUI();
-      }
-
-      function updateInventoryUI() {
-        document.querySelectorAll('.inventory-slot').forEach((slot, index) => {
-          const item = gameState.inventory[index];
-          slot.innerHTML = item ? `<div class="game-item" style="background-color:${getItemColor(item.type)}">${getItemSymbol(item.type)}</div>` : '空槽';
-          slot.classList.toggle('active', index === gameState.activeSlot);
-        });
-      }
-      
-      // 其他UI更新函數 (updateTimer, updateScore, createOrderElement, etc.)
-      // ... 保持不變 ...
-      
-      function updateWorkspaceUI(puzzle) {
-          // ... (此函數邏輯保持不變，但要確保它被調用) ...
-          setupWorkspaceInteraction(); // 重新綁定事件
-      }
-
-      function setupWorkspaceInteraction() {
-        document.querySelectorAll('.workspace-slot').forEach(slot => {
-            slot.onclick = () => {
-                const plateSlotIndex = parseInt(slot.dataset.slotIndex);
-                if (gameState.inventory[gameState.activeSlot]) {
-                    sendAction('place_on_assembly_plate', { fromSlot: gameState.activeSlot, plateSlotIndex });
-                } else {
-                    showToast("你手上沒有東西可以放上去");
-                }
-            };
-        });
-        const serveBtn = document.getElementById('serveDishBtn');
-        if(serveBtn) serveBtn.onclick = () => sendAction('serve_final_dish', {});
-      }
-
-      // ... (其他輔助函數 sendAction, showToast, getItemName 等保持不變) ...
-
-      function selectSlot(index) {
-          gameState.activeSlot = index;
-          updateInventoryUI();
-          sendAction('select_slot', { slotIndex: index });
-      }
-
-      function interactWithStation(type, subtype) {
-          if (!gameState.isRunning) return;
-          if (type === 'ingredient') {
-              if (gameState.inventory[gameState.activeSlot] === null) {
-                  sendAction('pick_ingredient', { ingredientType: subtype, slotIndex: gameState.activeSlot });
-              } else {
-                  showToast('庫存槽已有物品，請選擇空槽');
-              }
-          } else if (type === 'cooking') {
-              const currentItem = gameState.inventory[gameState.activeSlot];
-              if (currentItem) {
-                  sendAction('cook_item', { slotIndex: gameState.activeSlot, cookingMethod: subtype });
-              } else {
-                  showToast('請先選擇要烹飪的食材');
-              }
-          } else if (type === 'plate') {
-              // 上菜邏輯現在由中央組合區的按鈕觸發
-              showToast('請在中央組合區完成料理並點擊出餐');
-          }
-      }
-
-      function endGame(gameOverData) {
-        // ... (此函數邏輯保持不變) ...
-      }
-
+      setupSocketListeners();
+      initStations();
     });
+
+    function setupSocketListeners() {
+      socket.on('connect', () => {
+        console.log('Connected to cook game server.');
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomId = urlParams.get('roomId');
+        if (roomId) {
+          socket.emit('join_room', {
+            roomId
+          });
+          console.log(`Attempting to join room ${roomId}`);
+        } else {
+          console.error('No roomId found in URL.');
+          alert('Error: Room ID is missing.');
+        }
+      });
+
+      socket.on('game_started', (data) => {
+        console.log('Game started!', data);
+        if (data.gameState) {
+          startGame(data.gameState);
+        } else {
+          console.error("Received game_started but no gameState payload.");
+        }
+      });
+
+      socket.on('game_state', (data) => {
+        console.log('Received game state update', data);
+        startGame(data.gameState);
+      });
+
+      socket.on('inventory_update', (data) => {
+        console.log('Inventory update received', data);
+         if (!gameState || !gameState.players) return;
+        
+        // Update the inventory for the correct player in the local gameState
+        if (gameState.players[data.player_id]) {
+          gameState.players[data.player_id].inventory = data.inventory;
+        }
+
+        // If the update is for the current player, refresh their UI
+        if (data.player_id === currentPlayerId) {
+          updateInventoryUI(data.inventory);
+        }
+      });
+
+      socket.on('assembly_puzzle_update', (data) => {
+        console.log('Assembly puzzle updated', data);
+        gameState.assembly_puzzle = data.assembly_puzzle;
+        updateWorkspaceUI(data.assembly_puzzle);
+        // Also refresh orders UI to update progress bar
+        updateOrdersUI(gameState.orders);
+      });
+      
+      socket.on('order_completed', (data) => {
+        console.log('Order completed!', data);
+        // The backend will follow up with a 'game_state' event for the next order.
+        // We can show a temporary feedback message here.
+        const feedback = document.getElementById('feedback-message');
+        feedback.textContent = `Order Complete! +${data.points} points!`;
+        feedback.classList.add('show');
+        setTimeout(() => {
+          feedback.classList.remove('show');
+        }, 2000);
+      });
+
+      socket.on('game_timer', (data) => {
+        const timerElement = document.getElementById('game-timer');
+        if(timerElement) {
+          const minutes = Math.floor(data.timeLeft / 60);
+          const seconds = data.timeLeft % 60;
+          timerElement.textContent = `Time: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+      });
+
+      socket.on('game_over', (data) => {
+        console.log('Game Over!', data);
+        // Use a more elegant modal later
+        alert(`Game Over! Final Score: ${data.finalScore}`);
+        window.location.href = '/cook-game-room.html';
+      });
+      
+      socket.on('room_full', () => {
+        alert('This room is full.');
+        window.location.href = '/cook-game-room.html';
+      });
+      
+      socket.on('error', (data) => {
+        console.error('Server error:', data.message);
+        alert(`Error: ${data.message}`);
+      });
+    }
+
+    function startGame(initialGameState) {
+      gameState = initialGameState;
+
+      // This is the fix for the 'userId not defined' error.
+      // We get the current user's ID from the 'currentPlayer' object sent by the server.
+      if (gameState.currentPlayer && gameState.currentPlayer.user_id) {
+        currentPlayerId = gameState.currentPlayer.user_id;
+      } else {
+        console.error("Critical: currentPlayer data is missing in gameState!");
+        // Fallback or error handling
+        // For now, let's assume the user is a spectator and disable controls
+        currentPlayerId = null;
+      }
+
+      console.log(`Current player ID: ${currentPlayerId}`);
+
+      // Full UI Render/Re-render
+      updateOrdersUI(gameState.orders);
+      updateWorkspaceUI(gameState.assembly_puzzle);
+      if (currentPlayerId && gameState.players && gameState.players[currentPlayerId]) {
+        updateInventoryUI(gameState.players[currentPlayerId].inventory);
+      } else {
+        console.error("Current player not found in players list. Inventory cannot be rendered.");
+        updateInventoryUI([]); // Render an empty inventory
+      }
+      updateTaskHint();
+    }
+    
+    // --- UI Rendering Functions ---
+
+    function updateOrdersUI(orders) {
+      const ordersContainer = document.getElementById('orders-container');
+      ordersContainer.innerHTML = ''; // Clear existing orders
+      if (orders && orders.length > 0) {
+        orders.forEach(order => {
+          const orderElement = createOrderElement(order);
+          ordersContainer.appendChild(orderElement);
+        });
+      }
+    }
+
+    function createOrderElement(order) {
+      const orderCard = document.createElement('div');
+      orderCard.className = 'order-card';
+      orderCard.dataset.orderId = order.order_id;
+
+      let ingredientsHTML = 'Requires: ';
+      if (order.recipe && order.recipe.ingredients_details) {
+        ingredientsHTML += order.recipe.ingredients_details.map(ing => `
+          <span class="ingredient-tag" title="${ing.item_name}">${ing.quantity}x ${ing.item_name}</span>
+        `).join(', ');
+      } else {
+        ingredientsHTML = "Details not available."
+      }
+
+      orderCard.innerHTML = `
+        <div class="order-title">${order.dish_name}</div>
+        <div class="order-ingredients">${ingredientsHTML}</div>
+        <div class="progress-bar-container">
+          <div class="progress-bar" style="width: 0%;"></div>
+        </div>
+      `;
+
+      if (gameState && gameState.assembly_puzzle && gameState.assembly_puzzle.order_id === order.order_id) {
+        const puzzle = gameState.assembly_puzzle;
+        const totalSlots = puzzle.slots.length;
+        const filledSlots = puzzle.slots.filter(s => s.item).length;
+        const progress = totalSlots > 0 ? (filledSlots / totalSlots) * 100 : 0;
+        orderCard.querySelector('.progress-bar').style.width = `${progress}%`;
+        orderCard.classList.add('active');
+      }
+
+      return orderCard;
+    }
+
+    function updateWorkspaceUI(puzzle) {
+      const workspaceContainer = document.getElementById('workspace');
+      workspaceContainer.innerHTML = '';
+
+      if (!puzzle) return;
+
+      const puzzleContainer = document.createElement('div');
+      puzzleContainer.className = 'assembly-puzzle';
+
+      puzzleContainer.innerHTML = `
+        <div class="final-dish-container">
+          <img src="${puzzle.final_dish_image_url}" alt="${puzzle.final_dish_name}" class="final-dish-image">
+          <p>${puzzle.final_dish_name}</p>
+        </div>
+      `;
+
+      const slotsContainer = document.createElement('div');
+      slotsContainer.className = 'assembly-slots';
+      puzzle.slots.forEach((slot, index) => {
+        const slotElement = document.createElement('div');
+        slotElement.className = 'assembly-slot';
+        slotElement.dataset.slotIndex = index;
+        if (slot.item) {
+          slotElement.innerHTML = `<img src="${slot.item.image_url}" alt="${slot.item.name}" title="${slot.item.name}">`;
+          slotElement.classList.add('filled');
+        } else {
+          slotElement.innerHTML = `<span>${slot.required_item_type || 'Any'}</span>`;
+        }
+
+        slotElement.addEventListener('click', () => handlePlaceOnAssembly(index));
+        slotsContainer.appendChild(slotElement);
+      });
+
+      puzzleContainer.appendChild(slotsContainer);
+      workspaceContainer.appendChild(puzzleContainer);
+
+      const serveButton = document.getElementById('serve-dish-btn');
+      if (puzzle.status === 'ready_to_serve') {
+        serveButton.disabled = false;
+        serveButton.onclick = () => {
+          socket.emit('serve_final_dish');
+        };
+      } else {
+        serveButton.disabled = true;
+      }
+    }
+
+    function updateInventoryUI(inventory) {
+      const inventoryContainer = document.getElementById('inventory-slots');
+      inventoryContainer.innerHTML = '';
+      const inventorySize = 8;
+
+      for (let i = 0; i < inventorySize; i++) {
+        const item = inventory[i];
+        const slot = document.createElement('div');
+        slot.className = 'inventory-slot';
+        slot.dataset.slotIndex = i;
+
+        if (item) {
+          slot.innerHTML = `<img src="${item.image_url}" alt="${item.name}" title="${item.name}">`;
+          slot.dataset.itemId = item.item_id;
+          slot.addEventListener('click', () => handleInventoryClick(i, item.item_id));
+        } else {
+          slot.classList.add('empty');
+        }
+        inventoryContainer.appendChild(slot);
+      }
+      // After re-rendering, if an item was selected, re-apply the 'selected' class
+      if (selectedInventoryItem) {
+        const selectedSlotElement = inventoryContainer.querySelector(`.inventory-slot[data-slot-index='${selectedInventoryItem.slotIndex}']`);
+        if (selectedSlotElement) {
+          selectedSlotElement.classList.add('selected');
+        }
+      }
+    }
+
+    function initStations() {
+      const stationsContainer = document.getElementById('station-area');
+      stationsContainer.innerHTML = '';
+
+      const stations = [{
+        name: 'Rice Bin',
+        type: 'pick_ingredient',
+        item_id: 101,
+        img: '/img/rice.png'
+      }, {
+        name: 'Nori Box',
+        type: 'pick_ingredient',
+        item_id: 102,
+        img: '/img/nori.png'
+      }, {
+        name: 'Fish Cooler',
+        type: 'pick_ingredient',
+        item_id: 103, // Raw Fish
+        img: '/img/fish.png'
+      }, {
+        name: 'Cutting Board',
+        type: 'cook_item',
+        station: 'cutting_board',
+        img: '/img/cutting-board.png'
+      }, {
+        name: 'Stove',
+        type: 'cook_item',
+        station: 'stove',
+        img: '/img/stove.png'
+      }, ];
+
+      stations.forEach(station => {
+        const button = document.createElement('button');
+        button.className = 'station-btn';
+        button.title = station.name;
+        button.innerHTML = `<img src="${station.img}" alt="${station.name}"><span>${station.name}</span>`
+
+        button.addEventListener('click', () => {
+          if (station.type === 'pick_ingredient') {
+            console.log(`Picking ingredient: ${station.item_id}`);
+            socket.emit('pick_ingredient', {
+              item_id: station.item_id
+            });
+          } else if (station.type === 'cook_item') {
+            if (selectedInventoryItem) {
+              console.log(`Cooking item ${selectedInventoryItem.itemId} at ${station.station}`);
+              socket.emit('cook_item', {
+                item_id: selectedInventoryItem.itemId,
+                inventory_slot: selectedInventoryItem.slotIndex,
+                station: station.station
+              });
+              clearSelection();
+            } else {
+              alert(`Please select an item from your inventory to use the ${station.name}.`);
+            }
+          }
+        });
+        stationsContainer.appendChild(button);
+      });
+    }
+    
+    function updateTaskHint() {
+      const hintContainer = document.getElementById('task-hint');
+      if (!gameState || !hintContainer) return;
+
+      if (selectedInventoryItem) {
+        hintContainer.textContent = `Selected an item. Place it on the assembly plate or use a cooking station.`;
+      } else if (gameState.assembly_puzzle && gameState.assembly_puzzle.status === 'ready_to_serve') {
+        hintContainer.textContent = 'Dish is ready! Click "Serve Final Dish" to complete the order!';
+      } else {
+        hintContainer.textContent = 'Receive orders, prepare ingredients, and assemble the dishes!';
+      }
+    }
+
+    // --- Action Handlers ---
+
+    function handleInventoryClick(slotIndex, itemId) {
+      const inventorySlots = document.querySelectorAll('#inventory-slots .inventory-slot');
+
+      if (selectedInventoryItem && selectedInventoryItem.slotIndex === slotIndex) {
+        clearSelection();
+      } else {
+        clearSelection(); // Clear previous selection first
+        
+        const selectedSlot = inventorySlots[slotIndex];
+        selectedSlot.classList.add('selected');
+        selectedInventoryItem = {
+          slotIndex,
+          itemId
+        };
+        console.log(`Selected item ${itemId} from slot ${slotIndex}`);
+      }
+      updateTaskHint();
+    }
+
+    function handlePlaceOnAssembly(assemblySlotIndex) {
+      if (selectedInventoryItem) {
+        console.log(`Attempting to place item from inventory slot ${selectedInventoryItem.slotIndex} onto assembly slot ${assemblySlotIndex}`);
+        socket.emit('place_on_assembly_plate', {
+          inventory_slot: selectedInventoryItem.slotIndex,
+          assembly_slot: assemblySlotIndex
+        });
+        clearSelection();
+      } else {
+        alert('Please select an item from your inventory first!');
+      }
+    }
+
+    function clearSelection() {
+      if (selectedInventoryItem) {
+        const inventorySlots = document.querySelectorAll('#inventory-slots .inventory-slot');
+        inventorySlots.forEach(s => s.classList.remove('selected'));
+      }
+      selectedInventoryItem = null;
+      updateTaskHint();
+    }
   </script>
 </body>
 </html> 

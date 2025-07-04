@@ -2468,3 +2468,52 @@ WebSocket `player_action` 的處理邏輯已全面更新，以使用上述新的
 *   `cook_recipes_v2`
     *   **作用**: 定義所有製造食譜 (烹飪與組合)。
     *   **重要欄位**: `recipe_id`, `recipe_type` ('cooking' 或 'assembly'), `ingredients` (JSONB), `result_item_id`, `cook_station`, `cook_time_seconds`。
+```
+
+---
+# 21. 遊戲核心循環與UI渲染機制 (v2.0)
+
+本次更新的核心是將遊戲流程完全資料庫驅動化，並建立了一套清晰的前後端通訊與UI渲染機制。
+
+## 21.1 核心遊戲循環
+
+遊戲的核心循環圍繞「訂單」與「組合盤」(Assembly Puzzle)進行，流程如下：
+
+1.  **遊戲開始**:
+    *   後端 `start_game` 事件觸發。
+    *   後端調用 `generateOrder()` 從資料庫 (`cook_recipes_v2`) 隨機選取一個 `recipe_type = 'assembly'` 且 `is_orderable = TRUE` 的最終料理作為訂單。
+    *   後端調用 `getAssemblyRecipeData()` 查詢該訂單的組合配方。
+    *   後端構建包含**訂單**和**組合盤 (`assembly_puzzle`)** 的初始 `gameState`。
+    *   後端廣播 `game_started` 事件，將完整的 `gameState` 發送給所有客戶端。
+
+2.  **前端渲染**:
+    *   前端 `cook-game.html` 接收到 `game_started` 事件。
+    *   調用 `startGame(gameState)` 函數，初始化遊戲。
+    *   **核心渲染步驟**:
+        *   `initStations()`: 根據預設數據創建所有工作站按鈕。
+        *   `updateOrdersUI()`: 根據 `gameState.orders` 渲染頂部的訂單卡片。
+        *   `updateWorkspaceUI()`: 根據 `gameState.assembly_puzzle` 渲染畫面中央的組合盤，顯示所需的材料和狀態。
+        *   `updateInventoryUI()`: 根據 `gameState.players` 中當前玩家的數據渲染底部的物品欄。
+
+3.  **玩家操作**:
+    *   **拿取/烹飪**: 玩家點擊工作站，觸發 `pick_ingredient` 或 `cook_item` 事件。後端處理後，透過 `inventory_update` 事件更新該玩家的物品欄。
+    *   **放置到組合盤**: 玩家點擊物品欄中的物品，再點擊組合盤上的空位，觸發 `place_on_assembly_plate` 事件。
+    *   **後端處理放置**: 後端驗證物品是否正確。如果正確，則更新 `gameState.assembly_puzzle` 和玩家的物品欄。
+    *   **廣播更新**: 後端廣播 `assembly_puzzle_update` 和 `inventory_update` 事件給所有玩家。前端收到後各自更新UI。
+
+4.  **完成訂單**:
+    *   當組合盤上所有材料都放置正確後，後端會將 `assembly_puzzle.status` 更新為 `ready_to_serve`。
+    *   前端 `updateWorkspaceUI()` 函數檢測到此狀態，將「出餐」按鈕設為可點擊。
+    *   玩家點擊「出餐」，觸發 `serve_final_dish` 事件。
+    *   後端計算分數，廣播 `order_completed` 事件，並立即開始下一個訂單的循環（回到步驟1）。
+
+5.  **遊戲結束**:
+    *   當計時器歸零，後端觸發 `endGame()` 函數，計算最終分數和獎勵，並廣播 `game_over` 事件。前端顯示結算畫面。
+
+## 21.2 關鍵WebSocket事件
+
+-   `game_started` / `game_state`: 包含遊戲所有初始狀態，是前端渲染畫面的唯一真理來源。
+-   `assembly_puzzle_update`: 當任何玩家成功向組合盤放置物品時觸發，用於同步所有玩家的組合盤畫面。
+-   `inventory_update`: 當玩家物品欄發生變化時（如拿取、消耗、接收物品），後端會發送此事件給特定玩家，確保其UI正確。
+-   `place_on_assembly_plate`: (C→S) 玩家將物品放置到組合盤的動作。
+-   `serve_final_dish`: (C→S) 玩家點擊「出餐」按鈕的動作。
