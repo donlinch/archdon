@@ -104,20 +104,42 @@
       z-index: 10;
     }
     
-    .game-timer {
-      font-size: 1.2em;
-      color: var(--accent-color);
-      font-weight: bold;
-    }
-    
     .game-score {
       font-size: 1.2em;
       color: var(--secondary-color);
     }
     
+    /* 新的計時器樣式 */
+    .game-timer {
+        display: inline-flex;
+        border: 10px solid #000;
+        border-radius: 5px;
+        font-family: monospace;
+        font-weight: bold;
+        color: var(--accent-color);
+        background-color: rgba(0, 0, 0, 0.3);
+        position: relative;
+        overflow: hidden;
+        height: 30px;
+        width: 80px;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .game-timer::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: var(--accent-color);
+        opacity: 0.2;
+    }
+    
     /* 添加任務提示樣式 */
     .task-hint {
-      position: absolute;
+      position: fixed;
       top: 60px;
       left: 50%;
       transform: translateX(-50%);
@@ -794,6 +816,30 @@
         box-shadow: 0 0 10px var(--accent-color);
         transform: scale(1.05);
     }
+
+
+  /* 添加脈動動畫 */
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+    
+    /* 添加任務提示樣式 */
+    .task-hint {
+      position: fixed;
+      top: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(0, 0, 0, 0.7);
+      color: var(--text-color);
+      padding: 8px 15px;
+      border-radius: 5px;
+      font-size: 1.1em;
+      z-index: 10;
+      text-align: center;
+      max-width: 80%;
+    }
   </style>
 </head>
 <body>
@@ -813,8 +859,8 @@
     <!-- 遊戲UI -->
     <div class="game-ui" id="gameUI">
       <div class="game-header">
-        <div class="game-timer" id="gameTimer">03:00</div>
         <div class="game-score" id="gameScore">分數: 0</div>
+        <div class="game-timer" id="gameTimer">03:00</div>
       </div>
       
       <div class="game-main">
@@ -1187,6 +1233,8 @@
                   gameState.orders = newState.orders;
                   updateOrders();
                   updateTaskHint();
+                  // 更新訂單進度條
+                  updateOrderTimers();
               }
               
               // 更新庫存
@@ -1356,6 +1404,8 @@
           // 當後端每秒發送時間倒數時觸發
           case 'game_tick':
               updateTimer(message.timeRemaining);
+              // 更新所有訂單的進度條
+              updateOrderTimers(message.timeRemaining);
               break;
 
           // 當有新訂單生成時觸發
@@ -2078,7 +2128,30 @@
           const gameTimer = document.getElementById('gameTimer');
           const minutes = Math.floor(seconds / 60);
           const remainingSeconds = seconds % 60;
-          if(gameTimer) gameTimer.textContent = `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+          
+          if (gameTimer) {
+              // 更新計時器文本
+              gameTimer.textContent = `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+              
+              // 根據剩餘時間更新顏色
+              if (seconds < 30) {
+                  gameTimer.style.color = 'var(--error-color)';
+                  gameTimer.style.borderColor = 'var(--error-color)';
+              } else if (seconds < 60) {
+                  gameTimer.style.color = 'var(--accent-color)';
+                  gameTimer.style.borderColor = 'var(--accent-color)';
+              } else {
+                  gameTimer.style.color = 'var(--success-color)';
+                  gameTimer.style.borderColor = 'var(--success-color)';
+              }
+              
+              // 添加脈動動畫效果
+              if (seconds < 30) {
+                  gameTimer.style.animation = 'pulse 1s infinite';
+              } else {
+                  gameTimer.style.animation = 'none';
+              }
+          }
       }
 
       function updateScore(newScore) {
@@ -2181,18 +2254,36 @@
           orderName.className = 'order-name';
           orderName.textContent = getRecipeName(order.recipe); // 現在會顯示中文名
 
+          // 新增：訂單計時器文字
+          const orderTimerText = document.createElement('div');
+          orderTimerText.className = 'order-timer-text';
+          orderTimerText.textContent = '計時中...';
+
+          // 訂單計時器容器
+          const orderTimerContainer = document.createElement('div');
+          orderTimerContainer.className = 'order-timer-container';
+
+          // 訂單計時器進度條
           const orderTimer = document.createElement('div');
           orderTimer.className = 'order-timer';
 
-          // ★ 新增：訂單需求的容器
+          const orderTimerFill = document.createElement('div');
+          orderTimerFill.className = 'order-timer-fill';
+          orderTimerFill.style.width = '100%';
+
+          orderTimer.appendChild(orderTimerFill);
+          orderTimerContainer.appendChild(orderTimerText);
+          orderTimerContainer.appendChild(orderTimer);
+
+          // 訂單需求的容器
           const ingredientsContainer = document.createElement('div');
           ingredientsContainer.className = 'order-ingredients';
           
           orderCard.appendChild(orderName);
           orderCard.appendChild(ingredientsContainer); // 插入容器
-          orderCard.appendChild(orderTimer);
+          orderCard.appendChild(orderTimerContainer);
           
-          // ★ 新增：查詢並顯示訂單需求
+          // 查詢並顯示訂單需求
           const finalRecipe = allRecipes.find(r => r.recipe_id === order.recipe);
 
           if (finalRecipe && finalRecipe.requirements) {
@@ -2232,7 +2323,13 @@
            emergencyFixBtn.style.zIndex = '9999';
            emergencyFixBtn.style.display = 'none'; // 默認隱藏
            
-           // 5秒後顯示緊急按鈕
+           // 添加一個自動修復機制，在頁面載入後自動執行緊急修復
+           const autoFixTimeout = setTimeout(() => {
+               console.log('自動執行緊急UI修復...');
+               emergencyUIFix();
+           }, 3000); // 3秒後自動修復
+           
+           // 仍然保留手動按鈕，以防自動修復失敗
            setTimeout(() => {
                emergencyFixBtn.style.display = 'block';
            }, 5000);
@@ -2484,13 +2581,13 @@
           const userStatusName = document.getElementById('userStatusName');
           
           if (gameState.currentPlayer) {
-              // ★ 修改：確保頭像URL有效
+              // 確保頭像URL有效
               const avatarUrl = gameState.currentPlayer.avatar || 
                               gameState.currentPlayer.user_profile_image_url || 
                               '/images/a01girlmove.gif';
               userStatusAvatar.src = avatarUrl;
               
-              // ★ 修改：正確處理用戶名，避免亂碼
+              // 優先使用display_name，確保正確處理用戶名
               let displayName = '';
               if (gameState.currentPlayer.display_name) {
                   displayName = gameState.currentPlayer.display_name;
@@ -2500,15 +2597,7 @@
                   displayName = 'Player';
               }
               
-              // 檢查是否有亂碼的可能（非ASCII字符）
-              try {
-                  // 確保字符串是有效的UTF-8
-                  displayName = decodeURIComponent(encodeURIComponent(displayName));
-              } catch (e) {
-                  console.error('用戶名稱編碼處理失敗:', e);
-                  displayName = 'Player'; // 使用默認名稱
-              }
-              
+              // 不再進行額外的編碼處理，直接使用原始值
               userStatusName.textContent = displayName;
               userStatus.style.display = 'flex';
               
@@ -2526,6 +2615,60 @@
               console.warn('無法初始化用戶狀態指示器：缺少用戶資料');
           }
       }
+// 新增updateOrderTimers函數，用於更新所有訂單的進度條
+function updateOrderTimers(gameTimeRemaining) {
+    if (!gameState.orders || gameState.orders.length === 0) return;
+    
+    gameState.orders.forEach(order => {
+        if (!order.id) return;
+        
+        const orderElement = document.getElementById(`order-${order.id}`);
+        if (!orderElement) return;
+        
+        const timerElement = orderElement.querySelector('.order-timer');
+        if (!timerElement) return;
+        
+        // 創建或更新進度條元素
+        let timerFill = timerElement.querySelector('.order-timer-fill');
+        let timerText = orderElement.querySelector('.order-timer-text');
+        
+        if (!timerFill) {
+            // 如果進度條不存在，創建它
+            timerElement.innerHTML = '';
+            
+            timerText = document.createElement('div');
+            timerText.className = 'order-timer-text';
+            orderElement.insertBefore(timerText, timerElement);
+            
+            timerFill = document.createElement('div');
+            timerFill.className = 'order-timer-fill';
+            timerElement.appendChild(timerFill);
+        }
+        
+        // 計算剩餘時間和進度
+        const totalTime = order.timeLimit || 120; // 默認2分鐘
+        const elapsedTime = order.createdAt ? (Date.now() - order.createdAt) / 1000 : 0;
+        const remainingTime = Math.max(0, totalTime - elapsedTime);
+        const percentage = Math.min(100, (remainingTime / totalTime) * 100);
+        
+        // 更新進度條
+        timerFill.style.width = `${percentage}%`;
+        
+        // 更新顏色
+        if (percentage < 25) {
+            timerFill.style.backgroundColor = 'var(--error-color)';
+        } else if (percentage < 50) {
+            timerFill.style.backgroundColor = 'var(--accent-color)';
+        } else {
+            timerFill.style.backgroundColor = 'var(--success-color)';
+        }
+        
+        // 更新文字
+        const mins = Math.floor(remainingTime / 60);
+        const secs = Math.floor(remainingTime % 60);
+        timerText.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+    });
+}
     });
   </script>
 </body>

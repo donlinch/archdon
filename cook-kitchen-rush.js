@@ -707,7 +707,8 @@ cookGameApp.get('/admin/all-recipes', authenticateToken, isAdmin, async (req, re
                         playerJustJoined = true;
                         const newPlayer = {
                             id: userId,
-                            username: userProfile.display_name || username,
+                            username: username,
+                            display_name: userProfile.display_name || username,
                             level: userProfile.level || 1,
                             avatar: userProfile.user_profile_image_url || '/images/default-avatar.png',
                             ready: false
