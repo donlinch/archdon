@@ -92,7 +92,7 @@
                         return;
                     }
 
-                    const response = await fetch('/admin/all-items', {
+                    const response = await fetch('/cook-api/admin/all-items', {  
                         headers: {
                             'Authorization': `Bearer ${token}`
                         }
@@ -133,8 +133,8 @@
                         return;
                     }
 
-                    const response = await fetch('/admin/all-recipes', {
-                         headers: {
+                    const response = await fetch('/cook-api/admin/all-recipes', { // <--- ★ 在路徑前加上 /cook-api
+                        headers: {
                             'Authorization': `Bearer ${token}`
                         }
                     });
