@@ -909,7 +909,7 @@ cookGameApp.get('/admin/all-recipes', authenticateToken, isAdmin, async (req, re
                     return;
                 }
 
-                const { action, data: actionData } = data;
+                const { action, payload } = data;
                 const client = await pool.connect();
                 
                 try {
@@ -943,7 +943,7 @@ cookGameApp.get('/admin/all-recipes', authenticateToken, isAdmin, async (req, re
                     // 處理不同類型的玩家動作
                     switch (action) {
                         case 'pick_ingredient': {
-                            const { ingredientType, slotIndex } = actionData;
+                            const { ingredientType, slotIndex } = payload;
                             if (slotIndex < 0 || slotIndex >= player.inventory.length) {
                                 ws.send(JSON.stringify({ type: 'error', message: '無效的庫存槽位' }));
                                 break;
@@ -983,14 +983,14 @@ cookGameApp.get('/admin/all-recipes', authenticateToken, isAdmin, async (req, re
                                 playerId: userId,
                                 playerName: username,
                                 action: 'pick_ingredient',
-                                data: { ingredientType, slotIndex }
+                                payload: { ingredientType, slotIndex }
                             }, ws);
                             
                             console.log(`[COOK-GAME] 玩家 ${username} 拿取了 ${ingredientType}`);
                             break;
                         }
                         case 'cook_item': {
-                            const { slotIndex, cookingMethod } = actionData;
+                            const { slotIndex, stationType } = payload;
                             if (slotIndex < 0 || slotIndex >= player.inventory.length) {
                                 ws.send(JSON.stringify({ type: 'error', message: '無效的庫存槽位' }));
                                 break;
@@ -1003,8 +1003,8 @@ cookGameApp.get('/admin/all-recipes', authenticateToken, isAdmin, async (req, re
                             }
                         
                             // ★ V2 修改：使用 findCookingRecipe 查找食譜
-                            // 我們假設前端點擊「烹飪區」時，cookingMethod 是 'grill'
-                            const recipe = await findCookingRecipe(item.type, cookingMethod || 'grill');
+                            // 使用前端傳來的 stationType 作為烹飪方法
+                            const recipe = await findCookingRecipe(item.type, stationType || 'grill');
                         
                             if (!recipe) {
                                 ws.send(JSON.stringify({ type: 'error', message: '此物品無法在此烹飪站處理' }));
@@ -1037,15 +1037,15 @@ cookGameApp.get('/admin/all-recipes', authenticateToken, isAdmin, async (req, re
                                 playerId: userId,
                                 playerName: username,
                                 action: 'cook_item',
-                                data: { slotIndex, resultType: recipe.output_item_id_str }
+                                payload: { slotIndex, resultType: recipe.output_item_id_str }
                             }, ws);
                             
                             console.log(`[COOK-GAME] 玩家 ${username} 根據食譜 ${recipe.recipe_id} 將 ${item.type} 烹飪成 ${recipe.output_item_id_str}`);
                             break;
                         }
                         case 'assemble_items': {
-                            // actionData.ingredientItemTypes 應該是像 ['beef_patty_cooked', 'bread_slice_toasted'] 這樣的陣列
-                            const { ingredientItemTypes } = actionData;
+                            // payload.ingredientItemTypes 應該是像 ['beef_patty_cooked', 'bread_slice_toasted'] 這樣的陣列
+                            const { ingredientItemTypes } = payload;
                             
                             if (!ingredientItemTypes || !Array.isArray(ingredientItemTypes) || ingredientItemTypes.length === 0) {
                                 ws.send(JSON.stringify({ type: 'error', message: '未提供用於組裝的物品' }));
@@ -1108,14 +1108,14 @@ cookGameApp.get('/admin/all-recipes', authenticateToken, isAdmin, async (req, re
                                 playerId: userId,
                                 playerName: username,
                                 action: 'assemble_items',
-                                data: { resultType: recipe.output_item_id_str }
+                                payload: { resultType: recipe.output_item_id_str }
                             }, ws);
                             
                             console.log(`[COOK-GAME] 玩家 ${username} 根據食譜 ${recipe.recipe_id} 組裝了 ${recipe.output_item_id_str}`);
                             break;
                         }
                         case 'serve_dish': {
-                            const { slotIndex } = actionData;
+                            const { slotIndex } = payload;
                             if (slotIndex < 0 || slotIndex >= player.inventory.length) {
                                 ws.send(JSON.stringify({ type: 'error', message: '無效的庫存槽位' }));
                                 break;
@@ -1195,7 +1195,7 @@ cookGameApp.get('/admin/all-recipes', authenticateToken, isAdmin, async (req, re
                             break;
                         }
                         case 'select_slot': {
-                            const { slotIndex } = actionData;
+                            const { slotIndex } = payload;
                             if (slotIndex < 0 || slotIndex >= player.inventory.length) {
                                 ws.send(JSON.stringify({ type: 'error', message: '無效的庫存槽位' }));
                                 break;
@@ -1219,7 +1219,7 @@ cookGameApp.get('/admin/all-recipes', authenticateToken, isAdmin, async (req, re
                             break;
                         }
                         case 'transfer_item': {
-                            const { fromSlot, toPlayerId } = actionData;
+                            const { fromSlot, toPlayerId } = payload;
                             if (fromSlot < 0 || fromSlot >= player.inventory.length) {
                                 ws.send(JSON.stringify({ type: 'error', message: '無效的庫存槽位' }));
                                 break;
@@ -1513,7 +1513,17 @@ cookGameApp.get('/admin/all-recipes', authenticateToken, isAdmin, async (req, re
 
                             const userProfile = userRes.rows[0];
 
-                            ws.send(JSON.stringify({ type: 'auth_success' }));
+                            // 修改：在 auth_success 回應中包含用戶資料
+                            ws.send(JSON.stringify({ 
+                                type: 'auth_success',
+                                userData: {
+                                    user_id: userProfile.user_id,
+                                    username: userProfile.username,
+                                    display_name: userProfile.display_name,
+                                    user_profile_image_url: userProfile.user_profile_image_url,
+                                    level: userProfile.level
+                                }
+                            }));
                             console.log(`[COOK-GAME WS] 使用者 ${userProfile.display_name || userProfile.username} (ID: ${userId}) 認證成功`);
                             ws.userProfile = userProfile;
                         } else {

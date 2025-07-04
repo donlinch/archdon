@@ -96,8 +96,8 @@
     .game-header {
       height: 50px;
       background-color: rgba(0, 0, 0, 0.7);
-      display: flex;
-      justify-content: space-between;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
       align-items: center;
       padding: 0 15px;
       border-bottom: 1px solid var(--border-color);
@@ -107,50 +107,41 @@
     .game-score {
       font-size: 1.2em;
       color: var(--secondary-color);
+      text-align: center;
+      grid-column: 2;
     }
     
     /* 新的計時器樣式 */
     .game-timer {
-        display: inline-flex;
-        border: 10px solid #000;
-        border-radius: 5px;
-        font-family: monospace;
-        font-weight: bold;
-        color: var(--accent-color);
-        background-color: rgba(0, 0, 0, 0.3);
-        position: relative;
-        overflow: hidden;
-        height: 30px;
-        width: 80px;
-        align-items: center;
-        justify-content: center;
+      display: inline-flex;
+      padding: 5px 10px;
+      border-radius: 5px;
+      font-family: monospace;
+      font-weight: bold;
+      color: var(--accent-color);
+      background-color: rgba(0, 0, 0, 0.3);
+      justify-self: end;
+      grid-column: 3;
     }
 
-    .game-timer::before {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: var(--accent-color);
-        opacity: 0.2;
+    /* 添加脈動動畫 */
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
     }
     
     /* 添加任務提示樣式 */
     .task-hint {
-      position: fixed;
-      top: 60px;
-      left: 50%;
-      transform: translateX(-50%);
+      position: sticky;
+      top: 50px;
+      width: 100%;
       background-color: rgba(0, 0, 0, 0.7);
       color: var(--text-color);
       padding: 8px 15px;
-      border-radius: 5px;
       font-size: 1.1em;
       z-index: 10;
       text-align: center;
-      max-width: 80%;
     }
     
     /* 烹飪動畫 */
@@ -664,19 +655,17 @@
     
     /* User Status Indicator */
     .user-status {
-        position: fixed;
-        top: 10px;
-        left: 10px;
-        z-index: 1001;
         display: flex;
         align-items: center;
         background-color: var(--card-bg-color, rgba(0, 0, 0, 0.7));
-        padding: 5px 10px;
+        padding: 5px;
         border-radius: 20px;
         border: 1px solid var(--border-color, #444);
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
         transition: all 0.3s ease;
         cursor: pointer;
+        grid-column: 1;
+        justify-self: start;
     }
 
     .user-status:hover {
@@ -686,8 +675,8 @@
     }
 
     .user-status img {
-        width: 40px;
-        height: 40px;
+        width: 30px;
+        height: 30px;
         border-radius: 50%;
         border: 2px solid var(--accent-color, #FF9800);
         object-fit: cover;
@@ -843,25 +832,23 @@
   </style>
 </head>
 <body>
-  <!-- 用戶狀態指示器 -->
-  <div id="userStatus" class="user-status" style="display: none;">
-      <img id="userStatusAvatar" src="/images/a01girlmove.gif" alt="User">
-      <span id="userStatusName" class="username"></span>
-  </div>
-
+  <!-- 遊戲容器 -->
   <div class="game-container" id="gameContainer">
     <!-- 遊戲載入畫面 -->
     <div class="loading-screen" id="loadingScreen">
       <div class="loader"></div>
       <div class="loading-text">遊戲載入中...</div>
     </div>
-
-    <!-- 遊戲UI -->
-    <div class="game-ui" id="gameUI">
-      <div class="game-header">
-        <div class="game-score" id="gameScore">分數: 0</div>
-        <div class="game-timer" id="gameTimer">03:00</div>
+  <!-- 遊戲UI -->
+  <div class="game-ui" id="gameUI">
+    <div class="game-header">
+      <div class="user-status" id="userStatus" style="display: none;">
+        <img id="userStatusAvatar" src="/images/a01girlmove.gif" alt="User">
+        <span id="userStatusName" class="username"></span>
       </div>
+      <div class="game-score" id="gameScore">分數: 0</div>
+      <div class="game-timer" id="gameTimer">03:00</div>
+    </div>
       
       <div class="game-main">
         <div class="task-hint" id="taskHint">請拿取食材開始製作料理</div>
@@ -1500,10 +1487,10 @@
        if (!gameState.players || gameState.players.length === 0) return; 
           const currentItem = gameState.inventory[gameState.activeSlot];
 
-          if (type === 'grill' || type === 'fryer' || type === 'chopping_board') {
+          if (type === 'grill' || type === 'fry' || type === 'deep_fry' || type === 'boil') {
               if (currentItem) {
-                  showToast(`在 ${type} 上烹飪 ${getItemName(currentItem.type)}...`);
-                  showCookingAnimation(type); // 顯示烹飪動畫
+                  showToast(`正在${getCookingMethodName(type)} ${getItemName(currentItem.type)}...`);
+                  showCookingAnimation('cooking_station'); // 顯示烹飪動畫
                   sendAction('cook_item', {
                       stationType: type,
                       slotIndex: gameState.activeSlot 
@@ -1523,6 +1510,17 @@
                   showToast('請先選擇一個做好的料理才能上菜！');
               }
           }
+      }
+      
+      // 新增：獲取烹飪方式的中文名稱
+      function getCookingMethodName(type) {
+          const methodNames = {
+              'grill': '烤',
+              'fry': '煎',
+              'deep_fry': '炸',
+              'boil': '煮'
+          };
+          return methodNames[type] || type;
       }
 
       function handlePlateSlotClick(slotIndex) {
@@ -1895,8 +1893,7 @@
       // 新增：初始化工作站
       function initializeStations() {
           const stations = [
-              { id: 'grill', name: '烤架', icon: '🔥' },
-              { id: 'chopping_board', name: '切菜板', icon: '🔪' },
+              { id: 'cooking_station', name: '烹飪區', icon: '🍳' },
               { id: 'ingredient_storage', name: '食材庫', icon: '🥕' },
               { id: 'plate', name: '上菜區', icon: '🍽️' }
           ];
@@ -1920,6 +1917,9 @@
                   if (station.id === 'ingredient_storage') {
                       // 食材庫特殊處理 - 顯示食材選擇菜單
                       showIngredientMenu();
+                  } else if (station.id === 'cooking_station') {
+                      // 烹飪區特殊處理 - 顯示烹飪方式選單
+                      showCookingMethodsMenu();
                   } else {
                       // 其他工作站互動
                       interactWithStation(station.id);
@@ -1928,6 +1928,74 @@
               
               stationsContainer.appendChild(stationElement);
           });
+          
+          // 創建烹飪方式選單和背景遮罩
+          if (!document.getElementById('cookingMethodsMenu')) {
+              const cookingMethodsMenu = document.createElement('div');
+              cookingMethodsMenu.id = 'cookingMethodsMenu';
+              cookingMethodsMenu.className = 'cooking-methods';
+              
+              const cookingMethods = [
+                  { id: 'grill', name: '烤', icon: '🔥' },
+                  { id: 'fry', name: '煎', icon: '🍳' },
+                  { id: 'deep_fry', name: '炸', icon: '🥘' },
+                  { id: 'boil', name: '煮', icon: '♨️' }
+              ];
+              
+              cookingMethods.forEach(method => {
+                  const methodElement = document.createElement('div');
+                  methodElement.className = 'cooking-method';
+                  methodElement.innerHTML = `
+                      <div class="cooking-method-icon">${method.icon}</div>
+                      <div class="cooking-method-label">${method.name}</div>
+                  `;
+                  
+                  methodElement.addEventListener('click', () => {
+                      hideCookingMethodsMenu();
+                      interactWithStation(method.id);
+                  });
+                  
+                  cookingMethodsMenu.appendChild(methodElement);
+              });
+              
+              document.body.appendChild(cookingMethodsMenu);
+              
+              // 創建背景遮罩
+              const modalBackdrop = document.createElement('div');
+              modalBackdrop.id = 'modalBackdrop';
+              modalBackdrop.className = 'modal-backdrop';
+              modalBackdrop.addEventListener('click', hideCookingMethodsMenu);
+              
+              document.body.appendChild(modalBackdrop);
+          }
+      }
+      
+      // 新增：顯示烹飪方式選單
+      function showCookingMethodsMenu() {
+          const currentItem = gameState.inventory[gameState.activeSlot];
+          if (!currentItem) {
+              showToast('請先選擇一個食材！');
+              return;
+          }
+          
+          const cookingMethodsMenu = document.getElementById('cookingMethodsMenu');
+          const modalBackdrop = document.getElementById('modalBackdrop');
+          
+          if (cookingMethodsMenu && modalBackdrop) {
+              cookingMethodsMenu.style.display = 'grid';
+              modalBackdrop.style.display = 'block';
+          }
+      }
+      
+      // 新增：隱藏烹飪方式選單
+      function hideCookingMethodsMenu() {
+          const cookingMethodsMenu = document.getElementById('cookingMethodsMenu');
+          const modalBackdrop = document.getElementById('modalBackdrop');
+          
+          if (cookingMethodsMenu && modalBackdrop) {
+              cookingMethodsMenu.style.display = 'none';
+              modalBackdrop.style.display = 'none';
+          }
       }
 
       // 新增：為工作站顯示烹飪動畫
@@ -2615,6 +2683,13 @@
               console.warn('無法初始化用戶狀態指示器：缺少用戶資料');
           }
       }
+
+
+
+
+
+
+      
 // 新增updateOrderTimers函數，用於更新所有訂單的進度條
 function updateOrderTimers(gameTimeRemaining) {
     if (!gameState.orders || gameState.orders.length === 0) return;
