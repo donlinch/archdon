@@ -1367,22 +1367,37 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
      * 隨機生成一個新的遊戲訂單
      * @returns {Promise<object|null>} 新的訂單物件或在錯誤時返回 null
      */
-    async function generateOrder() {
-        // 在 V1 版本中，這個函式可能直接存取一個全域的 `pool` 變數
-        // 但現在它無法存取傳入 module.exports 的那個 pool
-        try {
-            const recipeResult = await pool.query(
-                'SELECT recipe_id FROM cook_recipes_v2 WHERE is_orderable = TRUE ORDER BY RANDOM() LIMIT 1'
-            );
 
+    async function generateOrder() {
+        try {
+            // ★★★ 核心修正：添加 recipe_type = 'assembly' 條件 ★★★
+            const query = `
+                SELECT recipe_id FROM cook_recipes_v2 
+                WHERE 
+                    recipe_type = 'assembly' AND 
+                    is_orderable = TRUE 
+                ORDER BY RANDOM() LIMIT 1
+            `;
+            const recipeResult = await pool.query(query);
+    
             if (recipeResult.rows.length === 0) {
-                console.warn('[COOK-GAME] 資料庫中沒有可訂購的食譜');
-                return null;
+                console.warn('[COOK-GAME] 資料庫中沒有可作為訂單的組合(assembly)食譜');
+                // ★ 新增：返回一個預設的安全食譜以防萬一
+                // 這裡假設 'deluxe_beef_burger' 是一個有效的組合食譜
+                const fallbackRecipe = {
+                    id: `order_${Date.now()}_fallback`,
+                    recipe: 'deluxe_beef_burger', // 您的資料庫裡必須有這個組合食譜
+                    totalTime: 180,
+                    timeRemaining: 180,
+                    createdAt: Date.now()
+                };
+                console.warn(`[COOK-GAME] 使用備用訂單: ${fallbackRecipe.recipe}`);
+                return fallbackRecipe;
             }
             
             const recipeId = recipeResult.rows[0].recipe_id;
             const totalTime = 120; // 預設120秒
-
+    
             return {
                 id: `order_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
                 recipe: recipeId,
