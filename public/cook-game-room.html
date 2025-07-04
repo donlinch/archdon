@@ -656,23 +656,20 @@
             addSystemMessage('認證成功，正在加入房間...');
             // 發送加入房間訊息
             if (currentUser) {
-                // 從 localStorage 獲取未處理的 roomId
                 const rawRoomId = localStorage.getItem('currentRoomId');
                 
-                console.log('嘗試加入房間，發送數據:', {
-                    type: 'join_room',
-                    roomId: rawRoomId, // 直接使用從 lobby 傳過來的 ID
-                });
-                
-                // 延遲一點發送join_room請求，確保認證完全處理完畢
+                // 延遲一點發送join_room請求，確保伺服器在 ws 物件上記錄完使用者資訊
                 setTimeout(() => {
                     if (websocket && websocket.readyState === WebSocket.OPEN) {
-                        websocket.send(JSON.stringify({
+                        const joinMessage = {
                             type: 'join_room',
-                            roomId: rawRoomId // ★★★ 確保發送的是 lobby 頁面存的原始 ID
-                        }));
+                            roomId: rawRoomId,
+                            userId: currentUser.user_id // ★ 新增：明確傳遞使用者ID
+                        };
+                        console.log('發送加入房間請求:', joinMessage);
+                        websocket.send(JSON.stringify(joinMessage));
                     }
-                }, 200); // 縮短延遲
+                }, 200);
             } else {
                 addSystemMessage('錯誤：找不到用戶資料，無法加入房間。');
             }
