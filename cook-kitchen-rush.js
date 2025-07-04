@@ -23,6 +23,96 @@ const gameTimers = new Map();
 module.exports = function(pool) { // <-- 接收傳入的 pool
     const cookGameApp = express();
 
+    // =================================================================
+    // ★ 新增：資料庫查詢輔助函數 (V2 遊戲邏輯)
+    // =================================================================
+
+    /**
+     * 根據物品的字串ID從 cook_items 表中獲取詳細資料
+     * @param {string} itemId - 物品的唯一字串 ID (e.g., 'beef_patty')
+     * @returns {Promise<object|null>} 物品的資料物件或 null
+     */
+    async function getItemData(itemId) {
+        const result = await pool.query('SELECT * FROM cook_items WHERE item_id = $1', [itemId]);
+        return result.rows[0] || null;
+    }
+
+    /**
+     * 根據生的食材和使用的烹飪站，查找對應的烹飪食譜
+     * @param {string} rawItemId - 原料物品的字串 ID (e.g., 'beef_patty')
+     * @param {string} stationType - 工作站類型 (e.g., 'grill')
+     * @returns {Promise<object|null>} 完整的食譜物件或 null
+     */
+    async function findCookingRecipe(rawItemId, stationType) {
+        const query = `
+            SELECT r.*, i_out.item_id as output_item_id_str
+            FROM cook_recipes_v2 r
+            JOIN cook_recipe_requirements_v2 req ON r.id = req.recipe_id
+            JOIN cook_items i_in ON req.required_item_id = i_in.id
+            JOIN cook_items i_out ON r.output_item_id = i_out.id
+            WHERE r.station_type = $1
+              AND i_in.item_id = $2
+              AND req.quantity = 1
+        `;
+        const result = await pool.query(query, [stationType, rawItemId]);
+        // 假設一個原料只會對應一個烹飪食譜
+        return result.rows[0] || null;
+    }
+
+    /**
+     * 根據一組原料，查找對應的組合食譜
+     * @param {string[]} ingredientItemTypes - 參與組合的物品類型ID陣列
+     * @returns {Promise<object|null>} 匹配的食譜或 null
+     */
+    async function findAssemblyRecipe(ingredientItemTypes) {
+        // 1. 計算每種原料的數量
+        const providedCounts = ingredientItemTypes.reduce((acc, type) => {
+            acc[type] = (acc[type] || 0) + 1;
+            return acc;
+        }, {});
+        const providedTypes = Object.keys(providedCounts);
+
+        // 2. 查找所有組合食譜
+        const recipesResult = await pool.query(`
+            SELECT r.id, r.recipe_id, i_out.item_id as output_item_id_str, r.description 
+            FROM cook_recipes_v2 r
+            JOIN cook_items i_out ON r.output_item_id = i_out.id
+            WHERE r.station_type = 'assembly'
+        `);
+        const allAssemblyRecipes = recipesResult.rows;
+
+        // 3. 遍歷每個食譜，檢查其需求是否與提供的原料完全匹配
+        for (const recipe of allAssemblyRecipes) {
+            const requirementsResult = await pool.query(`
+                SELECT i.item_id, req.quantity 
+                FROM cook_recipe_requirements_v2 req
+                JOIN cook_items i ON req.required_item_id = i.id
+                WHERE req.recipe_id = $1
+            `, [recipe.id]);
+            
+            const requiredItems = requirementsResult.rows;
+            
+            // 如果原料種類數量不匹配，則跳過
+            if (requiredItems.length !== providedTypes.length) {
+                continue;
+            }
+
+            const requiredCounts = requiredItems.reduce((acc, item) => {
+                acc[item.item_id] = item.quantity;
+                return acc;
+            }, {});
+
+            // 比較提供的原料和需求的原料
+            const isMatch = providedTypes.every(type => providedCounts[type] === requiredCounts[type]);
+
+            if (isMatch) {
+                return recipe; // 找到匹配的食譜
+            }
+        }
+
+        return null; // 沒有找到匹配的食譜
+    }
+
     // 中間件設置
     cookGameApp.use(cors());
     cookGameApp.use(express.json());
@@ -1564,4 +1654,24 @@ function generateOrder() {
         timeRemaining: totalTime,
         createdAt: Date.now()
     };
+}
+
+// 當玩家斷線時，重置他的烹飪狀態
+function resetPlayerCooking(player) {
+    if (player && player.cooking.isCooking) {
+        // 將未完成的烹飪物品歸還庫存
+        player.inventory.push({
+            id: player.cooking.itemId,
+            type: player.cooking.itemType,
+        });
+        player.cooking = {
+            isCooking: false,
+            itemId: null,
+            itemType: null,
+            station: null,
+            startTime: 0,
+            duration: 0,
+            outputType: null, // ★ V2: 重置
+        };
+    }
 }
