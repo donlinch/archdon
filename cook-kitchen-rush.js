@@ -159,24 +159,34 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
         });
     };
 
-    // 輔助中介軟體：檢查管理員權限
-    const isAdmin = async (req, res, next) => {
-        try {
-            // 從 authenticateToken 中介軟體獲取 userId
-            const userResult = await pool.query(
-                'SELECT is_admin FROM box_users WHERE user_id = $1',
-                [req.user.userId]
-            );
-    
-            if (userResult.rows.length === 0 || !userResult.rows[0].is_admin) {
-                return res.status(403).json({ success: false, error: '權限不足，需要管理員身份' });
-            }
-            next(); // 如果是管理員，則繼續
-        } catch (error) {
-            console.error('檢查管理員權限時出錯:', error);
-            res.status(500).json({ success: false, error: '伺服器錯誤' });
+   // 輔助中介軟體：檢查管理員權限 (基於角色系統)
+const isAdmin = async (req, res, next) => {
+    try {
+        // 從 authenticateToken 中介軟體獲取 userId
+        const userId = req.user.userId;
+        const ADMIN_ROLE_ID = 6; // 定義系統管理員的角色 ID
+
+        // 查詢 cook_user_roles 表，檢查用戶是否擁有指定的管理員角色
+        const roleResult = await pool.query(
+            'SELECT 1 FROM cook_user_roles WHERE user_id = $1 AND role_id = $2',
+            [userId, ADMIN_ROLE_ID]
+        );
+
+        // 如果查詢結果的行數為 0，表示該用戶沒有管理員角色
+        if (roleResult.rowCount === 0) {
+            console.warn(`[權限檢查] 使用者 ID: ${userId} 嘗試訪問管理員資源，但缺少 role_id = ${ADMIN_ROLE_ID} 的角色。`);
+            return res.status(403).json({ success: false, error: '權限不足，需要系統管理員身份' });
         }
-    };
+
+        // 權限檢查通過，繼續下一個處理程序
+        console.log(`[權限檢查] 使用者 ID: ${userId} 已通過管理員權限驗證 (role_id = ${ADMIN_ROLE_ID})。`);
+        next();
+
+    } catch (error) {
+        console.error(`[權限檢查] 檢查使用者 ID: ${req.user.userId} 的管理員權限時出錯:`, error);
+        res.status(500).json({ success: false, error: '伺服器權限檢查時發生錯誤' });
+    }
+};
     
     // =================================================================
     // ★ 新增：管理後台 API
