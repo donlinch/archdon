@@ -439,75 +439,6 @@
         transition: width 0.5s linear;
     }
 
-    /* ★ V2: 中央組合盤樣式 */
-    .assembly-puzzle-container {
-      display: none; /* 預設隱藏，由JS控制 */
-      background-color: #010409;
-      border: 2px dashed #30363d;
-      border-radius: 8px;
-      padding: 15px;
-      margin-bottom: 15px;
-      flex-direction: column;
-      gap: 10px;
-      min-height: 120px;
-    }
-
-    .puzzle-title {
-      color: var(--accent-color);
-      font-weight: bold;
-      text-align: center;
-      margin-bottom: 5px;
-      font-size: 1.2em;
-    }
-
-    .puzzle-slots {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      justify-content: center;
-    }
-
-    .puzzle-slot {
-      width: 70px;
-      height: 70px;
-      background: #0d1117;
-      border: 2px solid #30363d;
-      border-radius: 8px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      color: #8b949e;
-      position: relative;
-    }
-
-    .puzzle-slot.filled {
-      border-color: var(--success-color);
-      background-color: #1a2a1a;
-    }
-
-    .puzzle-slot:not(.filled):hover {
-      border-color: var(--accent-color);
-      background-color: #222;
-    }
-
-    .puzzle-slot-item {
-      font-size: 28px;
-      line-height: 1;
-    }
-    
-    .puzzle-slot-item .game-item {
-        background-color: transparent !important; /* 覆蓋掉原本的背景色 */
-    }
-
-    .puzzle-slot-label {
-      font-size: 0.7em;
-      margin-top: 4px;
-      text-align: center;
-    }
-
     .stations-container {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -583,13 +514,6 @@
     .inventory-slot.active {
       border-color: #ffd700;
       background: #444;
-    }
-    
-    /* ★ V2: 選中準備放置的物品 */
-    .inventory-slot.in-hand {
-        border-color: var(--accent-color);
-        box-shadow: 0 0 15px var(--accent-color);
-        transform: translateY(-5px);
     }
     
     /* 添加物品動畫效果 */
@@ -832,10 +756,6 @@
         <div class="orders-container" id="ordersContainer">
           <!-- 訂單卡片將由JavaScript動態生成 -->
         </div>
-        <!-- ★ V2 新增：中央組合盤 -->
-        <div class="assembly-puzzle-container" id="assemblyPuzzleContainer">
-          <!-- 組合盤將由JavaScript動態生成 -->
-        </div>
         <div class="stations-container" id="stationsContainer">
           <!-- 工作站將由JavaScript動態生成 -->
         </div>
@@ -947,10 +867,8 @@
       // 遊戲狀態
       let gameState = {
         activeSlot: 0,
-        itemInHandSlot: null, // ★ V2: 用於追蹤選中待放置的物品
         inventory: Array(8).fill(null), // 8個庫存槽
         orders: [],
-        assembly_puzzle: null, // ★ V2: 中央組合盤狀態
         stations: {},
         players: [],
         status: 'waiting'
@@ -1117,28 +1035,6 @@
           case 'game_over':
             // 處理遊戲結束
             endGame(message);
-            break;
-            
-          // ★ V2: 新增的事件處理
-          case 'assembly_puzzle_update':
-            gameState.assembly_puzzle = message.puzzle;
-            updateWorkspaceUI(gameState.assembly_puzzle);
-            if (message.newScore) {
-              updateScore(message.newScore);
-            }
-            // 成功放置後，取消物品選中狀態
-            if (gameState.itemInHandSlot !== null) {
-              const prevSlot = playerInventory.querySelector(`.inventory-slot[data-index="${gameState.itemInHandSlot}"]`);
-              if (prevSlot) prevSlot.classList.remove('in-hand');
-              gameState.itemInHandSlot = null;
-            }
-            updateTaskHint();
-            break;
-
-          case 'inventory_update':
-            gameState.inventory = message.inventory;
-            updateInventory(gameState.inventory);
-            updateTaskHint();
             break;
             
           // 新增的消息處理
@@ -1351,9 +1247,6 @@
         // 更新訂單
         updateOrders(gameState.orders);
         
-        // ★ V2: 更新中央組合盤
-        updateWorkspaceUI(gameState.assembly_puzzle);
-        
         // 更新庫存
         updateInventory(gameState.inventory);
         
@@ -1382,36 +1275,20 @@
         for (let i = 0; i < 8; i++) {
           const slot = document.createElement('div');
           slot.className = 'inventory-slot';
+          if (i === gameState.activeSlot) {
+            slot.classList.add('active');
+          }
+          
           slot.dataset.index = i;
           
           slot.addEventListener('click', () => {
-            // ★ V2: 修改點擊邏輯為 "選取物品以放置"
-            const itemInSlot = gameState.inventory[i];
+            // 切換活動槽
+            document.querySelectorAll('.inventory-slot').forEach(s => s.classList.remove('active'));
+            slot.classList.add('active');
+            gameState.activeSlot = i;
             
-            // 如果點擊同一個已選中的物品，則取消選取
-            if (gameState.itemInHandSlot === i) {
-                gameState.itemInHandSlot = null;
-                slot.classList.remove('in-hand');
-                return;
-            }
-
-            // 如果該槽位有物品，則選取它
-            if (itemInSlot) {
-                // 取消之前選中的
-                if (gameState.itemInHandSlot !== null) {
-                    const prevSlot = playerInventory.querySelector(`.inventory-slot[data-index="${gameState.itemInHandSlot}"]`);
-                    if (prevSlot) prevSlot.classList.remove('in-hand');
-                }
-                // 選取新的
-                gameState.itemInHandSlot = i;
-                slot.classList.add('in-hand');
-                showToast(`已選取 ${getItemName(itemInSlot.type)}，請點擊上方組合盤的對應位置`);
-            } else {
-                // 如果點擊空槽，且手上有物品，提示用戶
-                if (gameState.itemInHandSlot !== null) {
-                    showToast('請點擊上方組合盤來放置物品，或點擊物品來取消選取');
-                }
-            }
+            // 通知服務器
+            sendAction('select_slot', { slotIndex: i });
           });
           
           playerInventory.appendChild(slot);
@@ -1580,8 +1457,23 @@
         }
         // 組裝站互動
         else if (type === 'assembly') {
-          // ★ V2: 此站點已棄用
-          showToast('請直接點擊上方的中央組合盤來放置物品');
+          // 檢查是否有足夠的食材可以組裝
+          if (hasAssemblableItems()) {
+            sendAction('assemble_items', {});
+            
+            // 添加組裝動畫效果
+            const slots = document.querySelectorAll('.inventory-slot');
+            slots.forEach(slot => {
+              const item = slot.querySelector('.game-item');
+              if (item) {
+                item.style.animation = 'shake 0.5s';
+              }
+            });
+            
+            showToast('正在組裝食材...');
+          } else {
+            showToast('需要更多處理好的食材才能組裝');
+          }
         }
         // 盤子站互動 - 上菜
         else if (type === 'plate') {
@@ -2317,28 +2209,25 @@
           taskHint.textContent = '等待新的訂單...';
         }
         
-        // 根據玩家庫存和組合盤狀態提供更具體的提示
+        // 根據玩家庫存狀態提供更具體的提示
+        const hasRawIngredients = gameState.inventory.some(item => 
+          item && ['beef', 'lettuce', 'tomato', 'onion', 'bread', 'cheese'].includes(item.type));
+        
+        const hasCookedIngredients = gameState.inventory.some(item => 
+          item && ['beef_cooked', 'bread_toasted', 'tomato_grilled', 'onion_grilled'].includes(item.type));
+        
         const hasCompleteDish = gameState.inventory.some(item => 
           item && isCompleteDish(item.type));
         
-        const hasCookableIngredients = gameState.inventory.some(item =>
-          item && isCookable(item.type) && !item.isCooking && !item.isCooked); // Refined logic
-        
-        if (gameState.itemInHandSlot !== null) {
-          const item = gameState.inventory[gameState.itemInHandSlot];
-          taskHint.textContent = `已選取 ${getItemName(item.type)}，請放置到組合盤`;
-        } else if (hasCompleteDish) {
-          taskHint.textContent = '料理已完成！前往上菜區送餐 (此功能可能已在V2中被組合盤取代)';
-        } else if (gameState.assembly_puzzle && gameState.assembly_puzzle.status === 'pending') {
-            const neededItems = new Set(gameState.assembly_puzzle.slots.filter(s => !s.filled_by).map(s => s.required_item_id));
-            if (neededItems.size > 0) {
-                taskHint.textContent = `組合盤需要: ${getItemName(neededItems.values().next().value)} 等食材`;
-            } else {
-                taskHint.textContent = `組合盤已滿，等待完成...`;
-            }
-        } else if (hasCookableIngredients) {
-            taskHint.textContent = '有可烹飪的食材，快去加工！';
-        } else {
+        if (hasCompleteDish) {
+          taskHint.textContent = '料理已完成！前往上菜區送餐';
+        } else if (hasAssemblableItems()) {
+          taskHint.textContent = '可以組裝漢堡了！前往組裝區';
+        } else if (hasCookedIngredients) {
+          taskHint.textContent = '需要更多食材，繼續拿取或烹飪';
+        } else if (hasRawIngredients) {
+          taskHint.textContent = '前往烹飪區處理食材';
+        } else if (gameState.orders && gameState.orders.length > 0 && gameState.orders[0]) {
           taskHint.textContent = '拿取食材開始製作料理';
         }
       }
@@ -2383,90 +2272,6 @@
                   cookingContainer.remove();
               }
           }
-      }
-
-      // ★ V2: 新增: 更新中央組合盤UI的函數
-      function updateWorkspaceUI(puzzleData) {
-        const container = document.getElementById('assemblyPuzzleContainer');
-        container.innerHTML = '';
-
-        if (!puzzleData || puzzleData.status !== 'pending' || !puzzleData.slots) {
-          container.style.display = 'none';
-          return;
-        }
-        
-        container.style.display = 'flex';
-
-        const title = document.createElement('div');
-        title.className = 'puzzle-title';
-        title.textContent = `當前訂單: ${getRecipeName(puzzleData.recipe)}`;
-        container.appendChild(title);
-
-        const slotsContainer = document.createElement('div');
-        slotsContainer.className = 'puzzle-slots';
-        
-        puzzleData.slots.forEach((slotData, index) => {
-          const slotEl = document.createElement('div');
-          slotEl.className = 'puzzle-slot';
-          slotEl.dataset.puzzleIndex = index;
-
-          if (slotData.filled_by && slotData.item) {
-            slotEl.classList.add('filled');
-            
-            const itemIcon = document.createElement('div');
-            itemIcon.className = 'game-item puzzle-slot-item';
-            itemIcon.textContent = getItemSymbol(slotData.item.type);
-            itemIcon.style.backgroundColor = getItemColor(slotData.item.type);
-            slotEl.appendChild(itemIcon);
-            
-            const filledByLabel = document.createElement('div');
-            filledByLabel.className = 'puzzle-slot-label';
-            const player = gameState.players.find(p => p.id === slotData.filled_by);
-            filledByLabel.textContent = player ? player.username : '...';
-            slotEl.appendChild(filledByLabel);
-
-          } else {
-            const requiredIcon = document.createElement('div');
-            requiredIcon.className = 'puzzle-slot-item';
-            requiredIcon.textContent = getItemSymbol(slotData.required_item_id);
-
-            const requiredLabel = document.createElement('div');
-            requiredLabel.className = 'puzzle-slot-label';
-            requiredLabel.textContent = `需要${getItemName(slotData.required_item_id)}`;
-            
-            slotEl.appendChild(requiredIcon);
-            slotEl.appendChild(requiredLabel);
-          }
-          
-          slotEl.addEventListener('click', () => handlePuzzleSlotClick(index));
-          slotsContainer.appendChild(slotEl);
-        });
-
-        container.appendChild(slotsContainer);
-      }
-      
-      // ★ V2: 新增: 處理中央組合盤點擊事件
-      function handlePuzzleSlotClick(puzzleIndex) {
-          if (gameState.itemInHandSlot === null || typeof gameState.itemInHandSlot === 'undefined') {
-              showToast("請先從下方物品欄選擇一個要放置的物品");
-              return;
-          }
-
-          const item = gameState.inventory[gameState.itemInHandSlot];
-          if (!item) {
-              // 這種情況不應該發生，但作為防呆
-              showToast("你手上沒有物品了");
-              gameState.itemInHandSlot = null;
-              const prevSlot = playerInventory.querySelector(`.inventory-slot.in-hand`);
-              if(prevSlot) prevSlot.classList.remove('in-hand');
-              return;
-          }
-
-          // 發送放置動作
-          sendAction('place_on_assembly_plate', {
-              itemSlotIndex: gameState.itemInHandSlot,
-              puzzleSlotIndex: puzzleIndex
-          });
       }
     });
   </script>
