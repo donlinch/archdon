@@ -1068,18 +1068,9 @@
                           token: token
                       }));
                       
-                      // 同時解析 token 以獲取用戶資訊（這應該與後端驗證匹配）
-                      try {
-                          const tokenPayload = JSON.parse(atob(token.split('.')[1]));
-                          // 初始化用戶資訊
-                          gameState.currentPlayer = {
-                              user_id: tokenPayload.userId || tokenPayload.user_id,
-                              username: tokenPayload.username || tokenPayload.name || 'Player'
-                          };
-                          console.log('[WebSocket] 從Token解析的用戶信息:', gameState.currentPlayer);
-                      } catch (error) {
-                          console.error('[WebSocket] 解析 token 失敗:', error);
-                      }
+                      // ★ 修改：不再在這裡解析 token，而是等待後端返回用戶資料
+                      // 這樣可以避免因 atob 函數處理非 ASCII 字符而導致的亂碼問題
+                      console.log('[WebSocket] 等待後端返回用戶資料...');
                   } else {
                       console.error('[WebSocket] 錯誤：找不到 cookGameToken，無法進行認證。');
                       showToast("認證失敗，請重新登入。");
@@ -1122,7 +1113,53 @@
 
       function sendAction(action, payload = {}) {
           if (websocket && websocket.readyState === WebSocket.OPEN) {
-              websocket.send(JSON.stringify({ type: 'player_action', action, payload }));
+              // ★ 修改：確保有房間ID
+              let currentRoomId = null;
+              
+              // 1. 優先使用 websocket 對象上的房間ID
+              if (websocket.currentRoomId) {
+                  currentRoomId = websocket.currentRoomId;
+              }
+              
+              // 2. 如果沒有，嘗試從 URL 參數獲取
+              if (!currentRoomId) {
+                  const urlParams = new URLSearchParams(window.location.search);
+                  currentRoomId = urlParams.get('id');
+                  
+                  // 如果從 URL 獲取到了，保存到 websocket 對象上
+                  if (currentRoomId) {
+                      websocket.currentRoomId = currentRoomId;
+                      console.log(`[WebSocket] 從 URL 獲取並設置房間ID: ${currentRoomId}`);
+                  }
+              }
+              
+              // 3. 如果還是沒有，嘗試從 localStorage 獲取
+              if (!currentRoomId) {
+                  currentRoomId = localStorage.getItem('currentRoomId');
+                  
+                  // 如果從 localStorage 獲取到了，保存到 websocket 對象上
+                  if (currentRoomId) {
+                      websocket.currentRoomId = currentRoomId;
+                      console.log(`[WebSocket] 從 localStorage 獲取並設置房間ID: ${currentRoomId}`);
+                  }
+              }
+              
+              // 如果仍然沒有房間ID，顯示錯誤並返回
+              if (!currentRoomId) {
+                  console.error('[WebSocket] 無法獲取房間ID，無法發送操作');
+                  showToast('無法確定遊戲房間，請刷新頁面重試');
+                  return;
+              }
+              
+              // 發送操作請求，包含房間ID
+              websocket.send(JSON.stringify({ 
+                  type: 'player_action', 
+                  action, 
+                  payload,
+                  roomId: currentRoomId // 明確包含房間ID
+              }));
+              
+              console.log(`[WebSocket] 發送操作: ${action}, 房間ID: ${currentRoomId}`);
           } else {
               showToast('無法發送請求，連線已斷開。');
           }
@@ -1131,6 +1168,11 @@
       // 新增：統一的遊戲狀態更新函數
       function updateGameState(newState) {
           console.log('更新遊戲狀態:', newState);
+          
+          // ★ 修改：保存客戶端維護的關鍵狀態
+          const clientSideFlags = {
+              dataReady: gameState.dataReady || false
+          };
           
           // 深度合併新狀態到當前狀態
           if (newState) {
@@ -1185,6 +1227,15 @@
                       slot.classList.toggle('active', index === gameState.activeSlot);
                   });
               }
+              
+              // ★ 修改：恢復客戶端維護的關鍵狀態
+              gameState.dataReady = clientSideFlags.dataReady;
+          }
+          
+          // ★ 新增：檢查數據是否已準備好，如果還沒準備好但數據已加載，則標記為準備好
+          if (!gameState.dataReady && allItems && allItems.length > 0 && allRecipes && allRecipes.length > 0) {
+              console.log('數據已加載完成，標記 dataReady 為 true');
+              gameState.dataReady = true;
           }
       }
 
@@ -1202,12 +1253,40 @@
                   loadingScreen.style.display = 'none';
               }
               
-              // 更新用戶信息（如果後端提供）
+              // ★ 修改：使用後端提供的用戶資料，完全覆蓋本地解析的數據
               if (message.userData) {
+                  console.log('[WebSocket] 收到後端用戶資料:', message.userData);
+                  
+                  // 完全覆蓋本地數據
                   gameState.currentPlayer = {
-                      ...gameState.currentPlayer,
-                      ...message.userData
+                      user_id: message.userData.user_id,
+                      username: message.userData.username || message.userData.name,
+                      display_name: message.userData.display_name,
+                      avatar: message.userData.user_profile_image_url || message.userData.avatar
                   };
+                  
+                  console.log('[WebSocket] 更新後的用戶資料:', gameState.currentPlayer);
+              } else {
+                  console.warn('[WebSocket] 後端未返回用戶資料，嘗試從 token 獲取基本資訊');
+                  
+                  // 如果後端沒有返回用戶資料，嘗試從 token 獲取基本資訊
+                  try {
+                      const token = localStorage.getItem('cookGameToken');
+                      if (token) {
+                          const tokenParts = token.split('.');
+                          if (tokenParts.length === 3) {
+                              const payload = JSON.parse(atob(tokenParts[1]));
+                              
+                              // 只設置基本資訊，避免使用可能包含非 ASCII 字符的字段
+                              gameState.currentPlayer = {
+                                  user_id: payload.userId || payload.user_id,
+                                  username: 'Player' // 使用安全的默認值
+                              };
+                          }
+                      }
+                  } catch (e) {
+                      console.error('[WebSocket] 從 token 獲取用戶資料失敗:', e);
+                  }
               }
               
               // 初始化用戶狀態指示器
@@ -1223,6 +1302,16 @@
 
           case 'room_joined':
               console.log('成功加入房間:', message.roomId);
+              
+              // ★ 新增：確保設置 websocket.currentRoomId
+              if (message.roomId) {
+                  websocket.currentRoomId = message.roomId;
+                  console.log(`[WebSocket] 設置當前房間ID: ${message.roomId}`);
+                  
+                  // 同時保存到 localStorage，以便在頁面刷新後恢復
+                  localStorage.setItem('currentRoomId', message.roomId);
+              }
+              
               // 如果後端沒有自動開始遊戲，可以在這裡手動初始化UI
               if (message.gameState) {
                   startGame(message.gameState);
@@ -1552,10 +1641,24 @@
 
       // 新增：獲取配方名稱
       function getRecipeName(recipeId) {
+          // ★ 修改：增強錯誤處理
+          if (!recipeId) {
+              console.warn('嘗試獲取空的食譜ID');
+              return '未知料理';
+          }
+          
+          // ★ 修改：檢查 allRecipes 是否已加載
+          if (!allRecipes || allRecipes.length === 0) {
+              console.warn(`嘗試獲取食譜名稱 ${recipeId}，但食譜數據尚未加載`);
+              // 如果找不到，嘗試使用前端備用數據
+              return itemDetails[recipeId] ? itemDetails[recipeId].name : '未知料理';
+          }
+          
           const recipe = allRecipes.find(r => r.recipe_id === recipeId);
           if (recipe) {
-              return recipe.recipe_name;
+              return recipe.output_item_name || recipe.recipe_name || '未命名料理';
           }
+          
           // 如果找不到，嘗試使用前端備用數據
           return itemDetails[recipeId] ? itemDetails[recipeId].name : '未知料理';
       }
@@ -1600,16 +1703,23 @@
               console.error('遊戲數據尚未準備好，無法開始遊戲！');
               showToast('遊戲資源尚未加載完成，請稍候...');
               
-              // 延遲重試
-              setTimeout(() => {
-                  if (gameState.dataReady) {
-                      console.log('數據已準備好，重新嘗試開始遊戲');
-                      startGame(initialState);
-                  } else {
-                      console.error('數據仍未準備好，請使用修復界面按鈕');
-                  }
-              }, 2000);
-              return;
+              // ★ 修改：如果數據已經加載但尚未標記為準備好，立即標記
+              if (allItems && allItems.length > 0 && allRecipes && allRecipes.length > 0) {
+                  console.log('數據已加載但未標記，立即標記為準備好');
+                  gameState.dataReady = true;
+                  // 繼續執行遊戲初始化
+              } else {
+                  // 延遲重試
+                  setTimeout(() => {
+                      if (gameState.dataReady) {
+                          console.log('數據已準備好，重新嘗試開始遊戲');
+                          startGame(initialState);
+                      } else {
+                          console.error('數據仍未準備好，請使用修復界面按鈕');
+                      }
+                  }, 2000);
+                  return;
+              }
           }
           
           try {
@@ -1645,8 +1755,9 @@
                   });
               }
               
-              // ★ 修改：保留原有的玩家信息
+              // ★ 修改：保留原有的玩家信息和數據準備狀態
               const currentPlayer = gameState.currentPlayer || {};
+              const dataReady = gameState.dataReady || false;
               
               // 初始化遊戲狀態
               gameState = {
@@ -1657,13 +1768,31 @@
                   orders: [],
                   players: [],
                   currentPlayer: currentPlayer, // 保留已有的用戶信息
-                  dataReady: true // 保持數據準備標記
+                  dataReady: dataReady // 保持數據準備標記
               };
               
               console.log('遊戲開始，初始狀態:', initialState);
               
               // 使用統一的狀態更新函數
               updateGameState(initialState);
+              
+              // ★ 新增：檢查訂單數據是否完整
+              if (gameState.orders && gameState.orders.length > 0) {
+                  console.log(`檢查 ${gameState.orders.length} 個訂單的數據完整性`);
+                  gameState.orders.forEach((order, index) => {
+                      if (!order.recipe) {
+                          console.warn(`訂單 #${index} 缺少 recipe 字段`);
+                      } else {
+                          // 檢查是否能找到對應的食譜
+                          const recipe = allRecipes.find(r => r.recipe_id === order.recipe);
+                          if (!recipe) {
+                              console.warn(`找不到訂單 #${index} 對應的食譜: ${order.recipe}`);
+                          } else {
+                              console.log(`訂單 #${index} 對應食譜: ${recipe.recipe_id} (${recipe.output_item_name || '未命名'})`);
+                          }
+                      }
+                  });
+              }
               
               // 初始化UI組件
               initializeStations();
@@ -1702,6 +1831,10 @@
                   // 檢查是否有庫存槽被創建
                   const inventorySlots = document.querySelectorAll('.inventory-slot');
                   console.log(`檢測到 ${inventorySlots.length} 個庫存槽`);
+                  
+                  // ★ 新增：再次更新訂單顯示和任務提示
+                  updateOrders();
+                  updateTaskHint();
               }, 100);
           } catch (error) {
               console.error('啟動遊戲時發生錯誤:', error);
@@ -1973,11 +2106,23 @@
           const taskHint = document.getElementById('taskHint');
           if (!taskHint) return;
           
-          if (gameState.orders && gameState.orders.length > 0) {
+          // ★ 修改：更詳細的日誌和錯誤處理
+          console.log('更新任務提示，當前訂單:', gameState.orders);
+          
+          if (!gameState.orders) {
+              console.warn('訂單列表為空或未定義');
+              taskHint.textContent = '等待訂單數據...';
+              return;
+          }
+          
+          if (gameState.orders.length > 0) {
               const currentOrder = gameState.orders[0];
               if (currentOrder && currentOrder.recipe) {
-                  taskHint.textContent = `當前任務：製作 ${getRecipeName(currentOrder.recipe)}`;
+                  const recipeName = getRecipeName(currentOrder.recipe);
+                  console.log(`當前訂單料理: ${currentOrder.recipe} -> ${recipeName}`);
+                  taskHint.textContent = `當前任務：製作 ${recipeName}`;
               } else {
+                  console.warn('當前訂單缺少食譜ID:', currentOrder);
                   taskHint.textContent = '等待新的訂單...';
               }
           } else {
