@@ -159,6 +159,94 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
         });
     };
 
+    const isAdmin = async (req, res, next) => {
+        try {
+            const userResult = await pool.query(
+                'SELECT is_admin FROM box_users WHERE user_id = $1',
+                [req.user.userId]
+            );
+    
+            if (userResult.rows.length === 0 || !userResult.rows[0].is_admin) {
+                return res.status(403).json({ success: false, error: '權限不足，需要管理員身份' });
+            }
+            next();
+        } catch (error) {
+            console.error('檢查管理員權限時出錯:', error);
+            res.status(500).json({ success: false, error: '伺服器錯誤' });
+        }
+    };
+    
+    // =================================================================
+    // ★ 新增：管理後台 API
+    // =================================================================
+    
+    cookGameApp.get('/cook-api/admin/all-items', authenticateToken, isAdmin, async (req, res) => {
+        try {
+            const result = await pool.query('SELECT * FROM cook_items ORDER BY id ASC');
+            res.json(result.rows);
+        } catch (error) {
+            console.error('Error fetching all items:', error);
+            res.status(500).json({ success: false, error: '無法獲取物品列表' });
+        }
+    });
+    
+    cookGameApp.get('/cook-api/admin/all-recipes', authenticateToken, isAdmin, async (req, res) => {
+        try {
+            // 1. 獲取所有食譜基礎資料
+            const recipesResult = await pool.query(`
+                SELECT 
+                    r.id as db_id,
+                    r.recipe_id, 
+                    r.station_type, 
+                    r.output_item_id, 
+                    r.cook_time_seconds,
+                    i_out.item_name as output_item_name
+                FROM cook_recipes_v2 r
+                JOIN cook_items i_out ON r.output_item_id = i_out.id
+                ORDER BY r.id ASC
+            `);
+            const recipes = recipesResult.rows;
+    
+            // 2. 獲取所有食譜的需求
+            const requirementsResult = await pool.query(`
+                SELECT 
+                    req.recipe_id, 
+                    req.required_item_id,
+                    req.quantity,
+                    i_req.item_name as required_item_name
+                FROM cook_recipe_requirements_v2 req
+                JOIN cook_items i_req ON req.required_item_id = i_req.id
+            `);
+            const allRequirements = requirementsResult.rows;
+    
+            // 3. 將需求組合到對應的食譜中
+            const recipesWithRequirements = recipes.map(recipe => {
+                const requirements = allRequirements
+                    .filter(req => req.recipe_id === recipe.db_id)
+                    .map(req => ({
+                        item_id: req.required_item_id, // 前端關聯用
+                        item_name: req.required_item_name, // 前端顯示用
+                        quantity: req.quantity
+                    }));
+                
+                // 返回前端需要的格式
+                return {
+                    recipe_id: recipe.recipe_id,
+                    station_type: recipe.station_type,
+                    output_item_id: recipe.output_item_id,
+                    output_item_name: recipe.output_item_name,
+                    cook_time_seconds: recipe.cook_time_seconds,
+                    requirements: requirements
+                };
+            });
+    
+            res.json(recipesWithRequirements);
+        } catch (error) {
+            console.error('Error fetching all recipes:', error);
+            res.status(500).json({ success: false, error: '無法獲取食譜列表' });
+        }
+    });
+
     const activeConnections = new Map(); // 用於追蹤 userId -> ws 的對應關係
 
     // 輔助函數：廣播訊息到指定房間
