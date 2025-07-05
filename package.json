@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js",
+    "dev": "NODE_ENV=development nodemon server.js",
     "cook-game": "node cook-kitchen-rush.js",
     "dev-cook-game": "nodemon cook-kitchen-rush.js",
     "start-all": "concurrently \"npm run dev\" \"npm run dev-cook-game\"",

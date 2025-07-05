@@ -457,7 +457,7 @@
   <div class="admin-container">
     <div class="admin-sidebar">
       <div class="user-profile">
-        <img src="image/a01girlmove.gif" alt="Avatar" id="user-avatar">
+        <img src="/images/a01girlmove.gif" alt="Avatar" id="user-avatar">
         <div class="user-info">
             <strong id="user-username">載入中...</strong>
             <span>等級: <span id="user-level">--</span></span>
@@ -589,6 +589,26 @@
   </div>
   
   <script>
+    // 顯示通知
+    function showNotification(message, type = 'success') {
+      const notification = document.createElement('div');
+      notification.className = `notification ${type}`;
+      notification.textContent = message;
+      
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        notification.classList.add('show');
+      }, 10);
+      
+      setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+          document.body.removeChild(notification);
+        }, 300);
+      }, 3000);
+    }
+
     // 載入所有稱號
     async function loadTitles() {
       try {
@@ -903,55 +923,39 @@
       }
     }
     
-    // 顯示通知
-    function showNotification(message, type = 'success') {
-      const notification = document.createElement('div');
-      notification.className = `notification ${type}`;
-      notification.textContent = message;
+    // 頁面載入時獲取稱號列表
+    document.addEventListener('DOMContentLoaded', () => {
+      // 更新用戶狀態
+      updateUserStatus();
       
-      document.body.appendChild(notification);
-      
-      setTimeout(() => {
-        notification.classList.add('show');
-      }, 10);
-      
-      setTimeout(() => {
-        notification.classList.remove('show');
-        setTimeout(() => {
-          document.body.removeChild(notification);
-        }, 300);
-      }, 3000);
-    }
+      // 如果有遊戲token，載入稱號列表
+      if (localStorage.getItem('cookGameToken')) {
+        loadTitles();
+      }
+    });
     
-    // 載入使用者個人資料
-    async function loadUserProfile() {
-      const token = localStorage.getItem('cookGameToken');
-
-      try {
-        const response = await fetch('/player/profile', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (!response.ok) {
-            throw new Error('無法獲取用戶資料');
-        }
-        const profile = await response.json();
-
-        // 權限檢查：如果用戶角色不包含 6 (系統管理員)，則轉址
-        if (!profile.roles || !profile.roles.includes(6)) {
-            showNotification('權限不足，將返回首頁。', 'error');
-            setTimeout(() => {
-                window.location.href = '/index.html';
-            }, 2000);
-            return;
-        }
-
-        // 移除權限檢查，直接顯示用戶資料
-        document.getElementById('user-avatar').src = profile.avatar_url || 'image/a01girlmove.gif';
-        document.getElementById('user-username').textContent = profile.username;
-        document.getElementById('user-level').textContent = profile.level;
-      } catch (error) {
-          console.error('加載用戶資料失敗:', error);
-          document.getElementById('user-username').textContent = '用戶資料錯誤';
+    // 更新用戶狀態顯示
+    function updateUserStatus() {
+      // 檢查是否有已保存的登入信息
+      const savedUserId = localStorage.getItem('boxCurrentUserId');
+      const savedUserAvatarUrl = localStorage.getItem('boxCurrentUserAvatar');
+      const savedUserName = localStorage.getItem('boxCurrentUsername');
+      
+      const userAvatar = document.getElementById('user-avatar');
+      const userName = document.getElementById('user-username');
+      
+      if (savedUserId && savedUserName) {
+        userAvatar.src = savedUserAvatarUrl || '/images/a01girlmove.gif';
+        userName.textContent = savedUserName;
+      } else {
+        userAvatar.src = '/images/a01girlmove.gif';
+        userName.textContent = '未登入';
+        
+        // 提示用戶登入
+        showNotification('請先登入', 'error');
+        setTimeout(() => {
+          window.location.href = '/cook-login.html?redirect=' + window.location.pathname;
+        }, 2000);
       }
     }
     
@@ -981,62 +985,6 @@
       if (event.target === modal) {
         modal.style.display = 'none';
       }
-    });
-    
-    // 自動檢查並獲取遊戲Token
-    async function ensureGameTokenAndLoadData() {
-        let token = localStorage.getItem('cookGameToken');
-
-        // 如果沒有遊戲 token，嘗試使用主系統登入資訊進行快速登入
-        if (!token) {
-            const savedUserName = localStorage.getItem('boxCurrentUsername');
-
-            if (savedUserName) {
-                console.log('偵測到主系統登入，嘗試為管理員進行快速遊戲登入...');
-                try {
-                    const response = await fetch('/cook-api/auth/quick-login', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            username: savedUserName,
-                            deviceId: 'admin_panel_quick_login'
-                        })
-                    });
-                    
-                    const data = await response.json();
-                    
-                    if (response.ok && data.success) {
-                        localStorage.setItem('cookGameToken', data.token);
-                        token = data.token; // 更新 token 供本次使用
-                        showToast('管理員身份驗證成功！', 'success');
-                    } else {
-                        showToast('管理員快速登入失敗，請手動登入。', 'error');
-                        window.location.href = `/cook-login.html?redirect=${window.location.pathname}`;
-                        return;
-                    }
-                } catch (error) {
-                    console.error('管理員快速登入時發生錯誤:', error);
-                    showToast('自動登入失敗，將引導至登入頁面。', 'error');
-                    window.location.href = `/cook-login.html?redirect=${window.location.pathname}`;
-                    return;
-                }
-            } else {
-                // 如果連主系統都沒登入，就跳轉到登入頁
-                window.location.href = `/cook-login.html?redirect=${window.location.pathname}`;
-                return;
-            }
-        }
-
-        // 確認有 token 後，才載入頁面資料
-        if (token) {
-            loadTitles();
-            loadUserProfile();
-        }
-    }
-    
-    // 頁面載入時獲取稱號列表
-    document.addEventListener('DOMContentLoaded', () => {
-      ensureGameTokenAndLoadData();
     });
   </script>
 </body>

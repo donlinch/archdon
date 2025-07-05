@@ -1,6 +1,37 @@
-
-// server.js
 require('dotenv').config();
+
+// ★★★ 強力除錯區塊 START ★★★
+console.log('======================================================');
+console.log('★★★ 環境變數強力除錯 START ★★★');
+console.log(`[DEBUG] __dirname (腳本所在目錄): ${__dirname}`);
+console.log(`[DEBUG] process.cwd() (當前工作目錄): ${process.cwd()}`);
+console.log('[DEBUG] 正在檢查 .env 檔案是否存在...');
+try {
+    const fs = require('fs');
+    const envPath = require('path').join(process.cwd(), '.env');
+    if (fs.existsSync(envPath)) {
+        console.log(`[SUCCESS] .env 檔案找到於: ${envPath}`);
+        // 我們手動讀取並印出內容，來看看 dotenv 到底有沒有讀對
+        const envContent = fs.readFileSync(envPath, 'utf-8');
+        console.log('--- .env 檔案內容 START ---');
+        console.log(envContent);
+        console.log('--- .env 檔案內容 END ---');
+    } else {
+        console.error(`[ERROR] 在 ${envPath} 找不到 .env 檔案！`);
+    }
+} catch (e) {
+    console.error('[ERROR] 檢查 .env 檔案時發生錯誤:', e);
+}
+
+console.log('------------------------------------------------------');
+console.log('[DEBUG] 檢查 process.env 中的變數值:');
+console.log(`[DEBUG] process.env.NODE_ENV = ${process.env.NODE_ENV}`);
+console.log(`[DEBUG] process.env.DATABASE_URL = ${process.env.DATABASE_URL}`);
+console.log('★★★ 環境變數強力除錯 END ★★★');
+console.log('======================================================');
+// ★★★ 強力除錯區塊 END ★★★
+
+ 
 const http = require('http'); // <--- Need http module
 const https = require('https');
 const express = require('express');
@@ -30,15 +61,42 @@ const youtubeLotteryRouter = express.Router();
 
  
 
+
+
+
+
 if (process.env.NODE_ENV === 'production') {
     app.set('trust proxy', 1);
 }
 
-// --- 資料庫連接池設定 ---
+
+
+// --- 資料庫連接池設定 (最終除錯確認版) ---
+
+// 強制使用 .env 檔案中的 URL，並且強制啟用 SSL
+// 這段程式碼專門為你的本地開發環境設計
+console.log('[DB] 正在使用【最終除錯確認版】的資料庫設定...');
+
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    connectionString: process.env.DATABASE_URL, 
+    ssl: {
+        rejectUnauthorized: false // 強制啟用 SSL
+    }
 });
+
+// 添加一個測試連線，以便在啟動時立即知道是否成功
+pool.query('SELECT NOW()', (err, res) => {
+  if (err) {
+    console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+    console.error('[DB] 資料庫連接失敗！請檢查錯誤訊息:', err ? err.message : '未知錯誤');
+    console.error('[DB] 你的 DATABASE_URL 是:', process.env.DATABASE_URL);
+    console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+  } else {
+    console.log('[DB] ★★★ 資料庫連接成功！★★★ 伺服器時間:', res.rows[0].now);
+  }
+});
+ 
+
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -62,6 +120,12 @@ app.use(session({
         sameSite: 'lax'
     }
 }));
+
+
+
+ 
+
+
 
 
  const initializeCookGame = require('./cook-kitchen-rush'); // require() 會得到一個函式
@@ -451,59 +515,52 @@ if (GEMINI_API_KEY) {
 }
 // --- END OF Gemini AI Initialization ---
 
-
-// --- START OF Cloud Vision AI Integration ---
-let visionClient;
-try {
+ 
 
 
 
-
-
-    visionClient = new ImageAnnotatorClient();
-
-    console.log("[Cloud Vision AI] Client initialized successfully.");
-} catch (error) {
-    console.error("[Cloud Vision AI] Failed to initialize ImageAnnotatorClient. Error:", error.message);
-    console.error("[Cloud Vision AI] Image analysis features will be disabled. Check your GOOGLE_APPLICATION_CREDENTIALS setup in Render Environment and Secret Files.");
-    visionClient = null;
-}
-
-// --- START OF Cloud Translation AI Integration ---
-let translationClient;
-try {
-    // Translation API 服務的初始化通常不需要額外配置，除非您需要指定專案ID等
-    // GOOGLE_APPLICATION_CREDENTIALS 環境變數會自動被客戶端庫偵測到
-    translationClient = new TranslationServiceClient();
-    console.log("[Cloud Translation AI] Client initialized successfully.");
-} catch (error) {
-    console.error("[Cloud Translation AI] Failed to initialize TranslationServiceClient. Error:", error.message);
-    console.error("[Cloud Translation AI] Translation features will be disabled. Check your GOOGLE_APPLICATION_CREDENTIALS setup.");
-    translationClient = null;
-}
-// --- END OF Cloud Translation AI Integration ---
-
-
-
-
-
-
-
-
-
-// --- Get Google Cloud Project ID from Credentials --- 
+// --- START OF MODIFIED SECTION 1: Google Cloud Credentials Handling ---
 let googleProjectId = null;
-const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-if (credentialsPath) {
+let googleCredentialsPath = null;
+
+// Render 會自動設定 NODE_ENV 為 'production'
+if (process.env.NODE_ENV === 'production') {
+  // 在 Render 環境中，使用 Secret File 的固定路徑
+  googleCredentialsPath = '/etc/secrets/google-vision-credentials.json';
+  console.log('[Cloud AI] Production environment detected. Using secret file path:', googleCredentialsPath);
+} else {
+  // 在本機開發環境中，使用你 .env 檔案裡設定的路徑
+  googleCredentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  console.log('[Cloud AI] Development environment detected. Using GOOGLE_APPLICATION_CREDENTIALS:', googleCredentialsPath);
+}
+
+// 根據得到的路徑來初始化客戶端和讀取 Project ID
+if (googleCredentialsPath && fs.existsSync(googleCredentialsPath)) {
     try {
-        const credentialsFileContent = require('fs').readFileSync(credentialsPath, 'utf8'); // 注意：这里是同步读取，对于 server.js 启动时通常可以接受
+        // --- 初始化 Vision 和 Translation 客戶端 ---
+        // 注意：我們將初始化移到這裡，以確保使用正確的路徑
+        visionClient = new ImageAnnotatorClient({ keyFilename: googleCredentialsPath });
+        translationClient = new TranslationServiceClient({ keyFilename: googleCredentialsPath });
+        console.log("[Cloud Vision & Translation AI] Clients re-initialized successfully with path:", googleCredentialsPath);
+
+        // --- 讀取 Project ID ---
+        const credentialsFileContent = fs.readFileSync(googleCredentialsPath, 'utf8');
         const parsedCredentials = JSON.parse(credentialsFileContent);
         googleProjectId = parsedCredentials.project_id;
-        console.log("[Cloud AI] Successfully obtained Google Cloud Project ID from credentials:", googleProjectId); // 打印出来确认
+        console.log("[Cloud AI] Successfully obtained Google Cloud Project ID from credentials:", googleProjectId);
     } catch (error) {
-        console.error("[Cloud AI] Failed to get Google Cloud Project ID from credentials file:", error.message);
+        console.error("[Cloud AI] Error processing credentials file at", googleCredentialsPath, ":", error.message);
+        visionClient = null; // 初始化失敗，設為 null
+        translationClient = null;
     }
+} else {
+    // 之前在上面部分的 try-catch 已經處理了日誌，這裡可以保持原樣或添加額外日誌
+    console.error("[Cloud AI] Credentials file not found at path:", googleCredentialsPath, ". AI features depending on it will be disabled.");
+    // 確保 client 確實為 null
+    visionClient = null;
+    translationClient = null;
 }
+// --- END OF MODIFIED SECTION 1 ---
 
 const BOX_JWT_SECRET = process.env.BOX_JWT_SECRET;
 if (!BOX_JWT_SECRET) {
@@ -2329,40 +2386,31 @@ function broadcastToSimpleWalkerRoom(roomId, message, senderWs = null) {
 
  
 
+// --- START OF MODIFIED SECTION 2: Upload Directory Handling (修正後) ---
+let uploadDir;
 
-
-
-
-
-
-
-// --- 指向 Render 的持久化磁碟 /data 下的 uploads 子目錄 ---
-const uploadDir = '/data/uploads'; // <-- 直接使用絕對路徑
-
-
-
-
-
-
-
-
-
-
-
-
-// 確保這個目錄存在 (如果不存在則創建)
-if (!fs.existsSync(uploadDir)) {
-  try {
-      fs.mkdirSync(uploadDir, { recursive: true });
-      console.log(`持久化上傳目錄已創建: ${uploadDir}`);
-  } catch (err) {
-      console.error(`無法創建持久化上傳目錄 ${uploadDir}:`, err);
-      // 根據你的需求，這裡可能需要拋出錯誤或有後備方案
-      // 例如，如果無法創建 /data/uploads，可能退回使用臨時目錄？
-      // 但最好的方式是確保 /data 磁碟已正確掛載且應用有權限寫入
-  }
+if (process.env.NODE_ENV === 'production') {
+  uploadDir = '/data/uploads';
+  console.log(`[Uploads] Production environment detected. Using persistent disk path: ${uploadDir}`);
+} else {
+  // ★★★ 確保這裡是使用 path.join 來組合本地路徑 ★★★
+  uploadDir = path.join(__dirname, 'public', 'uploads');
+  console.log(`[Uploads] 本機開發環境中 Development environment detected. Using local path: ${uploadDir}`);
 }
 
+// 確保這個目錄存在 (如果不存在則創建)
+// 這個邏輯對本地和 Render 都適用
+try {
+    if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+        console.log(`[Uploads] Upload directory created at: ${uploadDir}`);
+    }
+} catch (err) {
+    console.error(`[Uploads] Failed to create upload directory at ${uploadDir}:`, err);
+    // 在 Render 環境中，如果這步失敗，通常意味著 Persistent Disk 沒有正確掛載。
+    // 在本地環境，通常是權限問題。
+}
+// --- END OF MODIFIED SECTION 2 ---
  
  
 
