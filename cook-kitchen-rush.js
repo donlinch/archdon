@@ -281,6 +281,64 @@ function initializeCookGame(pool) {
     });
     // #endregion
 
+    // --- 修復資料用的一次性 API ---
+    cookGameApp.post('/admin/fix-admin-role', authenticateToken, isAdmin, async (req, res) => {
+        // 這個端點只為 user_id '1' 工作
+        if (req.user.user_id !== '1' && req.user.user_id !== 1) {
+            return res.status(403).json({ error: '此操作僅限超級管理員使用。' });
+        }
+
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+
+            const userId = '1';
+            const roleId = 6; // 管理員角色 ID
+
+            console.log(`>>> [角色修復] 嘗試為 user_id=${userId} 分配 role_id=${roleId}`);
+
+            // 確保 role ID 6 存在於 roles 表中
+            const roleCheck = await client.query('SELECT * FROM public.roles WHERE id = $1', [roleId]);
+            if (roleCheck.rows.length === 0) {
+                console.log(`>>> [角色修復] 角色 ${roleId} (admin) 不存在，正在創建...`);
+                await client.query("INSERT INTO public.roles (id, name) VALUES (6, 'admin') ON CONFLICT (id) DO NOTHING;");
+            }
+
+            // 檢查分配是否存在
+            const assignmentCheck = await client.query('SELECT * FROM public.user_role_assignments WHERE user_id = $1 AND role_id = $2', [userId, roleId]);
+
+            if (assignmentCheck.rows.length > 0) {
+                console.log(`>>> [角色修復] user_id=${userId} 已擁有 role_id=${roleId}，無需操作。`);
+                await client.query('COMMIT');
+                return res.json({ success: true, message: '管理員角色已存在，無需修復。' });
+            }
+
+            // 插入分配
+            const result = await client.query(
+                'INSERT INTO public.user_role_assignments (user_id, role_id) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET role_id = EXCLUDED.role_id RETURNING *',
+                [userId, roleId]
+            );
+            
+            await client.query('COMMIT');
+
+            if (result.rowCount > 0) {
+                console.log(`>>> [角色修復] 成功為 user_id=${userId} 分配 role_id=${roleId}`);
+                res.json({ success: true, message: '成功修復管理員角色。', data: result.rows[0] });
+            } else {
+                // This case should ideally not be hit due to the check above, but as a fallback.
+                console.log(`>>> [角色修復] 角色分配已存在，插入操作被忽略。`);
+                res.json({ success: true, message: '管理員角色已存在，無需修復 (ON CONFLICT)。' });
+            }
+
+        } catch (error) {
+            await client.query('ROLLBACK');
+            console.error('>>> [角色修復] 修復管理員角色時出錯:', error);
+            res.status(500).json({ success: false, error: '修復角色時發生伺服器錯誤。', details: error.message });
+        } finally {
+            client.release();
+        }
+    });
+
     // 管理員API - 儀表板數據
     cookGameApp.get('/admin/dashboard', authenticateToken, isAdmin, async (req, res) => {
         try {
