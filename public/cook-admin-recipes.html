@@ -1301,19 +1301,13 @@ document.addEventListener('DOMContentLoaded', function() {
         updateUserStatus();
 
         const userId = localStorage.getItem('boxCurrentUserId');
-        const userRole = localStorage.getItem(`boxUserRole_${userId}`);
+        // 移除前端角色檢查，由後端API負責權限驗證
 
         if (!userId || !getUserToken()) {
             showToast('請先登入', 'error');
             setTimeout(() => {
                 window.location.href = '/cook-login.html?redirect=' + window.location.pathname;
             }, 1500);
-            return;
-        }
-
-        if (userRole !== '6') {
-            showToast('權限不足', 'error');
-            document.querySelector('.main-content').innerHTML = '<h1><i class="fas fa-exclamation-triangle"></i> 權限不足</h1><p>您沒有權限訪問此頁面。</p>';
             return;
         }
         

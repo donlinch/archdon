@@ -363,15 +363,9 @@
         function initializePage() {
             updateUserStatus();
             const userId = localStorage.getItem('boxCurrentUserId');
-            const userRole = localStorage.getItem(`boxUserRole_${userId}`);
             if (!userId || !getUserToken()) {
                 showToast('請先登入', 'error');
                 setTimeout(() => { window.location.href = '/cook-login.html?redirect=/cook-admin-quests.html'; }, 1500);
-                return;
-            }
-            if (userRole !== '6') {
-                showToast('權限不足', 'error');
-                document.querySelector('.main-content').innerHTML = '<h1>權限不足</h1><p>您沒有權限訪問此頁面。</p>';
                 return;
             }
             loadTemplates();
@@ -397,5 +391,4 @@
         document.addEventListener('DOMContentLoaded', initializePage);
     </script>
 </body>
-</html> 
 </html> 

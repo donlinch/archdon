@@ -71,8 +71,13 @@
         .admin-sidebar .user-profile .user-info span { font-size: 14px; opacity: 0.8; }
 
         .main-content { flex-grow: 1; display: flex; flex-direction: column; height: 100vh; }
-        header { padding: 15px 30px; background-color: var(--surface-color); border-bottom: 1px solid var(--border-color); }
+        header { padding: 15px 30px; background-color: var(--surface-color); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
         header h1 { margin: 0; font-size: 24px; }
+        .refresh-btn { background-color: var(--primary-color); color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        .refresh-btn:hover { opacity: 0.9; }
+        .refresh-btn.loading { opacity: 0.7; cursor: wait; }
+        .refresh-btn.loading i { animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .page-content { flex-grow: 1; padding: 30px; overflow: auto; }
 
         .dashboard-cards {
@@ -98,6 +103,7 @@
         .stat-card.titles { border-color: var(--warning-color); color: var(--warning-color); }
         .stat-card.items { border-color: var(--success-color); color: var(--success-color); }
         .stat-card.games { border-color: var(--danger-color); color: var(--danger-color); }
+        .stat-card.rooms { border-color: var(--success-color); color: var(--success-color); }
 
         .activity-section {
             background-color: var(--surface-color);
@@ -161,6 +167,7 @@
     <div class="main-content">
         <header>
             <h1>管理後台總覽</h1>
+            <button id="refresh-btn" class="refresh-btn"><i class="fas fa-sync-alt"></i> 刷新數據</button>
         </header>
 
         <main class="page-content">
@@ -175,15 +182,8 @@
                 <div class="stat-card titles">
                     <div class="icon"><i class="fas fa-trophy"></i></div>
                     <div class="info">
-                        <h3>總稱號數</h3>
+                        <h3>稱號獲得數</h3>
                         <p id="total-titles">0</p>
-                    </div>
-                </div>
-                <div class="stat-card items">
-                    <div class="icon"><i class="fas fa-box-open"></i></div>
-                    <div class="info">
-                        <h3>總物品數</h3>
-                        <p id="total-items">0</p>
                     </div>
                 </div>
                 <div class="stat-card games">
@@ -196,10 +196,22 @@
             </div>
 
             <div class="activity-section">
-                <h2>最近活動</h2>
+                <h2>系統狀態</h2>
                 <ul id="activity-list">
-                    <!-- Activity items will be dynamically inserted here -->
+                    <li><i class="fas fa-server"></i> API狀態: <span id="api-status">檢查中...</span></li>
+                    <li><i class="fas fa-info-circle"></i> 管理後台API端點: <code>/cook-api/admin/dashboard</code></li>
+                    <li><i class="fas fa-database"></i> 數據來源:
+                        <ul>
+                            <li>總玩家數 (userCount): <code>cook_players</code> 表中的記錄數</li>
+                            <li>稱號獲得數 (titleCount): <code>cook_user_titles</code> 表中的記錄數</li>
+                            <li>總遊玩場次: <code>cook_game_rooms</code> 表中的記錄數</li>
+                        </ul>
+                    </li>
                 </ul>
+                <div id="debug-section" style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+                    <h3><i class="fas fa-bug"></i> 調試信息</h3>
+                    <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 4px; font-family: monospace; white-space: pre-wrap; max-height: 200px; overflow: auto;" id="api-debug-output">等待API數據...</div>
+                </div>
             </div>
         </main>
     </div>
@@ -239,13 +251,39 @@
                 mergedOptions.body = JSON.stringify(mergedOptions.body);
             }
             
-            const response = await fetch(`/cook-api${endpoint}`, mergedOptions);
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ message: '無法解析錯誤訊息' }));
-                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+            try {
+                console.log(`正在請求API: /cook-api${endpoint}`);
+                const response = await fetch(`/cook-api${endpoint}`, mergedOptions);
+                
+                if (!response.ok) {
+                    if (response.status === 403) {
+                        showToast('權限不足，無法訪問管理功能', 'error');
+                        setTimeout(() => {
+                            window.location.href = '/cook-lobby.html';
+                        }, 2000);
+                        throw new Error('權限不足');
+                    }
+                    
+                    const errorText = await response.text();
+                    let errorMessage = `請求失敗 (${response.status})`;
+                    
+                    try {
+                        const errorData = JSON.parse(errorText);
+                        errorMessage = errorData.message || errorMessage;
+                    } catch (e) {
+                        // 如果無法解析為JSON，使用原始錯誤文本
+                        errorMessage = errorText || errorMessage;
+                    }
+                    
+                    console.error(`API錯誤 (${response.status}):`, errorMessage);
+                    throw new Error(errorMessage);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.error('API請求失敗:', error);
+                throw error;
             }
-            return response.json();
         }
 
         function updateUserStatus() {
@@ -285,27 +323,68 @@
         }
 
         function updateActivityList() {
-            const activityList = document.getElementById('activity-list');
-            // This is placeholder data. In a real application, this would come from an API.
-            const activities = [
-                { icon: 'fa-user-plus', text: '新玩家 "小廚神" 加入了遊戲' },
-                { icon: 'fa-trophy', text: '玩家 "美食家" 解鎖了 "傳奇廚師" 稱號' },
-                { icon: 'fa-file-alt', text: '新食譜 "彩虹蛋糕" 已新增' },
-                { icon: 'fa-gamepad', text: '一場新的 "廚神大賽" 剛結束' },
-                { icon: 'fa-box', text: '新的物品 "神秘香料" 已上架' }
-            ];
-            activityList.innerHTML = activities.map(act => `<li><i class="fas ${act.icon}"></i> ${act.text}</li>`).join('');
+            // 已經在HTML中直接添加了靜態內容，不需要動態更新
+        }
+        
+        async function checkApiStatus() {
+            const statusElement = document.getElementById('api-status');
+            try {
+                await fetch('/cook-api/health', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                statusElement.textContent = '正常';
+                statusElement.style.color = 'var(--success-color)';
+            } catch (error) {
+                statusElement.textContent = '無法連接';
+                statusElement.style.color = 'var(--danger-color)';
+            }
         }
         
         async function loadDashboardData() {
             try {
+                console.log('正在請求儀表板數據...');
+                // 使用正確的API端點
                 const data = await apiFetch('/admin/dashboard');
-                document.getElementById('total-users').textContent = data.total_users;
-                document.getElementById('total-titles').textContent = data.total_titles;
-                document.getElementById('total-items').textContent = data.total_items;
-                document.getElementById('total-games').textContent = data.total_games_played;
+                console.log('收到儀表板數據:', data);
+                
+                // 顯示調試信息
+                document.getElementById('api-debug-output').textContent = 
+                    '=== API返回的原始數據 ===\n' + 
+                    JSON.stringify(data, null, 2);
+                
+                // 顯示數據 - 匹配後端API返回的鍵名
+                document.getElementById('total-users').textContent = data.userCount || '0';
+                document.getElementById('total-titles').textContent = data.titleCount || '0';
+                document.getElementById('total-games').textContent = data.roomCount || '0';  // 使用roomCount
+                
+                // 添加數據說明提示
+                const tooltips = {
+                    'total-users': '來自cook_players表的記錄總數',
+                    'total-titles': '來自cook_user_titles表的記錄總數',
+                    'total-games': '來自cook_game_rooms表的記錄總數'
+                };
+                
+                // 為每個數據卡片添加提示說明
+                Object.keys(tooltips).forEach(id => {
+                    const element = document.getElementById(id);
+                    if (element) {
+                        element.title = tooltips[id];
+                    }
+                });
             } catch (error) {
+                console.error('載入儀表板數據失敗:', error);
                 showToast('無法載入儀表板數據: ' + error.message, 'error');
+                // 設置默認值以防API失敗
+                document.getElementById('total-users').textContent = '0';
+                document.getElementById('total-titles').textContent = '0';
+                document.getElementById('total-games').textContent = '0';
+                // 顯示錯誤信息
+                document.getElementById('api-debug-output').textContent = 
+                    '=== API錯誤 ===\n' + 
+                    error.toString();
             }
         }
 
@@ -313,7 +392,7 @@
             updateUserStatus();
 
             const userId = localStorage.getItem('boxCurrentUserId');
-            const userRole = localStorage.getItem(`boxUserRole_${userId}`);
+            // 移除前端角色檢查，由後端API負責權限驗證
             
             if (!userId || !getUserToken()) {
                 showToast('請先登入', 'error');
@@ -322,15 +401,27 @@
                 }, 1500);
                 return;
             }
-            
-            if (userRole !== '6') {
-                showToast('權限不足', 'error');
-                document.querySelector('.main-content').innerHTML = '<h1>權限不足</h1><p>您沒有權限訪問此頁面。</p>';
-                return;
-            }
 
             loadDashboardData();
-            updateActivityList(); 
+            checkApiStatus();
+            
+            // 添加刷新按鈕事件
+            const refreshBtn = document.getElementById('refresh-btn');
+            refreshBtn.addEventListener('click', async () => {
+                refreshBtn.classList.add('loading');
+                refreshBtn.disabled = true;
+                
+                try {
+                    await loadDashboardData();
+                    await checkApiStatus();
+                    showToast('數據已更新', 'success');
+                } catch (error) {
+                    console.error('刷新數據失敗:', error);
+                } finally {
+                    refreshBtn.classList.remove('loading');
+                    refreshBtn.disabled = false;
+                }
+            });
         }
 
         document.addEventListener('DOMContentLoaded', initializePage);

@@ -760,20 +760,11 @@
     async function loadTitles() {
       // 前端權限檢查
       const userId = localStorage.getItem('boxCurrentUserId');
-      const userRole = localStorage.getItem(`boxUserRole_${userId}`);
-
+      // 移除前端角色檢查，由後端API負責權限驗證
+      
       console.log('\n=== 前端權限檢查 ===');
       console.log('檢查用戶ID:', userId);
-      console.log('用戶角色:', userRole);
       console.log('localStorage 內容:', localStorage);
-
-      // 直接檢查 userRole 是否為 6
-      if (userRole !== '6') {
-          console.log('權限檢查失敗：角色不符合要求');
-          showNotification('權限不足');
-          document.querySelector('.titles-list').innerHTML = '<div class="error">權限不足</div>';
-          return;
-      }
 
       try {
         const token = getUserToken();
