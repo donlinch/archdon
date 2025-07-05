@@ -184,23 +184,26 @@ CREATE DATABASE sunnyyummy_db; # 如果已存在會跳過
 
 ## 項目結構
 
-```
-sunnyyummy-app/
-├── server.js               # 主網站服務器
-├── cook-kitchen-rush.js    # 料理急先鋒遊戲服務器
-├── public/                 # 靜態文件
-│   ├── cook-game.txt       # 遊戲設計說明文檔
-│   ├── index.html          # 主網站首頁
-│   ├── cook-login.html     # 遊戲登入頁面
-│   ├── cook-lobby.html     # 遊戲大廳
-│   ├── cook-game-room.html # 遊戲房間
-│   ├── cook-game.html      # 遊戲主頁面
-│   ├── cook-result.html    # 遊戲結果頁面
-│   ├── cook-help.html      # 遊戲說明頁面
-├── package.json            # 項目配置
-├── .env                    # 環境變數
-└── README.md               # 項目文檔
-```
+* sunnyyummy-app/
+* ├── server.js               # 主網站服務器
+* ├── cook-kitchen-rush.js    # 料理急先鋒遊戲服務器
+* ├── public/                 # 靜態文件
+* │   ├── index.html          # 主網站首頁
+  │    ├── cook-game.txt      # 遊戲設計說明文檔
+* │   ├── cook-login.html     # 遊戲登入頁面
+* │   ├── cook-lobby.html     # 遊戲大廳
+* │   ├── cook-game-room.html # 遊戲房間
+* │   ├── cook-admin-titles.html # 稱號管理
+* │   ├── cook-game.html      # 遊戲主頁面
+* │   ├── cook-result.html    # 遊戲結果頁面
+* │   ├── cook-help.html      # 遊戲說明頁面
+  │   ├── cook-admin.html      # 總覽
+  │   ├── cook-admin-recipes.html     # 食譜管理
+  │   ├── cook-admin-quests.html      # 任務管理
+  │   ├── cook-leaderboard.html       # 排行榜
+  ├── package.json            # 項目配置
+* ├── .env                    # 環境變數
+* └── README.md               # 項目文檔
 
 ## 主要功能
 
