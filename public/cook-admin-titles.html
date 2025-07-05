@@ -604,21 +604,7 @@
           }
         });
         
-        if (response.status === 401) {
-          // 未認證，重定向到登入頁面
-          window.location.href = '/cook-login.html?redirect=/cook-admin-titles.html';
-          return;
-        }
-        
-        if (response.status === 403) {
-          // 無權限訪問
-          showNotification('您沒有管理員權限訪問此頁面', 'error');
-          setTimeout(() => {
-            window.location.href = '/cook-lobby.html';
-          }, 2000);
-          return;
-        }
-        
+        // 移除權限檢查，直接處理回應
         if (!response.ok) {
           if (response.status === 404) {
             showNotification('稱號資料表可能尚未建立，請點擊"初始化稱號資料表"按鈕', 'error');
