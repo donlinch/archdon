@@ -83,35 +83,107 @@
     }
     
     .daily-task {
-      background-color: var(--card-bg-color);
+      background-color: #1e1e1e;
       border: 1px solid var(--border-color);
       border-radius: 5px;
       padding: 15px;
       margin-bottom: 20px;
-      animation: fadeIn 0.5s ease-in-out;
     }
     
     .daily-task h2 {
-      font-size: 1.1em;
       color: var(--accent-color);
-      margin-bottom: 10px;
-      border-bottom: 1px dashed var(--border-color);
-      padding-bottom: 5px;
+      margin-top: 0;
+      text-align: center;
     }
     
-    .task-progress {
-      height: 20px;
-      background-color: #333;
-      border-radius: 10px;
+    .ascii-art {
+      font-family: monospace;
+      text-align: center;
+      color: var(--accent-color);
       margin: 10px 0;
+    }
+    
+    .quest-item {
+      background-color: rgba(0, 0, 0, 0.3);
+      border-radius: 5px;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+    
+    .quest-title {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    
+    .quest-progress-container {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 5px;
+    }
+    
+    .quest-progress-text {
+      text-align: right;
+      font-size: 0.8em;
+      margin-bottom: 3px;
+    }
+    
+    .quest-progress-bar {
+      height: 8px;
+      background-color: #333;
+      border-radius: 4px;
       overflow: hidden;
     }
     
-    .progress-bar {
+    .quest-progress-fill {
       height: 100%;
-      background: linear-gradient(to right, var(--secondary-color), var(--accent-color));
-      width: 35%;
-      border-radius: 10px;
+      background-color: var(--accent-color);
+      border-radius: 4px;
+    }
+    
+    .quest-reward {
+      font-size: 0.9em;
+      color: #ffd700;
+      margin-bottom: 5px;
+    }
+    
+    .quest-action {
+      text-align: right;
+    }
+    
+    .claim-btn {
+      background-color: var(--accent-color);
+      color: #fff;
+      border: none;
+      border-radius: 3px;
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+    
+    .claim-btn:hover {
+      background-color: #ff8c00;
+    }
+    
+    .quest-status-text {
+      font-size: 0.9em;
+      color: #aaa;
+    }
+    
+    .quest-completed {
+      opacity: 0.7;
+    }
+    
+    .quest-ready {
+      border-left: 3px solid var(--accent-color);
+    }
+    
+    .loading-text {
+      text-align: center;
+      color: #aaa;
+    }
+    
+    .error-message {
+      color: #ff6b6b;
+      text-align: center;
     }
     
     .room-list {
@@ -333,16 +405,6 @@
       margin-top: 10px;
     }
     
-    /* ASCII藝術 */
-    .ascii-art {
-      font-size: 0.8em;
-      line-height: 1.2;
-      white-space: pre;
-      text-align: center;
-      color: var(--accent-color);
-      margin: 5px 0;
-    }
-    
     /* User Status Indicator */
     .user-status {
         position: fixed;
@@ -423,11 +485,9 @@
       <div class="ascii-art">
   o==[]::::::::::::::> 
       </div>
-      <p>今日任務: 完成3場遊戲</p>
-      <div class="task-progress">
-        <div class="progress-bar"></div>
+      <div id="daily-quests-container">
+        <p class="loading-text">正在加載每日任務...</p>
       </div>
-      <p>獎勵: 100 積分 (1/3)</p>
     </div>
 
     <div class="room-list">
@@ -584,6 +644,9 @@
             
             // 獲取房間列表
             fetchGameRooms();
+            
+            // 獲取每日任務
+            fetchDailyQuests();
             
             // 連接WebSocket
             connectWebSocket();
@@ -828,6 +891,127 @@ function showSystemBroadcast(text) {
         
         // 轉到房間頁面
         window.location.href = 'cook-game-room.html';
+    }
+
+    // 獲取每日任務
+    function fetchDailyQuests() {
+        const token = localStorage.getItem('cookGameToken');
+        
+        fetch('/cook-api/daily-quests', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('獲取每日任務失敗');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success && data.quests) {
+                displayDailyQuests(data.quests);
+            } else {
+                throw new Error('沒有找到每日任務數據');
+            }
+        })
+        .catch(error => {
+            console.error('獲取每日任務失敗:', error);
+            document.getElementById('daily-quests-container').innerHTML = 
+                '<p class="error-message">無法獲取每日任務，請稍後再試</p>';
+        });
+    }
+    
+    // 顯示每日任務
+    function displayDailyQuests(quests) {
+        const container = document.getElementById('daily-quests-container');
+        container.innerHTML = '';
+        
+        if (quests.length === 0) {
+            container.innerHTML = '<p>今天沒有可用的任務</p>';
+            return;
+        }
+        
+        quests.forEach(quest => {
+            const questElement = document.createElement('div');
+            questElement.className = 'quest-item';
+            
+            // 計算進度百分比
+            const progress = Math.min(100, (quest.progress / quest.target) * 100);
+            
+            // 根據任務狀態設置樣式和按鈕
+            let statusClass = '';
+            let actionButton = '';
+            
+            if (quest.status === 'completed') {
+                statusClass = 'quest-completed';
+                actionButton = '<span class="quest-status-text">已完成</span>';
+            } else if (quest.progress >= quest.target) {
+                statusClass = 'quest-ready';
+                actionButton = `<button class="claim-btn" data-quest-id="${quest.id}">領取獎勵</button>`;
+            } else {
+                statusClass = 'quest-active';
+                actionButton = '<span class="quest-status-text">進行中</span>';
+            }
+            
+            questElement.classList.add(statusClass);
+            
+            questElement.innerHTML = `
+                <div class="quest-title">${quest.title}</div>
+                <div class="quest-progress-container">
+                    <div class="quest-progress-text">${quest.progress}/${quest.target}</div>
+                    <div class="quest-progress-bar">
+                        <div class="quest-progress-fill" style="width: ${progress}%"></div>
+                    </div>
+                </div>
+                <div class="quest-reward">獎勵: ${quest.reward_points} 點</div>
+                <div class="quest-action">${actionButton}</div>
+            `;
+            
+            container.appendChild(questElement);
+        });
+        
+        // 為所有領取按鈕添加事件監聽器
+        document.querySelectorAll('.claim-btn').forEach(button => {
+            button.addEventListener('click', claimQuestReward);
+        });
+    }
+    
+    // 領取任務獎勵
+    function claimQuestReward(event) {
+        const questId = event.target.dataset.questId;
+        const token = localStorage.getItem('cookGameToken');
+        
+        fetch(`/cook-api/daily-quests/${questId}/claim`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => { throw new Error(err.error || '領取獎勵失敗') });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // 更新UI顯示
+                event.target.parentElement.innerHTML = '<span class="quest-status-text">已領取</span>';
+                event.target.closest('.quest-item').classList.remove('quest-ready');
+                event.target.closest('.quest-item').classList.add('quest-completed');
+                
+                // 顯示獎勵通知
+                showSystemBroadcast(`恭喜！你獲得了 ${data.rewardPoints} 點獎勵`);
+                
+                // 重新獲取任務列表以更新狀態
+                setTimeout(fetchDailyQuests, 1000);
+            }
+        })
+        .catch(error => {
+            console.error('領取任務獎勵失敗:', error);
+            alert(`領取獎勵失敗: ${error.message}`);
+        });
     }
   </script>
 </body>

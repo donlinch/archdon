@@ -162,6 +162,18 @@
       font-size: 1.1em;
       z-index: 10;
       text-align: center;
+      border-left: 3px solid var(--accent-color);
+      margin-bottom: 10px;
+    }
+    
+    .advanced-hint {
+      color: var(--accent-color);
+      font-weight: bold;
+    }
+    
+    .hint-highlight {
+      color: var(--secondary-color);
+      font-weight: bold;
     }
     
     /* 烹飪動畫 */
@@ -441,11 +453,29 @@
 
     .order-ingredients {
       display: flex;
-      gap: 5px;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 8px 0;
     }
 
-    .ingredient-icon {
+    .order-ingredient-item {
+      display: flex;
+      align-items: center;
+      background-color: rgba(0, 0, 0, 0.3);
+      border-radius: 12px;
+      padding: 4px 8px;
+      border: 1px solid #30363d;
+    }
+
+    .order-ingredient-icon {
       font-size: 1.2em;
+      margin-right: 4px;
+    }
+    
+    .order-ingredient-quantity {
+      font-size: 0.9em;
+      color: #c9d1d9;
+      font-weight: bold;
     }
 
     .order-timer-container {
@@ -1031,6 +1061,8 @@
       
       <div class="game-main">
         <div class="task-hint" id="taskHint">請拿取食材開始製作料理</div>
+        <!-- 新增：高級提示區域 -->
+        <div class="task-hint advanced-hint" id="advancedHint" style="display: none;"></div>
         <div class="orders-container" id="ordersContainer">
           <!-- 訂單卡片將由JavaScript動態生成 -->
         </div>
@@ -1398,6 +1430,8 @@
           if (newState.inventory !== undefined) {
               gameState.inventory = newState.inventory;
               updateInventoryDisplay();
+              // 新增：庫存更新時更新任務提示
+              updateTaskHint();
           }
           
           // 更新訂單
@@ -1566,16 +1600,22 @@
 
           case 'ingredient_picked':
               showToast(`已拿取 ${getItemName(message.ingredientType)}`, 'success');
+              // 新增：當拿取食材後更新提示
+              updateTaskHint();
               break;
 
           case 'item_cooked':
               showToast(`${getItemName(message.resultType)} 烹飪完成！`, 'success');
               hideAllCookingAnimations();
+              // 新增：當烹飪完成後更新提示
+              updateTaskHint();
               break;
 
           case 'items_assembled':
               clearAssemblyPlate();
               showToast(`${getItemName(message.resultType)} 組合完成！`, 'success');
+              // 新增：當組合完成後更新提示
+              updateTaskHint();
               break;
 
           case 'item_transferred':
@@ -1583,6 +1623,15 @@
                   showToast(`物品已成功傳遞給 ${message.toPlayerName}`, 'success');
               } else {
                   showToast(`收到了來自 ${message.fromPlayerName} 的物品！`, 'success');
+              }
+              break;
+              
+          case 'slot_selected':
+              // 新增：當選擇槽位時更新提示
+              if (message.slotIndex !== undefined) {
+                  gameState.activeSlot = message.slotIndex;
+                  updateInventoryDisplay();
+                  updateTaskHint();
               }
               break;
 
@@ -1616,7 +1665,7 @@
        if (!gameState.players || gameState.players.length === 0) return; 
           const currentItem = gameState.inventory[gameState.activeSlot];
 
-          if (type === 'grill' || type === 'fry' || type === 'deep_fry' || type === 'boil') {
+          if (type === 'grill' || type === 'pan_fry' || type === 'deep_fry' || type === 'boil') {
               if (currentItem) {
                   showToast(`正在${getCookingMethodName(type)} ${getItemName(currentItem.type)}...`);
                   showCookingAnimation('cooking_station'); // 顯示烹飪動畫
@@ -1645,7 +1694,7 @@
       function getCookingMethodName(type) {
           const methodNames = {
               'grill': '烤',
-              'fry': '煎',
+              'pan_fry': '煎',
               'deep_fry': '炸',
               'boil': '煮'
           };
@@ -2069,7 +2118,7 @@
               
               const cookingMethods = [
                   { id: 'grill', name: '烤', icon: '🔥' },
-                  { id: 'fry', name: '煎', icon: '🍳' },
+                  { id: 'pan_fry', name: '煎', icon: '🍳' },
                   { id: 'deep_fry', name: '炸', icon: '🥘' },
                   { id: 'boil', name: '煮', icon: '♨️' }
               ];
@@ -2210,11 +2259,9 @@
               return;
           }
           
-          // 篩選可用的基礎食材
+          // 篩選可用的基礎食材 - 只顯示raw_ingredient類型
           let availableIngredients = allItems.filter(item => 
-              (item.item_type === 'raw_ingredient' || item.item_type === 'ingredient') ||
-              item.is_base_item === true ||
-              (item.item_id && item.item_id.includes('raw'))
+              item.item_type === 'raw_ingredient'
           );
           
           if (!availableIngredients || availableIngredients.length === 0) {
@@ -2403,31 +2450,87 @@
           }
       }
 
+      // 改進：更新任務提示函數，提供更精確的指引
       function updateTaskHint() {
           const taskHint = document.getElementById('taskHint');
-          if (!taskHint) return;
+          const advancedHint = document.getElementById('advancedHint');
           
-          // ★ 修改：更詳細的日誌和錯誤處理
+          if (!taskHint || !advancedHint) return;
+          
           console.log('更新任務提示，當前訂單:', gameState.orders);
           
           if (!gameState.orders) {
               console.warn('訂單列表為空或未定義');
               taskHint.textContent = '等待訂單數據...';
+              advancedHint.style.display = 'none';
               return;
           }
           
-          if (gameState.orders.length > 0) {
-              const currentOrder = gameState.orders[0];
-              if (currentOrder && currentOrder.recipe) {
-                  const recipeName = getRecipeName(currentOrder.recipe);
-                  console.log(`當前訂單料理: ${currentOrder.recipe} -> ${recipeName}`);
-                  taskHint.textContent = `當前任務：製作 ${recipeName}`;
+          // 沒有訂單時的提示
+          if (gameState.orders.length === 0) {
+              taskHint.textContent = '太棒了！所有訂單都完成了！';
+              advancedHint.style.display = 'none';
+              return;
+          }
+          
+          // 獲取當前最優先訂單
+          const currentOrder = gameState.orders[0];
+          if (currentOrder && currentOrder.recipe) {
+              const recipeName = getRecipeName(currentOrder.recipe);
+              console.log(`當前訂單料理: ${currentOrder.recipe} -> ${recipeName}`);
+              taskHint.textContent = `當前任務：製作 ${recipeName}`;
+              
+              // 查找訂單所需的食材
+              const recipe = allRecipes.find(r => r.recipe_id === currentOrder.recipe);
+              
+              // 檢查玩家庫存，提供更精確的提示
+              if (recipe && recipe.requirements) {
+                  // 檢查玩家庫存中已有的食材
+                  const inventory = gameState.inventory || [];
+                  const inventoryItems = inventory.filter(item => item !== null).map(item => item.type);
+                  
+                  // 檢查缺少的食材
+                  const missingIngredients = [];
+                  recipe.requirements.forEach(req => {
+                      const reqItem = allItems.find(i => i.item_id === req.item_id);
+                      if (reqItem) {
+                          // 檢查庫存中是否有這個食材
+                          const hasIngredient = inventoryItems.includes(req.item_id);
+                          if (!hasIngredient) {
+                              missingIngredients.push(reqItem);
+                          }
+                      }
+                  });
+                  
+                  // 根據缺少的食材提供提示
+                  if (missingIngredients.length > 0) {
+                      let hintText = '提示：需要';
+                      missingIngredients.forEach((item, index) => {
+                          if (index > 0) {
+                              hintText += index === missingIngredients.length - 1 ? ' 和 ' : '、';
+                          }
+                          hintText += `<span class="hint-highlight">${item.item_name}</span>`;
+                      });
+                      
+                      advancedHint.innerHTML = hintText;
+                      advancedHint.style.display = 'block';
+                  } else {
+                      // 如果所有食材都有了，提示下一步操作
+                      const hasFinalDish = inventoryItems.includes(currentOrder.recipe);
+                      if (hasFinalDish) {
+                          advancedHint.innerHTML = '提示：料理已完成，請送至<span class="hint-highlight">上菜區</span>！';
+                      } else {
+                          advancedHint.innerHTML = '提示：已有所需食材，請前往<span class="hint-highlight">烹飪區</span>進行烹飪或<span class="hint-highlight">組合區</span>進行組合！';
+                      }
+                      advancedHint.style.display = 'block';
+                  }
               } else {
-                  console.warn('當前訂單缺少食譜ID:', currentOrder);
-                  taskHint.textContent = '等待新的訂單...';
+                  advancedHint.style.display = 'none';
               }
           } else {
-              taskHint.textContent = '太棒了！所有訂單都完成了！';
+              console.warn('當前訂單缺少食譜ID:', currentOrder);
+              taskHint.textContent = '等待新的訂單...';
+              advancedHint.style.display = 'none';
           }
       }
 
@@ -2468,6 +2571,7 @@
           });
       }
       
+      // 新增：創建訂單元素的改進版本
       function createOrderElement(order) {
           if (!order || !order.id || !order.recipe) {
               console.warn('嘗試創建無效訂單元素:', order);
@@ -2482,7 +2586,7 @@
           orderName.className = 'order-name';
           orderName.textContent = getRecipeName(order.recipe); // 現在會顯示中文名
 
-          // 新增：訂單計時器文字
+          // 訂單計時器文字
           const orderTimerText = document.createElement('div');
           orderTimerText.className = 'order-timer-text';
           orderTimerText.textContent = '計時中...';
@@ -2519,11 +2623,23 @@
                   // 從 allItems 中查找需求物品的詳細信息
                   const reqItem = allItems.find(i => i.item_id === req.item_id);
                   if (reqItem) {
-                      const icon = document.createElement('div');
-                      icon.className = 'ingredient-icon';
-                      icon.textContent = getItemSymbol(reqItem.item_id); 
-                      icon.title = `${reqItem.item_name} x ${req.quantity}`; // 滑鼠懸浮提示
-                      ingredientsContainer.appendChild(icon);
+                      // 創建更詳細的食材需求顯示
+                      const ingredientItem = document.createElement('div');
+                      ingredientItem.className = 'order-ingredient-item';
+                      
+                      const icon = document.createElement('span');
+                      icon.className = 'order-ingredient-icon';
+                      icon.textContent = getItemSymbol(reqItem.item_id);
+                      
+                      const quantity = document.createElement('span');
+                      quantity.className = 'order-ingredient-quantity';
+                      quantity.textContent = `x${req.quantity}`;
+                      
+                      ingredientItem.appendChild(icon);
+                      ingredientItem.appendChild(quantity);
+                      ingredientItem.title = `${reqItem.item_name} x ${req.quantity}`; // 滑鼠懸浮提示
+                      
+                      ingredientsContainer.appendChild(ingredientItem);
                   }
               });
           }
@@ -2617,7 +2733,7 @@
           
           // 更新訂單和任務提示
           updateOrders();
-          updateTaskHint();
+          updateTaskHint(); // 確保動態提示系統初始化
           updateOrderTimers();
           
           // 顯示歡迎提示

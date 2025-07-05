@@ -14,6 +14,27 @@
         th { background-color: #e8f5e9; }
         .code-block { background-color: #2d2d2d; color: #f0f0f0; padding: 15px; border-radius: 5px; white-space: pre; overflow-x: auto; font-family: monospace; }
         .export-btn { background-color: #FF9800; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 1em; }
+        .edit-btn, .save-btn { background-color: #4CAF50; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-right: 5px; }
+        .delete-btn, .cancel-btn { background-color: #f44336; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+        .difficulty-select { padding: 5px; border-radius: 4px; border: 1px solid #ddd; }
+        .edit-form { background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 10px 0; border: 1px solid #ddd; }
+        .form-group { margin-bottom: 10px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input, .form-group select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        .form-actions { margin-top: 15px; display: flex; justify-content: flex-end; gap: 10px; }
+        .difficulty-badge { 
+            display: inline-block; 
+            padding: 3px 8px; 
+            border-radius: 12px; 
+            color: white; 
+            font-weight: bold;
+            font-size: 0.85em;
+        }
+        .difficulty-1 { background-color: #4CAF50; } /* 簡單 - 綠色 */
+        .difficulty-2 { background-color: #2196F3; } /* 普通 - 藍色 */
+        .difficulty-3 { background-color: #FF9800; } /* 中等 - 橙色 */
+        .difficulty-4 { background-color: #F44336; } /* 困難 - 紅色 */
+        .difficulty-5 { background-color: #9C27B0; } /* 專家 - 紫色 */
     </style>
 </head>
 <body>
@@ -44,20 +65,54 @@
         <!-- 食譜管理區塊 -->
         <div class="section">
             <h2>食譜列表 (cook_recipes_v2 & requirements)</h2>
-            <p>這裡管理所有的烹飪和組合配方。</p>
+            <p>這裡管理所有的烹飪和組合配方。食譜難度影響訂單生成：房間難度 easy(1-2)、normal(2-4)、hard(3-5)。</p>
+            
+            <!-- 編輯表單 (初始隱藏) -->
+            <div id="recipeEditForm" class="edit-form" style="display: none;">
+                <h3>編輯食譜</h3>
+                <div class="form-group">
+                    <label for="editRecipeName">食譜名稱</label>
+                    <input type="text" id="editRecipeName" placeholder="食譜名稱">
+                </div>
+                <div class="form-group">
+                    <label for="editDifficulty">難度</label>
+                    <select id="editDifficulty" class="difficulty-select">
+                        <option value="1">1 - 簡單</option>
+                        <option value="2">2 - 普通</option>
+                        <option value="3">3 - 中等</option>
+                        <option value="4">4 - 困難</option>
+                        <option value="5">5 - 專家</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="editIsOrderable">可作為訂單</label>
+                    <select id="editIsOrderable">
+                        <option value="true">是</option>
+                        <option value="false">否</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button id="cancelEditBtn" class="cancel-btn">取消</button>
+                    <button id="saveRecipeBtn" class="save-btn">保存</button>
+                </div>
+            </div>
+            
             <table id="recipesTable">
                 <thead>
                     <tr>
-                        <th>食譜 ID (recipe_id)</th>
-                        <th>類型 (station_type)</th>
-                        <th>產出物 (Output)</th>
-                        <th>所需原料 (Requirements)</th>
-                        <th>烹飪時間 (Cook Time)</th>
+                        <th>ID</th>
+                        <th>食譜ID</th>
+                        <th>名稱</th>
+                        <th>工作站</th>
+                        <th>產出物品</th>
+                        <th>烹飪時間</th>
+                        <th>可訂單</th>
+                        <th>難度</th>
+                        <th>需求物品</th>
+                        <th>操作</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <!-- JS 動態填充 -->
-                </tbody>
+                <tbody id="recipesTableBody"></tbody>
             </table>
         </div>
 
@@ -78,9 +133,16 @@
             const recipesTableBody = document.querySelector('#recipesTable tbody');
             const exportSqlBtn = document.getElementById('exportSqlBtn');
             const sqlOutput = document.getElementById('sqlOutput');
+            const recipeEditForm = document.getElementById('recipeEditForm');
+            const editRecipeName = document.getElementById('editRecipeName');
+            const editDifficulty = document.getElementById('editDifficulty');
+            const editIsOrderable = document.getElementById('editIsOrderable');
+            const cancelEditBtn = document.getElementById('cancelEditBtn');
+            const saveRecipeBtn = document.getElementById('saveRecipeBtn');
 
             let allItems = [];
             let allRecipes = [];
+            let currentEditingRecipe = null;
 
             // 獲取所有物品資料
             async function fetchItems() {
@@ -133,7 +195,7 @@
                         return;
                     }
 
-                    const response = await fetch('/cook-api/admin/all-recipes', { // <--- ★ 在路徑前加上 /cook-api
+                    const response = await fetch('/cook-api/admin/all-recipes', {
                         headers: {
                             'Authorization': `Bearer ${token}`
                         }
@@ -154,20 +216,177 @@
                              // 從 API 回應中直接取得 required_item_name
                             return `${req.item_name} x ${req.quantity}`;
                         }).join(', ');
+                        
+                        // 根據難度設置不同的CSS類別
+                        const difficultyClass = `difficulty-${recipe.difficulty || '1'}`;
+                        const difficultyText = getDifficultyText(recipe.difficulty || '1');
 
                         recipesTableBody.innerHTML += `
                             <tr>
+                                <td>${recipe.recipe_db_id}</td>
                                 <td>${recipe.recipe_id}</td>
+                                <td>${recipe.output_item_name}食譜</td>
                                 <td>${recipe.station_type}</td>
                                 <td>${outputItemName}</td>
-                                <td>${requirements}</td>
                                 <td>${recipe.cook_time_seconds || 'N/A'}</td>
+                                <td>${recipe.is_orderable ? '是' : '否'}</td>
+                                <td><span class="difficulty-badge ${difficultyClass}">${difficultyText}</span></td>
+                                <td>${requirements}</td>
+                                <td>
+                                    <button class="edit-btn" data-id="${recipe.recipe_db_id}">編輯</button>
+                                    <button class="delete-btn" data-id="${recipe.recipe_db_id}">刪除</button>
+                                </td>
                             </tr>
                         `;
+                    });
+                    
+                    // 綁定編輯按鈕事件
+                    document.querySelectorAll('.edit-btn').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const recipeId = parseInt(btn.dataset.id);
+                            editRecipe(recipeId);
+                        });
+                    });
+                    
+                    // 綁定刪除按鈕事件
+                    document.querySelectorAll('.delete-btn').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const recipeId = parseInt(btn.dataset.id);
+                            if (confirm('確定要刪除這個食譜嗎？此操作不可逆。')) {
+                                deleteRecipe(recipeId);
+                            }
+                        });
                     });
                 } catch (error) {
                     console.error('Fetch recipes error:', error);
                     sqlOutput.textContent = `載入食譜時發生錯誤: ${error.message}`;
+                }
+            }
+            
+            // 根據難度值獲取文字描述
+            function getDifficultyText(difficulty) {
+                const difficultyTexts = {
+                    '1': '簡單',
+                    '2': '普通',
+                    '3': '中等',
+                    '4': '困難',
+                    '5': '專家'
+                };
+                return `${difficulty} - ${difficultyTexts[difficulty] || '未知'}`;
+            }
+            
+            // 編輯食譜
+            function editRecipe(recipeId) {
+                const recipe = allRecipes.find(r => r.recipe_db_id === recipeId);
+                if (!recipe) {
+                    alert('找不到指定的食譜');
+                    return;
+                }
+                
+                currentEditingRecipe = recipe;
+                
+                // 填充表單
+                editRecipeName.value = recipe.output_item_name + '食譜';
+                editDifficulty.value = recipe.difficulty || '1';
+                editIsOrderable.value = recipe.is_orderable ? 'true' : 'false';
+                
+                // 顯示表單
+                recipeEditForm.style.display = 'block';
+                
+                // 滾動到表單位置
+                recipeEditForm.scrollIntoView({ behavior: 'smooth' });
+            }
+            
+            // 取消編輯
+            cancelEditBtn.addEventListener('click', () => {
+                recipeEditForm.style.display = 'none';
+                currentEditingRecipe = null;
+            });
+            
+            // 保存食譜編輯
+            saveRecipeBtn.addEventListener('click', async () => {
+                if (!currentEditingRecipe) {
+                    alert('沒有選擇要編輯的食譜');
+                    return;
+                }
+                
+                try {
+                    const token = localStorage.getItem('cookGameToken');
+                    if (!token) {
+                        alert('請先登入');
+                        return;
+                    }
+                    
+                    // 準備更新數據
+                    const updateData = {
+                        recipeId: currentEditingRecipe.recipe_db_id,
+                        recipeName: editRecipeName.value,
+                        difficulty: parseInt(editDifficulty.value),
+                        isOrderable: editIsOrderable.value === 'true'
+                    };
+                    
+                    const response = await fetch('/cook-api/admin/update-recipe', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify(updateData)
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`更新食譜失敗: ${response.statusText}`);
+                    }
+                    
+                    const result = await response.json();
+                    if (result.success) {
+                        alert('食譜更新成功');
+                        recipeEditForm.style.display = 'none';
+                        currentEditingRecipe = null;
+                        
+                        // 重新載入食譜列表
+                        fetchRecipes();
+                    } else {
+                        throw new Error(result.message || '更新失敗');
+                    }
+                } catch (error) {
+                    console.error('Update recipe error:', error);
+                    alert(`更新食譜時發生錯誤: ${error.message}`);
+                }
+            });
+            
+            // 刪除食譜
+            async function deleteRecipe(recipeId) {
+                try {
+                    const token = localStorage.getItem('cookGameToken');
+                    if (!token) {
+                        alert('請先登入');
+                        return;
+                    }
+                    
+                    const response = await fetch(`/cook-api/admin/delete-recipe/${recipeId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`刪除食譜失敗: ${response.statusText}`);
+                    }
+                    
+                    const result = await response.json();
+                    if (result.success) {
+                        alert('食譜刪除成功');
+                        
+                        // 重新載入食譜列表
+                        fetchRecipes();
+                    } else {
+                        throw new Error(result.message || '刪除失敗');
+                    }
+                } catch (error) {
+                    console.error('Delete recipe error:', error);
+                    alert(`刪除食譜時發生錯誤: ${error.message}`);
                 }
             }
 
@@ -192,8 +411,8 @@
                 const recipeValues = allRecipes.map(r => {
                     const outputItem = allItems.find(i => i.id === r.output_item_id);
                     const recipeName = `${r.output_item_name}食譜`;
-                    const isOrderable = outputItem ? outputItem.is_dish : false;
-                    const difficulty = 1; 
+                    const isOrderable = r.is_orderable !== undefined ? r.is_orderable : (outputItem ? outputItem.is_dish : false);
+                    const difficulty = r.difficulty || 1; 
                     // 使用從後端傳來的 recipe_db_id
                     return `(${r.recipe_db_id}, '${r.recipe_id}', '${recipeName}', '${r.station_type}', ${r.output_item_id}, ${r.cook_time_seconds || 'NULL'}, ${isOrderable}, ${difficulty})`;
                 }).join(',\n');
