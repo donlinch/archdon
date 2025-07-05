@@ -186,6 +186,32 @@
       text-align: center;
     }
     
+    .action-buttons {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    
+    .action-btn {
+      background-color: var(--card-bg-color);
+      color: var(--text-color);
+      border: 1px solid var(--border-color);
+      padding: 15px;
+      border-radius: 5px;
+      text-align: center;
+      font-size: 1em;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-decoration: none; /* For <a> tag */
+    }
+    
+    .action-btn:hover {
+      background-color: var(--secondary-color);
+      color: #fff;
+      border-color: var(--secondary-color);
+    }
+    
     .room-list {
       margin-bottom: 20px;
     }
@@ -483,41 +509,26 @@
     <div class="daily-task">
       <h2>每日任務</h2>
       <div class="ascii-art">
-  o==[]::::::::::::::> 
+          ◆◇◆◇◆◇◆◇◆
       </div>
-      <div id="daily-quests-container">
+      <div id="questList" class="quest-list">
         <p class="loading-text">正在加載每日任務...</p>
       </div>
     </div>
 
-    <div class="room-list">
+    <div class="action-buttons">
+      <button id="createRoomBtn" class="action-btn">[+] 創建房間</button>
+      <a href="/cook-leaderboard.html" class="action-btn">[⭐] 排行榜</a>
+    </div>
+    
+    <div id="roomList" class="room-list">
       <h2>
-        遊戲房間列表
-        <button class="refresh-btn" id="refreshRooms">[重新整理]</button>
+        <span>可加入的房間</span>
+        <button id="refreshRooms" class="refresh-btn">[刷新]</button>
       </h2>
-
-      <div class="room-grid" id="roomContainer">
-        <!-- 房間卡片範例 -->
-        <div class="room-card" data-room-id="room1">
-          <div class="room-status status-waiting">等待中</div>
-          <div class="room-name">廚藝大賽初級房</div>
-          <div class="room-info">
-            <span>難度: 簡單</span>
-            <span>玩家: 2/4</span>
-          </div>
-        </div>
-
-        <div class="room-card" data-room-id="room2">
-          <div class="room-status status-playing">遊戲中</div>
-          <div class="room-name">米其林大廚挑戰</div>
-          <div class="room-info">
-            <span>難度: 中級</span>
-            <span>玩家: 4/4</span>
-          </div>
-        </div>
+      <div id="roomGrid" class="room-grid">
+        <!-- Room cards will be inserted here -->
       </div>
-
-      <button class="create-room-btn" id="createRoomBtn">+ 創建房間</button>
     </div>
   </div>
 
@@ -526,15 +537,15 @@
       <div class="nav-icon">[♦]</div>
       遊戲大廳
     </div>
-    <div class="nav-item">
+    <div class="nav-item" data-page="leaderboard">
       <div class="nav-icon">[⭐]</div>
       排行榜
     </div>
-    <div class="nav-item">
+    <div class.nav-item" data-page="achievements">
       <div class="nav-icon">[✔]</div>
       成就
     </div>
-    <div class="nav-item">
+    <div class="nav-item" data-page="settings">
       <div class="nav-icon">[⚙]</div>
       設定
     </div>
@@ -564,6 +575,11 @@
 
       <button class="submit-btn" id="submitRoomBtn">確認創建</button>
     </div>
+  </div>
+
+  <div class="user-controls">
+    <!-- 管理員入口按鈕，根據用戶角色顯示或隱藏 -->
+    <button id="admin-panel-btn" class="admin-btn hidden">管理後台</button>
   </div>
 
   <script>
@@ -650,6 +666,9 @@
             
             // 連接WebSocket
             connectWebSocket();
+
+            // 檢查管理員權限
+            checkAdminAccess();
         })
         .catch(error => {
             console.error('獲取用戶資料失敗:', error);
@@ -664,7 +683,36 @@
         document.getElementById('refreshRooms').addEventListener('click', fetchGameRooms);
         document.getElementById('closeModalBtn').addEventListener('click', () => hideModal('createRoomModal'));
         document.getElementById('submitRoomBtn').addEventListener('click', createRoom);
+        
+        // 註冊導航欄點擊事件
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', handleNavigation);
+        });
     });
+
+    // 處理導航
+    function handleNavigation(event) {
+        const navItems = document.querySelectorAll('.nav-item');
+        navItems.forEach(item => item.classList.remove('active'));
+        
+        // 設置當前點擊的項目為活動狀態
+        event.currentTarget.classList.add('active');
+        
+        // 根據點擊的導航項執行相應操作
+        const navText = event.currentTarget.textContent.trim();
+        
+        if (navText.includes('排行榜')) {
+            // 導航到排行榜頁面
+            window.location.href = 'cook-leaderboard.html';
+        } else if (navText.includes('成就')) {
+            // 目前還沒有成就頁面，可以在這裡添加
+            alert('成就功能即將推出，敬請期待！');
+        } else if (navText.includes('設定')) {
+            // 目前還沒有設定頁面，可以在這裡添加
+            alert('設定功能即將推出，敬請期待！');
+        }
+        // 如果是大廳，則不需要做任何事情，因為已經在大廳頁面
+    }
 
     // 連接WebSocket
     function connectWebSocket() {
@@ -737,6 +785,14 @@ function handleSocketMessage(message) {
             // 例如：document.getElementById('userLevelDisplay').textContent = `Lv. ${message.newLevel}`;
             break;
         
+        case 'leaderboard':
+            window.location.href = 'cook-leaderboard.html';
+            break;
+        case 'achievements':
+            // 目前還沒有成就頁面，可以在這裡添加
+            alert('成就功能即將推出，敬請期待！');
+            break;
+        
         default:
             // 對於大廳頁面不關心的訊息（例如 'game_tick'），可以忽略
             // console.log('[Lobby WS] 收到未處理的訊息類型:', message.type);
@@ -785,7 +841,7 @@ function showSystemBroadcast(text) {
         })
         .then(response => response.json())
         .then(rooms => {
-            const roomList = document.getElementById('roomContainer');
+            const roomList = document.getElementById('roomGrid');
             roomList.innerHTML = '';
             
             if (rooms.length === 0) {
@@ -830,7 +886,7 @@ function showSystemBroadcast(text) {
         })
         .catch(error => {
             console.error('獲取房間列表失敗:', error);
-            document.getElementById('roomContainer').innerHTML = 
+            document.getElementById('roomGrid').innerHTML = 
                 '<div class="error-message">無法獲取房間列表，請稍後再試</div>';
         });
     }
@@ -917,14 +973,14 @@ function showSystemBroadcast(text) {
         })
         .catch(error => {
             console.error('獲取每日任務失敗:', error);
-            document.getElementById('daily-quests-container').innerHTML = 
+            document.getElementById('questList').innerHTML = 
                 '<p class="error-message">無法獲取每日任務，請稍後再試</p>';
         });
     }
     
     // 顯示每日任務
     function displayDailyQuests(quests) {
-        const container = document.getElementById('daily-quests-container');
+        const container = document.getElementById('questList');
         container.innerHTML = '';
         
         if (quests.length === 0) {
@@ -1012,6 +1068,30 @@ function showSystemBroadcast(text) {
             console.error('領取任務獎勵失敗:', error);
             alert(`領取獎勵失敗: ${error.message}`);
         });
+    }
+
+    // 在加載用戶資料後檢查是否為管理員
+    async function checkAdminAccess() {
+        try {
+            const response = await fetch('/api/user/role', {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('cookGameToken')}`
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                // 假設API返回用戶角色信息，包含isAdmin字段
+                if (data.isAdmin) {
+                    document.getElementById('admin-panel-btn').classList.remove('hidden');
+                    document.getElementById('admin-panel-btn').addEventListener('click', () => {
+                        window.location.href = '/cook-admin.html';
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('檢查管理員權限時出錯:', error);
+        }
     }
   </script>
 </body>

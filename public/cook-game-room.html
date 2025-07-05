@@ -461,6 +461,127 @@
             display: none;
         }
     }
+
+    .daily-quests {
+      background-color: var(--card-bg-color);
+      border: 1px solid var(--border-color);
+      border-radius: 5px;
+      margin-bottom: 20px;
+      animation: fadeIn 0.5s ease-in-out;
+    }
+
+    .daily-quests-header {
+      padding: 10px 15px;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 1.1em;
+      color: var(--secondary-color);
+    }
+
+    .daily-quests-list {
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .quest-item {
+      background-color: rgba(50, 50, 50, 0.5);
+      padding: 10px;
+      border-radius: 3px;
+      border-left: 3px solid var(--accent-color);
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    
+    .quest-item.completed {
+        border-left-color: var(--success-color);
+    }
+
+    .quest-description {
+      font-weight: bold;
+    }
+
+    .quest-progress-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.9em;
+      color: #aaa;
+    }
+
+    .quest-progress-bar-bg {
+      width: 70%;
+      background-color: #222;
+      border-radius: 10px;
+      height: 10px;
+      overflow: hidden;
+    }
+
+    .quest-progress-bar {
+      height: 100%;
+      background-color: var(--secondary-color);
+      border-radius: 10px;
+      width: 0%; /* Will be set by JS */
+      transition: width 0.5s ease;
+    }
+    
+    .quest-reward {
+      font-size: 0.9em;
+      color: var(--ready-color);
+      text-align: right;
+    }
+
+    .quest-status-completed {
+      color: var(--success-color);
+      font-weight: bold;
+    }
+
+    /* 任務完成通知 */
+    .quest-toast {
+      position: fixed;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #2d2d2d;
+      color: #fff;
+      padding: 15px 20px;
+      border-radius: 8px;
+      border: 1px solid var(--accent-color);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.5s, top 0.5s, visibility 0.5s;
+    }
+
+    .quest-toast.show {
+      opacity: 1;
+      top: 100px;
+      visibility: visible;
+    }
+
+    .toast-icon {
+      font-size: 2em;
+      color: var(--ready-color);
+    }
+    
+    .toast-content p {
+      margin: 0;
+      line-height: 1.3;
+    }
+
+    .toast-title {
+      font-weight: bold;
+    }
+
+    .toast-reward {
+      font-size: 0.9em;
+      color: #aaa;
+    }
   </style>
 </head>
 <body>
@@ -491,6 +612,13 @@
       </div>
       <div class="player-grid" id="playerContainer">
         <!-- 玩家卡片將透過JavaScript動態生成 -->
+      </div>
+    </div>
+
+    <div class="daily-quests">
+      <div class="daily-quests-header">今日任務</div>
+      <div class="daily-quests-list" id="dailyQuestsContainer">
+        <div class="system-message">正在讀取任務...</div>
       </div>
     </div>
 
@@ -654,6 +782,8 @@
         switch (message.type) {
           case 'auth_success':
             addSystemMessage('認證成功，正在加入房間...');
+            // 獲取每日任務
+            fetchDailyQuests();
             // 發送加入房間訊息
             if (currentUser) {
                 const rawRoomId = localStorage.getItem('currentRoomId');
@@ -719,6 +849,16 @@
             addSystemMessage(`錯誤: ${message.message}`);
             break;
             
+          case 'titles_unlocked':
+            handleTitlesUnlocked(message.titles);
+            break;
+            
+          case 'daily_quest_completed':
+            showQuestCompletedToast(message);
+            // 重新整理任務列表以顯示最新狀態
+            fetchDailyQuests();
+            break;
+            
           default:
             console.log('未處理的訊息類型:', message.type);
         }
@@ -754,28 +894,7 @@
         playerCountDisplay.textContent = `${players.length}/4`;
         
         players.forEach(player => {
-          const playerCard = document.createElement('div');
-          playerCard.className = 'player-card';
-          
-          if (currentUser && player.id === currentUser.user_id) {
-            playerCard.classList.add('current');
-          }
-          
-          const statusClass = player.ready ? 'status-ready' : '';
-          const avatarUrl = player.avatar || '/images/a01girlmove.gif';
-          const avatarInitial = player.username ? player.username.charAt(0).toUpperCase() : '?';
-
-          playerCard.innerHTML = `
-            <div class="player-avatar" style="background-image: url('${avatarUrl}'); background-size: cover; background-position: center;">
-              ${!player.avatar ? avatarInitial : ''}
-            </div>
-            <div class="player-info">
-              <div class="player-name">${player.username}</div>
-              <div class="player-level">Lv.${player.level}</div>
-            </div>
-            <div class="player-status ${statusClass}"></div>
-          `;
-          
+          const playerCard = renderPlayerCard(player, currentUser && player.id === currentUser.user_id);
           playerContainer.appendChild(playerCard);
           
           // 如果當前用戶已準備，更新按鈕狀態
@@ -784,6 +903,68 @@
             readyBtn.classList.add('active');
             readyBtn.textContent = '取消準備';
           }
+        });
+      }
+      
+      // 新增：獲取並渲染每日任務
+      async function fetchDailyQuests() {
+        const questsContainer = document.getElementById('dailyQuestsContainer');
+        try {
+          const response = await fetch('/api/daily-quests', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (!response.ok) {
+            throw new Error('無法獲取每日任務');
+          }
+          const data = await response.json();
+          if (data.success && data.quests) {
+            renderDailyQuests(data.quests);
+          } else {
+            questsContainer.innerHTML = '<div class="system-message">獲取任務失敗</div>';
+          }
+        } catch (error) {
+          console.error('獲取每日任務時出錯:', error);
+          questsContainer.innerHTML = '<div class="system-message">無法載入任務</div>';
+        }
+      }
+
+      function renderDailyQuests(quests) {
+        const questsContainer = document.getElementById('dailyQuestsContainer');
+        questsContainer.innerHTML = '';
+        
+        if (quests.length === 0) {
+          questsContainer.innerHTML = '<div class="system-message">今天沒有特別任務！</div>';
+          return;
+        }
+        
+        quests.forEach(quest => {
+          const progress = Math.min(quest.progress, quest.target);
+          const progressPercent = quest.target > 0 ? (progress / quest.target) * 100 : 100;
+          const isCompleted = quest.status === 'completed' || progress >= quest.target;
+          
+          const questElement = document.createElement('div');
+          questElement.className = `quest-item ${isCompleted ? 'completed' : ''}`;
+          
+          let progressHTML = `
+            <div class="quest-progress-container">
+              <span>進度: ${progress} / ${quest.target}</span>
+              <div class="quest-progress-bar-bg">
+                <div class="quest-progress-bar" style="width: ${progressPercent}%"></div>
+              </div>
+            </div>
+          `;
+          
+          if (isCompleted) {
+            progressHTML = `<div class="quest-status-completed">已完成 ✔</div>`;
+          }
+          
+          questElement.innerHTML = `
+            <div class="quest-description">${quest.description}</div>
+            ${progressHTML}
+            <div class="quest-reward">獎勵: ${quest.reward_points} 點</div>
+          `;
+
+          questsContainer.appendChild(questElement);
         });
       }
       
@@ -895,6 +1076,99 @@
         }
       }
       
+      // 處理稱號解鎖通知
+      function handleTitlesUnlocked(titles) {
+        if (!titles || titles.length === 0) return;
+        
+        // 創建通知元素
+        const notification = document.createElement('div');
+        notification.className = 'title-unlock-notification';
+        
+        let titlesHTML = '';
+        titles.forEach(title => {
+          titlesHTML += `
+            <div class="unlocked-title ${title.rarity}">
+              <span class="title-icon">🏆</span>
+              <span class="title-name">${title.title_name}</span>
+            </div>
+          `;
+        });
+        
+        notification.innerHTML = `
+          <div class="notification-header">
+            <h3>新稱號解鎖！</h3>
+            <button class="close-btn">×</button>
+          </div>
+          <div class="notification-content">
+            ${titlesHTML}
+          </div>
+          <div class="notification-footer">
+            <button class="view-titles-btn">查看我的稱號</button>
+          </div>
+        `;
+        
+        // 添加事件監聽器
+        notification.querySelector('.close-btn').addEventListener('click', () => {
+          document.body.removeChild(notification);
+        });
+        
+        notification.querySelector('.view-titles-btn').addEventListener('click', () => {
+          // 跳轉到稱號頁面
+          window.location.href = '/cook-titles.html';
+        });
+        
+        // 添加到頁面
+        document.body.appendChild(notification);
+        
+        // 播放音效
+        playSound('unlock');
+        
+        // 5秒後自動關閉
+        setTimeout(() => {
+          if (document.body.contains(notification)) {
+            document.body.removeChild(notification);
+          }
+        }, 5000);
+      }
+      
+      // 新增：顯示任務完成通知
+      function showQuestCompletedToast(questData) {
+        // 移除舊的通知
+        const existingToast = document.querySelector('.quest-toast');
+        if(existingToast) {
+          document.body.removeChild(existingToast);
+        }
+
+        // 創建新的通知元素
+        const toast = document.createElement('div');
+        toast.className = 'quest-toast';
+        toast.innerHTML = `
+          <div class="toast-icon">🏅</div>
+          <div class="toast-content">
+            <p class="toast-title">每日任務完成！</p>
+            <p>${questData.description || '一個任務已完成'}</p>
+            <p class="toast-reward">+${questData.rewardPoints || 0} 點獎勵</p>
+          </div>
+        `;
+        document.body.appendChild(toast);
+
+        // 顯示通知
+        setTimeout(() => {
+          toast.classList.add('show');
+        }, 100);
+
+        // 幾秒後自動隱藏
+        setTimeout(() => {
+          toast.classList.remove('show');
+          // 動畫結束後從DOM中移除
+          setTimeout(() => {
+            if (document.body.contains(toast)) {
+              document.body.removeChild(toast);
+            }
+          }, 500);
+        }, 4000);
+      }
+      
       // 註冊事件監聽器
       sendChatBtn.addEventListener('click', sendChatMessage);
       
@@ -915,6 +1189,32 @@
         }
       });
     });
+
+    function renderPlayerCard(player, isCurrentUser) {
+      const playerCard = document.createElement('div');
+      playerCard.className = `player-card ${player.ready ? 'ready' : ''} ${isCurrentUser ? 'current-user' : ''}`;
+      
+      let titleHTML = '';
+      if (player.equipped_title) {
+        titleHTML = `<div class="player-title ${player.equipped_title.rarity}" style="color: ${player.equipped_title.color_code || '#ffffff'}">
+          ${player.equipped_title.title_name}
+        </div>`;
+      }
+      
+      playerCard.innerHTML = `
+        <div class="player-avatar">
+          <img src="${player.avatar || '/images/default-avatar.png'}" alt="${player.username}">
+          <span class="player-level">Lv.${player.level || 1}</span>
+        </div>
+        <div class="player-info">
+          <div class="player-name">${player.display_name || player.username}</div>
+          ${titleHTML}
+          <div class="player-status">${player.ready ? '準備完成' : '未準備'}</div>
+        </div>
+      `;
+      
+      return playerCard;
+    }
   </script>
 </body>
 </html> 

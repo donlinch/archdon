@@ -811,6 +811,71 @@
       color: var(--secondary-color);
     }
 
+    /* 新增：每日任務進度樣式 */
+    .daily-quests-summary {
+      margin-top: 20px;
+      padding-top: 15px;
+      border-top: 1px solid var(--border-color);
+    }
+    
+    .quests-summary-title {
+      font-weight: bold;
+      color: var(--accent-color);
+      margin-bottom: 10px;
+      text-align: left;
+    }
+    
+    .quest-summary-item {
+      margin-bottom: 8px;
+      text-align: left;
+    }
+    
+    .quest-summary-desc {
+      font-size: 0.9em;
+    }
+    
+    .quest-summary-progress {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+      font-size: 0.8em;
+      color: #ccc;
+    }
+
+    .quest-summary-bar-bg {
+      flex-grow: 1;
+      height: 8px;
+      background-color: #333;
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .quest-summary-bar {
+      height: 100%;
+      background-color: var(--secondary-color);
+      border-radius: 4px;
+      transition: width 1s ease-in-out;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    
+    .quest-summary-bar.increase {
+        background-color: var(--accent-color);
+        z-index: 1;
+    }
+
+    .quest-summary-item.completed .quest-summary-desc {
+        color: var(--success-color);
+        text-decoration: line-through;
+    }
+    
+    .quest-summary-item.completed .quest-summary-bar {
+        background-color: var(--success-color);
+    }
+
     .assembly-plate {
         background-color: #161b22;
         border: 1px solid #30363d;
@@ -1039,6 +1104,70 @@
       font-size: 1em;
       color: #c9d1d9;
     }
+
+    .level-rewards-btn {
+        background-color: transparent;
+        color: var(--accent-color);
+        border: 1px solid var(--accent-color);
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-weight: bold;
+        cursor: pointer;
+        font-size: 0.8em;
+        margin-left: 10px;
+        align-self: center;
+        transition: all 0.2s ease;
+    }
+    .level-rewards-btn:hover {
+        background-color: var(--accent-color);
+        color: var(--bg-color);
+    }
+
+    #levelRewardsContent {
+        max-height: 60vh;
+        overflow-y: auto;
+        text-align: left;
+        padding: 0 10px;
+    }
+
+    .level-reward-item {
+        background-color: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 10px;
+    }
+
+    .level-reward-item h3 {
+        color: var(--accent-color);
+        margin-bottom: 10px;
+        border-bottom: 1px solid #30363d;
+        padding-bottom: 5px;
+        font-size: 1.2em;
+    }
+
+    .level-unlocks-list {
+        list-style: none;
+        padding: 0;
+    }
+
+    .level-unlock-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 0;
+        font-size: 1em;
+    }
+
+    .level-unlock-item .symbol {
+        font-size: 1.4em;
+        width: 30px;
+        text-align: center;
+    }
+
+    .level-unlock-item .name {
+        color: #c9d1d9;
+    }
   </style>
 </head>
 <body>
@@ -1052,7 +1181,10 @@
   <!-- 遊戲UI -->
   <div class="game-ui" id="gameUI">
     <div class="game-header">
-      <div id="userStatus" ...> ... </div>
+      <div style="display: flex; align-items: center; justify-self: start;">
+        <div id="userStatus" ...> ... </div>
+        <button id="levelRewardsBtn" class="level-rewards-btn">🏆 等級獎勵</button>
+      </div>
       <div class="game-score" id="gameScore">分數: 0</div>
       <div class="game-timer">
           <div id="gameTimerInner" class="game-timer-inner">03:00</div>
@@ -1111,6 +1243,11 @@
               <div class="stat-value" id="personalScore">0</div>
             </div>
           </div>
+          <!-- 新增：每日任務進度區塊 -->
+          <div class="daily-quests-summary" id="dailyQuestsSummary">
+            <div class="quests-summary-title">每日任務進度</div>
+            <!-- 任務進度將由JS動態生成於此 -->
+          </div>
           <!-- 新增：獎勵資訊區域 -->
           <div class="rewards-container" id="rewardsContainer" style="margin-top: 15px; padding: 10px; background-color: rgba(0, 0, 0, 0.2); border-radius: 5px;">
             <div class="reward-title" style="font-weight: bold; color: #FFD700; margin-bottom: 5px;">獲得獎勵</div>
@@ -1144,6 +1281,17 @@
     <!-- 提示通知 -->
     <div class="toast" id="toast"></div>
     
+    <!-- 等級獎勵預覽 Dialog -->
+    <div class="dialog" id="levelRewardsDialog" style="display: none;">
+      <div class="dialog-content">
+        <div class="dialog-title">等級獎勵一覽</div>
+        <div id="levelRewardsContent">
+          <!-- 等級獎勵將由JS動態生成於此 -->
+        </div>
+        <button class="dialog-button" id="closeLevelRewardsBtn">關閉</button>
+      </div>
+    </div>
+
     <!-- 食材選擇菜單 -->
     <div class="ingredients-menu" id="ingredientsMenu">
       <div class="ingredients-menu-header">
@@ -1197,6 +1345,11 @@
       const personalScore = document.getElementById('personalScore');
       const returnToLobbyBtn = document.getElementById('returnToLobbyBtn');
       const toast = document.getElementById('toast');
+      const levelRewardsBtn = document.getElementById('levelRewardsBtn');
+      const levelRewardsDialog = document.getElementById('levelRewardsDialog');
+      const closeLevelRewardsBtn = document.getElementById('closeLevelRewardsBtn');
+      const levelRewardsContent = document.getElementById('levelRewardsContent');
+      let levelRewardsData = null; // Cache for reward data
       
       // 遊戲狀態
       let gameState = {
@@ -2345,22 +2498,33 @@
           console.log('遊戲結束，結算數據:', gameOverData);
           
           // 更新結算畫面數據
-          document.getElementById('finalScore').textContent = gameOverData.teamScore || 0;
+          document.getElementById('finalScore').textContent = gameOverData.finalScore || 0;
           document.getElementById('completedOrders').textContent = gameOverData.completedOrders || 0;
-          document.getElementById('personalScore').textContent = gameOverData.personalScore || 0;
+          
+          // 獲取當前玩家ID
+          const currentPlayerId = gameState.currentPlayer?.user_id;
+          if (currentPlayerId) {
+            document.getElementById('personalScore').textContent = gameOverData.playerScores[currentPlayerId] || 0;
+          }
           
           // 如果有獎勵數據，更新獎勵區域
-          if (gameOverData.rewards) {
-              document.getElementById('basePoints').textContent = gameOverData.rewards.basePoints || 0;
-              document.getElementById('questReward').textContent = gameOverData.rewards.questReward || 0;
-              document.getElementById('expGained').textContent = gameOverData.rewards.expGained || 0;
+          if (gameOverData.rewards && currentPlayerId && gameOverData.rewards[currentPlayerId]) {
+              const playerRewards = gameOverData.rewards[currentPlayerId];
+              document.getElementById('basePoints').textContent = (playerRewards.pointsEarned - (playerRewards.questReward || 0)) || 0;
+              document.getElementById('questReward').textContent = playerRewards.questReward || 0;
+              document.getElementById('expGained').textContent = playerRewards.expGained || 0;
               
+              // 渲染每日任務進度
+              if (playerRewards.dailyQuestUpdates) {
+                  renderQuestSummary(playerRewards.dailyQuestUpdates);
+              }
+
               // 如果有等級進度，顯示進度條
-              if (gameOverData.rewards.levelProgress) {
+              if (playerRewards.levelProgress) {
                   document.getElementById('levelProgress').textContent = 
-                      `${gameOverData.rewards.levelProgress.current}/${gameOverData.rewards.levelProgress.next}`;
+                      `${playerRewards.levelProgress.current}/${playerRewards.levelProgress.next}`;
                   document.getElementById('levelProgressBar').style.width = 
-                      `${(gameOverData.rewards.levelProgress.current / gameOverData.rewards.levelProgress.next) * 100}%`;
+                      `${(playerRewards.levelProgress.current / playerRewards.levelProgress.next) * 100}%`;
                   document.getElementById('levelProgressContainer').style.display = 'block';
               }
           }
@@ -2372,6 +2536,56 @@
           document.getElementById('returnToLobbyBtn').onclick = () => {
               window.location.href = '/cook-lobby.html';
           };
+      }
+
+      // 新增：渲染結算畫面的任務進度
+      function renderQuestSummary(questUpdates) {
+        const summaryContainer = document.getElementById('dailyQuestsSummary');
+        summaryContainer.innerHTML = '<div class="quests-summary-title">每日任務進度</div>'; // 重置
+
+        if (!questUpdates || questUpdates.length === 0) {
+            const noUpdateEl = document.createElement('div');
+            noUpdateEl.className = 'quest-summary-item';
+            noUpdateEl.textContent = '本次遊戲沒有更新每日任務進度。';
+            summaryContainer.appendChild(noUpdateEl);
+            return;
+        }
+
+        questUpdates.forEach(quest => {
+            const itemEl = document.createElement('div');
+            itemEl.className = 'quest-summary-item';
+            
+            const oldProgressPercent = (quest.oldProgress / quest.target) * 100;
+            const newProgressPercent = (quest.newProgress / quest.target) * 100;
+            const increasePercent = newProgressPercent - oldProgressPercent;
+
+            itemEl.innerHTML = `
+                <div class="quest-summary-desc">${quest.description}</div>
+                <div class="quest-summary-progress">
+                    <span>${quest.oldProgress}/${quest.target}</span>
+                    <div class="quest-summary-bar-bg">
+                        <div class="quest-summary-bar" style="width: ${oldProgressPercent}%"></div>
+                        <div class="quest-summary-bar increase" style="width: 0%; left: ${oldProgressPercent}%"></div>
+                    </div>
+                    <span>${quest.newProgress}/${quest.target}</span>
+                </div>
+            `;
+            summaryContainer.appendChild(itemEl);
+
+            // 觸發進度條動畫
+            setTimeout(() => {
+                const increaseBar = itemEl.querySelector('.increase');
+                if (increaseBar) {
+                    increaseBar.style.width = `${increasePercent}%`;
+                
+                    // 檢查是否完成
+                    if (quest.completed || quest.newProgress >= quest.target) {
+                        itemEl.classList.add('completed');
+                        increaseBar.style.backgroundColor = 'var(--success-color)';
+                    }
+                }
+            }, 200);
+        });
       }
 
       // 新增：顯示升級通知
@@ -3136,6 +3350,81 @@ function updateOrderTimers(gameTimeRemaining) {
           }
           
           console.log('庫存顯示已更新');
+      }
+
+      // =================================================================
+      // 等級獎勵功能
+      // =================================================================
+      levelRewardsBtn.addEventListener('click', () => {
+          showLevelRewards();
+      });
+
+      closeLevelRewardsBtn.addEventListener('click', () => {
+          levelRewardsDialog.style.display = 'none';
+      });
+
+      async function showLevelRewards() {
+          levelRewardsDialog.style.display = 'flex';
+          
+          if (!levelRewardsData) {
+              levelRewardsContent.innerHTML = '<p>載入獎勵資訊中...</p>';
+              try {
+                  const token = localStorage.getItem('cookGameToken');
+                  const response = await fetch('/cook-api/level-rewards', {
+                      headers: { 'Authorization': `Bearer ${token}` }
+                  });
+                  
+                  if (!response.ok) {
+                      throw new Error('無法獲取等級獎勵資訊');
+                  }
+                  
+                  levelRewardsData = await response.json();
+                  renderLevelRewards(levelRewardsData);
+
+              } catch (error) {
+                  console.error('獲取等級獎勵失敗:', error);
+                  levelRewardsContent.innerHTML = '<p>無法載入獎勵資訊，請稍後再試。</p>';
+              }
+          } else {
+              renderLevelRewards(levelRewardsData);
+          }
+      }
+
+      function renderLevelRewards(rewards) {
+          if (!rewards || rewards.length === 0) {
+              levelRewardsContent.innerHTML = '<p>目前沒有可預覽的等級獎勵。</p>';
+              return;
+          }
+
+          levelRewardsContent.innerHTML = '';
+
+          rewards.forEach(levelInfo => {
+              const itemEl = document.createElement('div');
+              itemEl.className = 'level-reward-item';
+
+              let unlocksHTML = '<ul class="level-unlocks-list">';
+              if (levelInfo.unlocks && levelInfo.unlocks.length > 0) {
+                  levelInfo.unlocks.forEach(unlock => {
+                      const name = unlock.name || getItemName(unlock.id);
+                      const symbol = unlock.symbol || getItemSymbol(unlock.id);
+                      unlocksHTML += `
+                          <li class="level-unlock-item">
+                              <span class="symbol">${symbol}</span>
+                              <span class="name">${name} (${unlock.type === 'recipe' ? '食譜' : '食材'})</span>
+                          </li>
+                      `;
+                  });
+              } else {
+                  unlocksHTML += '<li>無特別獎勵</li>';
+              }
+              unlocksHTML += '</ul>';
+
+              itemEl.innerHTML = `
+                  <h3>等級 ${levelInfo.level} (EXP: ${levelInfo.exp_required})</h3>
+                  ${unlocksHTML}
+              `;
+              levelRewardsContent.appendChild(itemEl);
+          });
       }
     });
   </script>

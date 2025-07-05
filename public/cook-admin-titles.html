@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>稱號管理 - 料理急先鋒</title>
+  <link rel="stylesheet" href="/css/cook-admin.css">
+</head>
+<body>
+  <div class="admin-container">
+    <div class="admin-sidebar">
+      <h2>管理後台</h2>
+      <nav>
+        <a href="/cook-admin.html">總覽</a>
+        <a href="/cook-admin-items.html">物品管理</a>
+        <a href="/cook-admin-recipes.html">食譜管理</a>
+        <a href="/cook-admin-titles.html" class="active">稱號管理</a>
+        <a href="/cook-admin-quests.html">任務管理</a>
+        <a href="/cook-lobby.html">返回遊戲</a>
+      </nav>
+    </div>
+    
+    <div class="admin-content">
+      <h1>稱號管理</h1>
+      
+      <div class="action-bar">
+        <button id="add-title-btn" class="primary-btn">新增稱號</button>
+      </div>
+      
+      <div class="titles-list">
+        <table id="titles-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>稱號名稱</th>
+              <th>稀有度</th>
+              <th>解鎖條件</th>
+              <th>解鎖值</th>
+              <th>狀態</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- 由JavaScript動態生成 -->
+            <tr>
+              <td colspan="7" class="loading">載入中...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 編輯稱號對話框 -->
+  <div id="title-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modal-title">編輯稱號</h2>
+        <span class="close">&times;</span>
+      </div>
+      <div class="modal-body">
+        <form id="title-form">
+          <input type="hidden" id="title-id">
+          
+          <div class="form-group">
+            <label for="title-id-str">稱號ID</label>
+            <input type="text" id="title-id-str" required>
+            <small>唯一識別符，如 "master_chef"</small>
+          </div>
+          
+          <div class="form-group">
+            <label for="title-name">稱號名稱</label>
+            <input type="text" id="title-name" required>
+            <small>顯示給玩家的名稱</small>
+          </div>
+          
+          <div class="form-group">
+            <label for="title-description">稱號描述</label>
+            <textarea id="title-description"></textarea>
+          </div>
+          
+          <div class="form-group">
+            <label for="title-rarity">稀有度</label>
+            <select id="title-rarity" required>
+              <option value="common">普通</option>
+              <option value="uncommon">不普通</option>
+              <option value="rare">稀有</option>
+              <option value="epic">史詩</option>
+              <option value="legendary">傳說</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="title-unlock-condition">解鎖條件</label>
+            <select id="title-unlock-condition" required>
+              <option value="level">等級達到</option>
+              <option value="points">積分達到</option>
+              <option value="games_played">遊戲場次達到</option>
+              <option value="orders_completed">完成訂單數達到</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="title-unlock-value">解鎖值</label>
+            <input type="number" id="title-unlock-value" min="1" required>
+            <small>達到此數值時解鎖稱號</small>
+          </div>
+          
+          <div class="form-group">
+            <label for="title-color">文字顏色</label>
+            <input type="color" id="title-color" value="#ffffff">
+            <input type="text" id="title-color-code" placeholder="#FFFFFF">
+          </div>
+          
+          <div class="form-group">
+            <label for="title-icon">圖標URL</label>
+            <input type="text" id="title-icon-url">
+            <small>可選，稱號的小圖標</small>
+          </div>
+          
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="title-active" checked>
+              啟用此稱號
+            </label>
+          </div>
+          
+          <div class="form-actions">
+            <button type="submit" class="primary-btn">保存</button>
+            <button type="button" class="cancel-btn">取消</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // 載入所有稱號
+    async function loadTitles() {
+      try {
+        const token = localStorage.getItem('cookGameToken');
+        if (!token) {
+          window.location.href = '/cook-login.html?redirect=/cook-admin-titles.html';
+          return;
+        }
+        
+        const response = await fetch('/admin/titles', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.status === 401) {
+          // 未認證，重定向到登入頁面
+          window.location.href = '/cook-login.html?redirect=/cook-admin-titles.html';
+          return;
+        }
+        
+        if (response.status === 403) {
+          // 無權限訪問
+          showNotification('您沒有管理員權限訪問此頁面', 'error');
+          setTimeout(() => {
+            window.location.href = '/cook-lobby.html';
+          }, 2000);
+          return;
+        }
+        
+        if (!response.ok) {
+          throw new Error('獲取稱號列表失敗');
+        }
+        
+        const titles = await response.json();
+        displayTitles(titles);
+      } catch (error) {
+        console.error('載入稱號失敗:', error);
+        showNotification('載入稱號列表失敗', 'error');
+      }
+    }
+    
+    // 顯示稱號列表
+    function displayTitles(titles) {
+      const tbody = document.querySelector('#titles-table tbody');
+      tbody.innerHTML = '';
+      
+      if (titles.length === 0) {
+        const row = document.createElement('tr');
+        row.innerHTML = '<td colspan="7" class="no-data">沒有稱號數據</td>';
+        tbody.appendChild(row);
+        return;
+      }
+      
+      titles.forEach(title => {
+        const row = document.createElement('tr');
+        
+        // 根據稀有度添加類名
+        row.className = `rarity-${title.rarity}`;
+        
+        row.innerHTML = `
+          <td>${title.title_id}</td>
+          <td>
+            <div class="title-name-display">
+              ${title.icon_url ? `<img src="${title.icon_url}" alt="" class="title-icon">` : ''}
+              <span style="color: ${title.color_code || '#ffffff'}">${title.title_name}</span>
+            </div>
+          </td>
+          <td>${getRarityText(title.rarity)}</td>
+          <td>${getConditionText(title.unlock_condition)}</td>
+          <td>${title.unlock_value}</td>
+          <td>${title.is_active ? '<span class="status active">啟用</span>' : '<span class="status inactive">停用</span>'}</td>
+          <td class="actions">
+            <button class="edit-btn" data-id="${title.id}">編輯</button>
+            <button class="delete-btn" data-id="${title.id}">刪除</button>
+          </td>
+        `;
+        
+        tbody.appendChild(row);
+      });
+      
+      // 添加編輯按鈕事件監聽
+      document.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', () => editTitle(btn.dataset.id));
+      });
+      
+      // 添加刪除按鈕事件監聽
+      document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', () => deleteTitle(btn.dataset.id));
+      });
+    }
+    
+    // 獲取稱號稀有度文字
+    function getRarityText(rarity) {
+      const rarityMap = {
+        'common': '普通',
+        'uncommon': '不普通',
+        'rare': '稀有',
+        'epic': '史詩',
+        'legendary': '傳說'
+      };
+      
+      return rarityMap[rarity] || rarity;
+    }
+    
+    // 獲取解鎖條件文字
+    function getConditionText(condition) {
+      const conditionMap = {
+        'level': '等級達到',
+        'points': '積分達到',
+        'games_played': '遊戲場次達到',
+        'orders_completed': '完成訂單數達到'
+      };
+      
+      return conditionMap[condition] || condition;
+    }
+    
+    // 編輯稱號
+    async function editTitle(id) {
+      try {
+        const token = localStorage.getItem('cookGameToken');
+        if (!token) {
+          window.location.href = '/cook-login.html?redirect=/cook-admin-titles.html';
+          return;
+        }
+        
+        const response = await fetch(`/admin/titles/${id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.status === 401 || response.status === 403) {
+          showNotification('無權訪問', 'error');
+          return;
+        }
+        
+        if (!response.ok) {
+          throw new Error('獲取稱號詳情失敗');
+        }
+        
+        const title = await response.json();
+        
+        // 填充表單
+        document.getElementById('title-id').value = title.id;
+        document.getElementById('title-id-str').value = title.title_id;
+        document.getElementById('title-name').value = title.title_name;
+        document.getElementById('title-description').value = title.title_description || '';
+        document.getElementById('title-rarity').value = title.rarity;
+        document.getElementById('title-unlock-condition').value = title.unlock_condition;
+        document.getElementById('title-unlock-value').value = title.unlock_value;
+        document.getElementById('title-color').value = title.color_code || '#ffffff';
+        document.getElementById('title-color-code').value = title.color_code || '#ffffff';
+        document.getElementById('title-icon-url').value = title.icon_url || '';
+        document.getElementById('title-active').checked = title.is_active;
+        
+        // 更新模態框標題
+        document.getElementById('modal-title').textContent = '編輯稱號';
+        
+        // 顯示模態框
+        document.getElementById('title-modal').style.display = 'block';
+      } catch (error) {
+        console.error('載入稱號詳情失敗:', error);
+        showNotification('載入稱號詳情失敗', 'error');
+      }
+    }
+    
+    // 新增稱號
+    function addTitle() {
+      const token = localStorage.getItem('cookGameToken');
+      if (!token) {
+        window.location.href = '/cook-login.html?redirect=/cook-admin-titles.html';
+        return;
+      }
+      
+      // 重置表單
+      document.getElementById('title-form').reset();
+      document.getElementById('title-id').value = '';
+      
+      // 更新模態框標題
+      document.getElementById('modal-title').textContent = '新增稱號';
+      
+      // 顯示模態框
+      document.getElementById('title-modal').style.display = 'block';
+    }
+    
+    // 保存稱號
+    async function saveTitle(event) {
+      event.preventDefault();
+      
+      const token = localStorage.getItem('cookGameToken');
+      if (!token) {
+        window.location.href = '/cook-login.html?redirect=/cook-admin-titles.html';
+        return;
+      }
+      
+      const titleId = document.getElementById('title-id').value;
+      const titleData = {
+        title_id: document.getElementById('title-id-str').value,
+        title_name: document.getElementById('title-name').value,
+        title_description: document.getElementById('title-description').value,
+        rarity: document.getElementById('title-rarity').value,
+        unlock_condition: document.getElementById('title-unlock-condition').value,
+        unlock_value: parseInt(document.getElementById('title-unlock-value').value),
+        color_code: document.getElementById('title-color-code').value,
+        icon_url: document.getElementById('title-icon-url').value,
+        is_active: document.getElementById('title-active').checked
+      };
+      
+      if (titleId) {
+        titleData.id = titleId;
+      }
+      
+      try {
+        const response = await fetch('/admin/titles', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(titleData)
+        });
+        
+        if (response.status === 401) {
+          window.location.href = '/cook-login.html?redirect=/cook-admin-titles.html';
+          return;
+        }
+        
+        if (response.status === 403) {
+          showNotification('您沒有權限執行此操作', 'error');
+          return;
+        }
+        
+        if (!response.ok) {
+          throw new Error('保存稱號失敗');
+        }
+        
+        // 關閉模態框
+        document.getElementById('title-modal').style.display = 'none';
+        
+        // 重新載入稱號列表
+        loadTitles();
+        
+        showNotification('稱號已成功保存');
+      } catch (error) {
+        console.error('保存稱號失敗:', error);
+        showNotification('保存稱號失敗', 'error');
+      }
+    }
+    
+    // 刪除稱號
+    async function deleteTitle(id) {
+      const token = localStorage.getItem('cookGameToken');
+      if (!token) {
+        window.location.href = '/cook-login.html?redirect=/cook-admin-titles.html';
+        return;
+      }
+      
+      if (!confirm('確定要刪除這個稱號嗎？此操作不可恢復。')) {
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/admin/titles/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.status === 401) {
+          window.location.href = '/cook-login.html?redirect=/cook-admin-titles.html';
+          return;
+        }
+        
+        if (response.status === 403) {
+          showNotification('您沒有權限執行此操作', 'error');
+          return;
+        }
+        
+        if (!response.ok) {
+          throw new Error('刪除稱號失敗');
+        }
+        
+        // 重新載入稱號列表
+        loadTitles();
+        
+        showNotification('稱號已成功刪除');
+      } catch (error) {
+        console.error('刪除稱號失敗:', error);
+        showNotification('刪除稱號失敗', 'error');
+      }
+    }
+    
+    // 顯示通知
+    function showNotification(message, type = 'success') {
+      const notification = document.createElement('div');
+      notification.className = `notification ${type}`;
+      notification.textContent = message;
+      
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        notification.classList.add('show');
+      }, 10);
+      
+      setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+          document.body.removeChild(notification);
+        }, 300);
+      }, 3000);
+    }
+    
+    // 顏色選擇器同步
+    document.getElementById('title-color').addEventListener('input', function() {
+      document.getElementById('title-color-code').value = this.value;
+    });
+    
+    document.getElementById('title-color-code').addEventListener('input', function() {
+      document.getElementById('title-color').value = this.value;
+    });
+    
+    // 註冊事件監聽器
+    document.getElementById('add-title-btn').addEventListener('click', addTitle);
+    document.getElementById('title-form').addEventListener('submit', saveTitle);
+    document.querySelector('.close').addEventListener('click', () => {
+      document.getElementById('title-modal').style.display = 'none';
+    });
+    document.querySelector('.cancel-btn').addEventListener('click', () => {
+      document.getElementById('title-modal').style.display = 'none';
+    });
+    
+    // 點擊模態框外部關閉
+    window.addEventListener('click', (event) => {
+      const modal = document.getElementById('title-modal');
+      if (event.target === modal) {
+        modal.style.display = 'none';
+      }
+    });
+    
+    // 頁面載入時獲取稱號列表
+    document.addEventListener('DOMContentLoaded', () => {
+      loadTitles();
+    });
+  </script>
+</body>
+</html>

@@ -249,10 +249,21 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
      * @returns {Promise<boolean>} 是否有任務完成
      */
     async function updateDailyQuestProgress(userId, questType, progress) {
+        const updatedQuestsInfo = [];
         try {
             // 獲取今天的日期
             const today = new Date();
             today.setHours(0, 0, 0, 0);
+
+            // 獲取任務更新前的狀態
+            const beforeUpdateResult = await pool.query(`
+                SELECT id, progress FROM cook_daily_quests
+                WHERE user_id = $1
+                  AND quest_type = $2
+                  AND status = 'active'
+                  AND created_at >= $3
+            `, [userId, questType, today]);
+            const initialProgressMap = new Map(beforeUpdateResult.rows.map(q => [q.id, q.progress]));
             
             // 更新指定類型的活躍每日任務
             const updateResult = await pool.query(`
@@ -266,14 +277,26 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
             `, [progress, userId, questType, today]);
             
             if (updateResult.rows.length === 0) {
-                return false;
+                return [];
             }
             
             // 檢查任務是否完成
             const updatedQuests = updateResult.rows;
-            let questCompleted = false;
             
             for (const quest of updatedQuests) {
+                const initialProgress = initialProgressMap.get(quest.id) || 0;
+                let questCompleted = false;
+
+                // 將更新資訊加入陣列
+                const questUpdateInfo = {
+                    description: quest.description,
+                    oldProgress: initialProgress,
+                    newProgress: quest.progress,
+                    target: quest.target,
+                    completed: false,
+                    rewardPoints: quest.reward_points
+                };
+
                 if (quest.progress >= quest.target && quest.status === 'active') {
                     // 將任務標記為完成
                     await pool.query(`
@@ -290,6 +313,7 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
                     `, [quest.reward_points, userId]);
                     
                     questCompleted = true;
+                    questUpdateInfo.completed = true;
                     
                     console.log(`[每日任務] 用戶 ${userId} 完成了每日任務 ${quest.id}，獲得 ${quest.reward_points} 點獎勵`);
                     
@@ -304,13 +328,14 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
                         }));
                     }
                 }
+                updatedQuestsInfo.push(questUpdateInfo);
             }
             
-            return questCompleted;
+            return updatedQuestsInfo;
             
         } catch (error) {
             console.error('[每日任務] 更新每日任務進度時出錯:', error);
-            return false;
+            return [];
         }
     }
 
@@ -401,65 +426,50 @@ const isAdmin = async (req, res, next) => {
             res.json(result.rows);
         } catch (error) {
             console.error('Error fetching all items:', error);
-            res.status(500).json({ success: false, error: '無法獲取物品列表' });
+            res.status(500).json({ success: false, message: '獲取物品列表失敗' });
         }
     });
-    // API: 獲取所有食譜及其需求 (修正版)
+
+    // 增強版：獲取所有食譜，包含其組成成分
     cookGameApp.get('/admin/all-recipes', authenticateToken, isAdmin, async (req, res) => {
-        const client = await pool.connect();
         try {
-            // 1. 獲取所有食譜的基礎資料，並 JOIN 產出物的名稱
-            const recipesResult = await client.query(`
+            const query = `
                 SELECT 
-                    r.id AS recipe_db_id,
+                    r.id, 
                     r.recipe_id, 
+                    r.recipe_name, 
                     r.station_type, 
-                    r.output_item_id, 
-                    r.cook_time_seconds,
-                    r.is_orderable,
+                    r.output_item_id,
+                    out_item.item_name as output_item_name,
+                    out_item.item_id as output_item_id_str,
+                    r.cooking_time_ms, 
+                    r.is_orderable, 
                     r.difficulty,
-                    r.recipe_name,
-                    i_out.item_name AS output_item_name
-                FROM cook_recipes_v2 r
-                JOIN cook_items i_out ON r.output_item_id = i_out.id
-                ORDER BY r.id ASC
-            `);
-            const recipes = recipesResult.rows;
-
-            // 2. 獲取所有食譜的需求，並 JOIN 需求物品的名稱
-            const requirementsResult = await client.query(`
-                SELECT 
-                    req.recipe_id, 
-                    req.required_item_id, 
-                    req.quantity,
-                    i.item_id,
-                    i.item_name
-                FROM cook_recipe_requirements_v2 req
-                JOIN cook_items i ON req.required_item_id = i.id
-            `);
-
-            // 3. 將需求資料映射到對應的食譜
-            const recipesWithRequirements = recipes.map(recipe => {
-                const requirements = requirementsResult.rows
-                    .filter(req => req.recipe_id === recipe.recipe_db_id)
-                    .map(req => ({
-                        item_id: req.item_id,
-                        item_name: req.item_name,
-                        quantity: req.quantity
-                    }));
-
-                return {
-                    ...recipe,
-                    requirements
-                };
-            });
-
-            res.json(recipesWithRequirements);
+                    r.description,
+                    COALESCE(
+                        (SELECT json_agg(json_build_object(
+                            'required_item_id', req.required_item_id,
+                            'item_id_str', req_item.item_id,
+                            'item_name', req_item.item_name,
+                            'quantity', req.quantity
+                        ))
+                        FROM cook_recipe_requirements_v2 req
+                        JOIN cook_items req_item ON req.required_item_id = req_item.id
+                        WHERE req.recipe_id = r.id),
+                        '[]'::json
+                    ) as requirements
+                FROM 
+                    cook_recipes_v2 r
+                JOIN 
+                    cook_items out_item ON r.output_item_id = out_item.id
+                ORDER BY 
+                    r.id ASC;
+            `;
+            const result = await pool.query(query);
+            res.json(result.rows);
         } catch (error) {
-            console.error('Error fetching all recipes:', error);
-            res.status(500).json({ success: false, error: '無法獲取食譜列表' });
-        } finally {
-            client.release();
+            console.error('Error fetching all recipes with requirements:', error);
+            res.status(500).json({ success: false, message: '獲取食譜列表失敗' });
         }
     });
 
@@ -512,9 +522,9 @@ const isAdmin = async (req, res, next) => {
                     r.id AS recipe_db_id,
                     r.recipe_id, 
                     r.station_type, 
-                    r.output_item_id, 
+                    r.output_item_id,
                     r.cook_time_seconds,
-                    r.is_orderable,
+                    r.is_orderable, 
                     r.difficulty,
                     r.recipe_name,
                     i_out.item_name AS output_item_name,
@@ -547,7 +557,7 @@ const isAdmin = async (req, res, next) => {
                     req.quantity,
                     i.item_id,
                     i.item_name
-                FROM cook_recipe_requirements_v2 req
+                        FROM cook_recipe_requirements_v2 req
                 JOIN cook_items i ON req.required_item_id = i.id
             `;
             
@@ -853,7 +863,7 @@ const isAdmin = async (req, res, next) => {
         const client = await pool.connect();
         try {
             await client.query('BEGIN');
-            
+
             const roomResult = await client.query('SELECT * FROM cook_game_rooms WHERE room_id = $1 FOR UPDATE', [roomId]);
             if (roomResult.rows.length === 0) {
                 await client.query('ROLLBACK');
@@ -888,6 +898,7 @@ const isAdmin = async (req, res, next) => {
                     finalStats.rewards[player.id] = {
                         pointsEarned: player.pointsEarned || 0,
                         questReward: player.questReward || 0,
+                        dailyQuestUpdates: player.dailyQuestUpdates || [] // 附上每日任務進度更新
                     };
                 });
             }
@@ -903,7 +914,7 @@ const isAdmin = async (req, res, next) => {
             });
             
             console.log(`[COOK-GAME] 房間 ${roomId} 的遊戲已結束，最終分數: ${finalStats.totalScore}`);
-            
+
             await client.query('COMMIT');
         } catch (error) {
             await client.query('ROLLBACK');
@@ -933,6 +944,21 @@ const isAdmin = async (req, res, next) => {
             for (const player of gameState.players) {
                 const userId = player.id;
                 if (!userId) continue;
+
+                // ★ 新增：更新每日任務進度並收集結果
+                console.log(`[每日任務] 正在為玩家 ${userId} 更新遊戲結束後的每日任務進度...`);
+                player.dailyQuestUpdates = [];
+                const gameUpdates = await updateDailyQuestProgress(userId, 'complete_games', 1);
+                player.dailyQuestUpdates.push(...gameUpdates);
+                const pointUpdates = await updateDailyQuestProgress(userId, 'earn_points', basePoints);
+                player.dailyQuestUpdates.push(...pointUpdates);
+                const orderUpdates = await updateDailyQuestProgress(userId, 'complete_orders', completedOrders);
+                player.dailyQuestUpdates.push(...orderUpdates);
+
+                // ★ 待辦：處理 'complete_difficulty_orders' 類型的每日任務。
+                // 目前 cook_daily_quests 表缺少 target_difficulty 欄位，因此暫時無法處理。
+                // 未來可考慮擴充資料庫欄位以支援此功能。
+
 
                 // 計算玩家獲得的經驗值和點數
                 let pointsEarned = basePoints;
@@ -1108,6 +1134,28 @@ const isAdmin = async (req, res, next) => {
         } catch (error) {
             console.error(`[COOK-GAME] 更新玩家統計數據時出錯:`, error);
         }
+
+        const newUnlockedTitles = await checkTitleUnlocks(userId);
+        if (newUnlockedTitles.length > 0) {
+            console.log(`[COOK-GAME] 玩家 ${userId} 解鎖了 ${newUnlockedTitles.length} 個新稱號`);
+            
+            // 向玩家發送稱號解鎖通知
+            const playerWs = activeConnections.get(userId);
+            if (playerWs && playerWs.readyState === WebSocket.OPEN) {
+                playerWs.send(JSON.stringify({
+                    type: 'titles_unlocked',
+                    titles: newUnlockedTitles.map(title => ({
+                        title_id: title.title_id,
+                        title_name: title.title_name,
+                        rarity: title.rarity
+                    }))
+                }));
+            }
+        }
+
+
+
+
     }
     
     // ★ 新增：根據任務難度獲取獎勵點數
@@ -1165,8 +1213,7 @@ const isAdmin = async (req, res, next) => {
                 }
                 
                 // 使用系統廣播通知其他玩家
-                const playerDataResult = await pool.query('SELECT username, display_name FROM cook_users WHERE user_id = $1', [userId]);
-                if (playerDataResult.rows.length > 0) {
+                const playerDataResult = await pool.query('SELECT username, display_name FROM box_users WHERE user_id = $1', [userId]);                if (playerDataResult.rows.length > 0) {
                     const playerName = playerDataResult.rows[0].display_name || playerDataResult.rows[0].username;
                     broadcastSystemMessage(`恭喜玩家 ${playerName} 升級到 ${newLevel} 級！`);
                 }
@@ -1229,11 +1276,11 @@ const isAdmin = async (req, res, next) => {
                     console.log(`[COOK-GAME] 玩家 ${username} (ID: ${userId}) 在緩衝時間內重新連線，取消離開操作。`);
                     clearTimeout(disconnectionTimers.get(userId));
                     disconnectionTimers.delete(userId);
-                }
+        }
 
-                const client = await pool.connect();
-                try {
-                    await client.query('BEGIN');
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
                     const roomResult = await client.query('SELECT * FROM cook_game_rooms WHERE room_id = $1 FOR UPDATE', [roomId]);
                     if (roomResult.rows.length === 0) {
                         ws.send(JSON.stringify({ type: 'error', message: '找不到對應的遊戲房間，將返回大廳。' }));
@@ -1254,7 +1301,7 @@ const isAdmin = async (req, res, next) => {
 
                     if (room.status === 'waiting' && gameState.players.length >= 4 && !gameState.players.some(p => p.id === userId)) {
                         ws.send(JSON.stringify({ type: 'error', message: '房間已滿' }));
-                        await client.query('ROLLBACK');
+                await client.query('ROLLBACK');
                         return;
                     }
 
@@ -1276,7 +1323,7 @@ const isAdmin = async (req, res, next) => {
                     ws.userId = userId;
                     
                     await client.query('UPDATE cook_game_rooms SET game_state = $1, updated_at = NOW() WHERE room_id = $2', [gameState, roomId]);
-                    await client.query('COMMIT');
+            await client.query('COMMIT');
 
                     console.log(`[COOK-GAME] 玩家 ${username} (ID: ${userId}) 已成功加入/重連至房間 ${roomId}`);
                     
@@ -1306,13 +1353,13 @@ const isAdmin = async (req, res, next) => {
                         }
                         broadcastToRoom(roomId, { type: 'player_list', players: gameState.players });
                     }
-                } catch (error) {
-                    await client.query('ROLLBACK');
+        } catch (error) {
+            await client.query('ROLLBACK');
                     console.error(`[COOK-GAME] 加入房間錯誤:`, error);
                     ws.send(JSON.stringify({ type: 'error', message: '加入房間時發生後端錯誤' }));
-                } finally {
-                    client.release();
-                }
+        } finally {
+            client.release();
+        }
                 break;
             }
             case 'leave_room':
@@ -1356,7 +1403,7 @@ const isAdmin = async (req, res, next) => {
                     broadcastToRoom(roomId, { type: 'player_list', players: gameState.players });
                     console.log(`[COOK-GAME] 玩家 ${username} 在房間 ${roomId} 狀態已更新為 ${type}`);
 
-                } catch (error) {
+        } catch (error) {
                     await client.query('ROLLBACK');
                     console.error(`[COOK-GAME] 更新玩家準備狀態錯誤:`, error);
                     ws.send(JSON.stringify({ type: 'error', message: '更新準備狀態時發生後端錯誤' }));
@@ -1449,7 +1496,7 @@ const isAdmin = async (req, res, next) => {
                         ws.send(JSON.stringify({ type: 'error', message: '所有玩家都必須準備好才能開始遊戲' }));
                         await client.query('ROLLBACK');
                     }
-                } catch (error) {
+        } catch (error) {
                     await client.query('ROLLBACK');
                     console.error(`[COOK-GAME] 開始遊戲錯誤:`, error);
                     ws.send(JSON.stringify({ type: 'error', message: '開始遊戲時發生後端錯誤' }));
@@ -1844,7 +1891,7 @@ const isAdmin = async (req, res, next) => {
                             return;
                     }
 
-                } catch (error) {
+        } catch (error) {
                     await client.query('ROLLBACK');
                     console.error(`[COOK-GAME] 處理玩家動作錯誤:`, error);
                     ws.send(JSON.stringify({ type: 'error', message: '處理玩家動作時發生後端錯誤' }));
@@ -1946,6 +1993,22 @@ const isAdmin = async (req, res, next) => {
                 WHERE u.user_id = $1
             `;
             
+
+            const titleQuery = `
+            SELECT t.title_id, t.title_name, t.rarity, t.color_code, t.icon_url
+            FROM cook_titles t
+            JOIN cook_user_titles ut ON t.id = ut.title_id
+            WHERE ut.user_id = $1 AND ut.is_equipped = TRUE
+            LIMIT 1
+        `;
+        
+        const titleResult = await pool.query(titleQuery, [req.user.userId]);
+        if (titleResult.rows.length > 0) {
+            user.equipped_title = titleResult.rows[0];
+        }
+
+
+
             const userResult = await pool.query(userQuery, [req.user.userId]);
             
             if (userResult.rows.length === 0) {
@@ -2035,10 +2098,10 @@ const isAdmin = async (req, res, next) => {
             [user.user_id, user.username]
           );
         } else {
-          // 更新最後登入時間
+          // 更新最後登入時間和用戶名，確保與主表同步
           await pool.query(
-            'UPDATE cook_players SET last_login = NOW() WHERE user_id = $1',
-            [user.user_id]
+            'UPDATE cook_players SET last_login = NOW(), username = $2 WHERE user_id = $1',
+            [user.user_id, user.username]
           );
         }
         
@@ -2048,7 +2111,7 @@ const isAdmin = async (req, res, next) => {
           token
         });
         
-      } catch (error) {
+        } catch (error) {
         console.error('快速登入處理出錯:', error);
         res.status(500).json({ success: false, error: '伺服器錯誤' });
       }
@@ -2452,7 +2515,7 @@ const isAdmin = async (req, res, next) => {
             const sortOrder = req.query.sort_order?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC'; // 默認降序
 
             // 驗證並過濾排序欄位，防止SQL注入
-            const validSortFields = ['points', 'level', 'created_at', 'last_login'];
+            const validSortFields = ['points', 'level', 'games_played', 'orders_completed', 'created_at', 'last_login'];
             const safeSort = validSortFields.includes(sortBy) ? sortBy : 'points';
 
             // 構建SQL查詢
@@ -2462,6 +2525,8 @@ const isAdmin = async (req, res, next) => {
                     cp.username, 
                     cp.level, 
                     cp.points, 
+                    cp.games_played,
+                    cp.orders_completed,
                     cp.achievements, 
                     cp.created_at, 
                     cp.last_login,
@@ -2515,6 +2580,240 @@ const isAdmin = async (req, res, next) => {
             res.status(500).json({ error: '獲取排行榜數據失敗' });
         }
     });
+
+    // 新增：獲取當前用戶在特定排行榜上的排名
+    cookGameApp.get('/api/leaderboard/my-rank', authenticateToken, async (req, res) => {
+        try {
+            const userId = req.user.userId;
+            const sortBy = req.query.sort_by || 'points';
+
+            // 驗證排序欄位
+            const validSortFields = ['points', 'level', 'games_played', 'orders_completed'];
+            const safeSort = validSortFields.includes(sortBy) ? sortBy : 'points';
+
+            // 使用窗口函數 RANK() 來計算排名
+            const query = `
+                WITH user_ranks AS (
+                    SELECT 
+                        cp.user_id,
+                        RANK() OVER (ORDER BY cp.${safeSort} DESC) as rank
+                    FROM 
+                        cook_players cp
+                )
+                SELECT 
+                    ur.rank,
+                    cp.level,
+                    cp.points,
+                    cp.games_played,
+                    cp.orders_completed,
+                    bu.display_name,
+                    bu.user_profile_image_url as profile_image
+                FROM 
+                    cook_players cp
+                JOIN 
+                    user_ranks ur ON cp.user_id = ur.user_id
+                LEFT JOIN 
+                    box_users bu ON cp.user_id = bu.user_id
+                WHERE 
+                    cp.user_id = $1
+            `;
+
+            const result = await pool.query(query, [userId]);
+
+            if (result.rows.length > 0) {
+                res.json({ success: true, myRank: result.rows[0] });
+            } else {
+                // 如果玩家在 cook_players 中沒有記錄
+                res.status(404).json({ success: false, message: '找不到玩家排名數據' });
+            }
+        } catch (error) {
+            console.error('[API ERROR] GET /api/leaderboard/my-rank:', error);
+            res.status(500).json({ success: false, error: '獲取個人排名失敗' });
+        }
+    });
+
+// 獲取用戶稱號列表
+cookGameApp.get('/api/user/titles', authenticateToken, async (req, res) => {
+        try {
+            const userId = req.user.userId;
+        
+        // 獲取用戶解鎖的所有稱號
+        const result = await pool.query(`
+            SELECT ct.*, cut.is_equipped, cut.unlocked_at
+            FROM cook_titles ct
+            JOIN cook_user_titles cut ON ct.id = cut.title_id
+            WHERE cut.user_id = $1
+            ORDER BY cut.is_equipped DESC, ct.rarity DESC, ct.title_name ASC
+        `, [userId]);
+        
+        res.json({ success: true, titles: result.rows });
+        } catch (error) {
+        console.error('獲取用戶稱號時出錯:', error);
+        res.status(500).json({ success: false, error: '伺服器錯誤' });
+    }
+});
+
+// 設置當前使用的稱號
+cookGameApp.post('/api/user/titles/:titleId/equip', authenticateToken, async (req, res) => {
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        
+        const userId = req.user.userId;
+        const titleId = req.params.titleId;
+        
+        // 先將用戶所有稱號設為未裝備
+        await client.query(`
+            UPDATE cook_user_titles
+            SET is_equipped = FALSE
+            WHERE user_id = $1
+        `, [userId]);
+        
+        // 設置選中的稱號為裝備中
+        const result = await client.query(`
+            UPDATE cook_user_titles
+            SET is_equipped = TRUE
+            WHERE user_id = $1 AND title_id = $2
+            RETURNING *
+        `, [userId, titleId]);
+        
+        if (result.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ success: false, error: '找不到指定稱號或您尚未解鎖該稱號' });
+        }
+        
+        await client.query('COMMIT');
+        
+        res.json({ success: true, message: '稱號已成功設置' });
+        } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('設置用戶稱號時出錯:', error);
+        res.status(500).json({ success: false, error: '伺服器錯誤' });
+    } finally {
+        client.release();
+    }
+});
+
+// 管理員API - 獲取所有稱號
+cookGameApp.get('/admin/titles', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM cook_titles ORDER BY id ASC');
+        res.json(result.rows);
+    } catch (error) {
+        console.error('獲取稱號列表時出錯:', error);
+        res.status(500).json({ success: false, error: '無法獲取稱號列表' });
+    }
+});
+
+// 管理員API - 新增或更新稱號
+cookGameApp.post('/admin/titles', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const { id, title_id, title_name, title_description, rarity, unlock_condition, unlock_value, icon_url, color_code, is_active } = req.body;
+        
+        let result;
+        
+        if (id) {
+            result = await pool.query(`
+                UPDATE cook_titles
+                SET title_id = $1, title_name = $2, title_description = $3, rarity = $4, 
+                    unlock_condition = $5, unlock_value = $6, icon_url = $7, color_code = $8, is_active = $9
+                WHERE id = $10
+                RETURNING *
+            `, [title_id, title_name, title_description, rarity, unlock_condition, unlock_value, icon_url, color_code, is_active, id]);
+        } else {
+            result = await pool.query(`
+                INSERT INTO cook_titles (title_id, title_name, title_description, rarity, unlock_condition, unlock_value, icon_url, color_code)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                RETURNING *
+            `, [title_id, title_name, title_description, rarity, unlock_condition, unlock_value, icon_url, color_code]);
+        }
+        
+        res.json({ success: true, title: result.rows[0] });
+    } catch (error) {
+        console.error('新增或更新稱號時出錯:', error);
+        res.status(500).json({ success: false, error: '伺服器錯誤' });
+    }
+});
+
+
+
+/**
+ * 檢查用戶是否符合稱號解鎖條件並自動解鎖
+ * @param {string} userId - 用戶ID
+ * @returns {Promise<Array>} 新解鎖的稱號列表
+ */
+async function checkTitleUnlocks(userId) {
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        
+        // 獲取用戶遊戲數據
+        const playerResult = await client.query(`
+            SELECT level, points, games_played, orders_completed
+            FROM cook_players 
+            WHERE user_id = $1
+        `, [userId]);
+        
+        if (playerResult.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return [];
+        }
+        
+        const player = playerResult.rows[0];
+        
+        // 獲取用戶尚未解鎖的稱號
+        const titlesResult = await client.query(`
+            SELECT t.* 
+            FROM cook_titles t
+            LEFT JOIN cook_user_titles ut ON t.id = ut.title_id AND ut.user_id = $1
+            WHERE ut.id IS NULL AND t.is_active = TRUE
+        `, [userId]);
+        
+        const unlockedTitles = [];
+        
+        // 檢查每個稱號的解鎖條件
+        for (const title of titlesResult.rows) {
+            let isUnlocked = false;
+            
+            switch (title.unlock_condition) {
+                case 'level':
+                    isUnlocked = player.level >= title.unlock_value;
+                    break;
+                case 'points':
+                    isUnlocked = player.points >= title.unlock_value;
+                    break;
+                case 'games_played':
+                    isUnlocked = player.games_played >= title.unlock_value;
+                    break;
+                case 'orders_completed':
+                    isUnlocked = player.orders_completed >= title.unlock_value;
+                    break;
+                // 可以添加更多解鎖條件
+            }
+            
+            if (isUnlocked) {
+                // 解鎖稱號
+                await client.query(`
+                    INSERT INTO cook_user_titles (user_id, title_id, unlocked_at)
+                    VALUES ($1, $2, NOW())
+                `, [userId, title.id]);
+                
+                unlockedTitles.push(title);
+            }
+        }
+        
+        await client.query('COMMIT');
+        return unlockedTitles;
+        } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('檢查稱號解鎖時出錯:', error);
+        return [];
+    } finally {
+        client.release();
+    }
+}
+
+    
     
     // 後台管理 API - 任務模板管理
     cookGameApp.get('/admin/quest-templates', authenticateToken, isAdmin, async (req, res) => {
@@ -2599,62 +2898,274 @@ const isAdmin = async (req, res, next) => {
             res.status(500).json({ error: 'Failed to fetch recipes' });
         }
     });
-    
-    // 管理員API - 更新食譜
-    cookGameApp.post('/cook-api/admin/update-recipe', isAdmin, async (req, res) => {
-        try {
-            const { recipeId, recipeName, difficulty, isOrderable } = req.body;
+     
+
+
+// API: 獲取管理後台儀表板數據
+cookGameApp.get('/admin/dashboard', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        // 獲取用戶數量
+        const userCountResult = await pool.query('SELECT COUNT(*) as count FROM cook_players');
+        const userCount = parseInt(userCountResult.rows[0].count);
+        
+        // 獲取遊戲場次數量
+        const gameCountResult = await pool.query(`
+            SELECT COUNT(*) as count 
+            FROM cook_game_rooms 
+            WHERE status = 'finished'
+        `);
+        const gameCount = parseInt(gameCountResult.rows[0].count);
+        
+        // 獲取稱號數量
+        const titleCountResult = await pool.query('SELECT COUNT(*) as count FROM cook_titles');
+        const titleCount = parseInt(titleCountResult.rows[0].count);
+        
+        // 獲取物品數量
+        const itemCountResult = await pool.query('SELECT COUNT(*) as count FROM cook_items');
+        const itemCount = parseInt(itemCountResult.rows[0].count);
+        
+        // 獲取最近活動
+        const recentActivitiesResult = await pool.query(`
+            SELECT * FROM (
+                SELECT 'user_login' as type, 'User login' as description, last_login as timestamp, username
+                FROM cook_players
+                WHERE last_login IS NOT NULL
+                UNION ALL
+                SELECT 'game_completed' as type, 'Game completed' as description, updated_at as timestamp, creator_name as username
+                FROM cook_game_rooms
+                WHERE status = 'finished'
+                UNION ALL
+                SELECT 'title_unlocked' as type, 'Title unlocked' as description, unlocked_at as timestamp, u.username
+                FROM cook_user_titles ut
+                JOIN box_users u ON ut.user_id = u.user_id
+                ORDER BY timestamp DESC
+                LIMIT 10
+            ) as activities
+            ORDER BY timestamp DESC
+            LIMIT 10
+        `);
+        
+        // 格式化活動數據
+        const recentActivities = recentActivitiesResult.rows.map(activity => {
+            let description = '';
             
-            if (!recipeId || difficulty === undefined) {
-                return res.status(400).json({ success: false, message: '缺少必要參數' });
+            switch (activity.type) {
+                case 'user_login':
+                    description = `${activity.username} 登入了遊戲`;
+                    break;
+                case 'game_completed':
+                    description = `${activity.username} 完成了一場遊戲`;
+                    break;
+                case 'title_unlocked':
+                    description = `${activity.username} 解鎖了一個稱號`;
+                    break;
+                default:
+                    description = activity.description;
             }
             
-            // 更新食譜資料
-            const updateQuery = `
-                UPDATE cook_recipes_v2
-                SET recipe_name = $1, difficulty = $2, is_orderable = $3
-                WHERE id = $4
-                RETURNING *
+            return {
+                type: activity.type,
+                description: description,
+                timestamp: activity.timestamp
+            };
+        });
+        
+        res.json({
+            userCount,
+            gameCount,
+            titleCount,
+            itemCount,
+            recentActivities
+        });
+        } catch (error) {
+        console.error('獲取儀表板數據時出錯:', error);
+        res.status(500).json({ success: false, error: '伺服器錯誤' });
+    }
+});
+
+    // =================================================================
+    // ★ 新增管理後端 API (Admin Backend API) V3 - for new recipe admin
+    // =================================================================
+
+    // 新增：創建新物品
+    cookGameApp.post('/admin/items', authenticateToken, isAdmin, async (req, res) => {
+        const { item_id, item_name, item_type, description, icon, is_sellable, sell_price, is_base_ingredient } = req.body;
+
+        if (!item_id || !item_name || !item_type) {
+            return res.status(400).json({ success: false, message: '物品ID、名稱和類型為必填項' });
+        }
+
+        try {
+            const newItem = await pool.query(
+                `INSERT INTO cook_items (item_id, item_name, item_type, description, icon, is_sellable, sell_price, is_base_ingredient)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                 RETURNING *`,
+                [item_id, item_name, item_type, description, icon, is_sellable || false, sell_price || 0, is_base_ingredient || false]
+            );
+            res.status(201).json({ success: true, message: '物品創建成功', item: newItem.rows[0] });
+        } catch (error) {
+            console.error('Error creating new item:', error);
+            if (error.code === '23505') { // Unique violation
+                return res.status(409).json({ success: false, message: '物品ID已存在' });
+            }
+            res.status(500).json({ success: false, message: '創建物品時發生內部錯誤' });
+        }
+    });
+
+    // 新增：創建新食譜 (Wizard)
+    cookGameApp.post('/admin/recipes', authenticateToken, isAdmin, async (req, res) => {
+        const {
+            recipe_id,
+            recipe_name,
+            station_type,
+            output_item_id,
+            cooking_time_ms,
+            is_orderable,
+            difficulty,
+            description,
+            requirements
+        } = req.body;
+
+        if (!recipe_id || !recipe_name || !station_type || !output_item_id || !requirements || requirements.length === 0) {
+            return res.status(400).json({ success: false, message: '缺少必要的食譜信息' });
+        }
+
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+
+            const recipeInsertQuery = `
+                INSERT INTO cook_recipes_v2 (recipe_id, recipe_name, station_type, output_item_id, cooking_time_ms, is_orderable, difficulty, description)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                RETURNING id
             `;
-            
-            const result = await pool.query(updateQuery, [recipeName, difficulty, isOrderable, recipeId]);
-            
-            if (result.rows.length === 0) {
-                return res.status(404).json({ success: false, message: '找不到指定的食譜' });
+            const recipeResult = await client.query(recipeInsertQuery, [
+                recipe_id, recipe_name, station_type, output_item_id, cooking_time_ms || 0, is_orderable, difficulty, description
+            ]);
+            const newRecipeId = recipeResult.rows[0].id;
+
+            const requirementInsertQuery = `
+                INSERT INTO cook_recipe_requirements_v2 (recipe_id, required_item_id, quantity)
+                VALUES ($1, $2, $3)
+            `;
+            for (const req of requirements) {
+                await client.query(requirementInsertQuery, [newRecipeId, req.required_item_id, req.quantity]);
             }
-            
-            res.json({ success: true, recipe: result.rows[0] });
+
+            await client.query('COMMIT');
+            res.status(201).json({ success: true, message: '食譜創建成功', recipe_id: newRecipeId });
+
         } catch (error) {
-            console.error('Error updating recipe:', error);
-            res.status(500).json({ success: false, message: '更新食譜失敗', error: error.message });
+            await client.query('ROLLBACK');
+            console.error('Error creating new recipe:', error);
+             if (error.code === '23505') { // Unique violation on recipe_id
+                return res.status(409).json({ success: false, message: '食譜ID已存在' });
+            }
+            res.status(500).json({ success: false, message: '創建食譜時發生內部錯誤' });
+        } finally {
+            client.release();
         }
     });
-    
-    // 管理員API - 刪除食譜
-    cookGameApp.delete('/cook-api/admin/delete-recipe/:recipeId', isAdmin, async (req, res) => {
+
+    // 更新食譜 (增強版，使用 PUT 和 :id)
+    cookGameApp.put('/admin/recipes/:id', authenticateToken, isAdmin, async (req, res) => {
+        const recipeId = parseInt(req.params.id, 10);
+        const {
+            recipe_name,
+            difficulty,
+            is_orderable,
+            description,
+            station_type,
+            output_item_id,
+            cooking_time_ms,
+            requirements
+        } = req.body;
+
+        if (isNaN(recipeId)) {
+            return res.status(400).json({ success: false, message: '無效的食譜ID' });
+        }
+
+        const client = await pool.connect();
         try {
-            const recipeId = parseInt(req.params.recipeId);
-            
-            if (isNaN(recipeId)) {
-                return res.status(400).json({ success: false, message: '無效的食譜ID' });
+            await client.query('BEGIN');
+
+            // 1. 更新 cook_recipes_v2 表
+            const updateRecipeQuery = `
+                UPDATE cook_recipes_v2
+                SET 
+                    recipe_name = $1, 
+                    difficulty = $2, 
+                    is_orderable = $3,
+                    description = $4,
+                    station_type = $5,
+                    output_item_id = $6,
+                    cooking_time_ms = $7
+                WHERE id = $8
+            `;
+            await client.query(updateRecipeQuery, [
+                recipe_name, difficulty, is_orderable, description, station_type, output_item_id, cooking_time_ms, recipeId
+            ]);
+
+            // 2. 刪除舊的 requirements
+            await client.query('DELETE FROM cook_recipe_requirements_v2 WHERE recipe_id = $1', [recipeId]);
+
+            // 3. 插入新的 requirements
+            if (requirements && requirements.length > 0) {
+                const requirementInsertQuery = `
+                    INSERT INTO cook_recipe_requirements_v2 (recipe_id, required_item_id, quantity)
+                    VALUES ($1, $2, $3)
+                `;
+                for (const req of requirements) {
+                    await client.query(requirementInsertQuery, [recipeId, req.required_item_id, req.quantity]);
+                }
             }
-            
-            // 首先刪除關聯的需求物品
-            await pool.query('DELETE FROM cook_recipe_requirements_v2 WHERE recipe_id = $1', [recipeId]);
-            
-            // 然後刪除食譜本身
-            const result = await pool.query('DELETE FROM cook_recipes_v2 WHERE id = $1 RETURNING id', [recipeId]);
-            
-            if (result.rows.length === 0) {
-                return res.status(404).json({ success: false, message: '找不到指定的食譜' });
-            }
-            
-            res.json({ success: true, message: '食譜已成功刪除' });
+
+            await client.query('COMMIT');
+            res.json({ success: true, message: '食譜更新成功' });
+
         } catch (error) {
-            console.error('Error deleting recipe:', error);
-            res.status(500).json({ success: false, message: '刪除食譜失敗', error: error.message });
+            await client.query('ROLLBACK');
+            console.error(`Error updating recipe ${recipeId}:`, error);
+            res.status(500).json({ success: false, message: '更新食譜失敗' });
+        } finally {
+            client.release();
         }
     });
+
+    // 刪除食譜 (安全版，使用 DELETE 和 :id，並使用事務)
+    cookGameApp.delete('/admin/recipes/:id', authenticateToken, isAdmin, async (req, res) => {
+        const recipeId = parseInt(req.params.id, 10);
+        if (isNaN(recipeId)) {
+            return res.status(400).json({ success: false, message: '無效的食譜ID' });
+        }
+
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            
+            // First, delete dependencies in cook_recipe_requirements_v2
+            await client.query('DELETE FROM cook_recipe_requirements_v2 WHERE recipe_id = $1', [recipeId]);
+            
+            // Then, delete the recipe from cook_recipes_v2
+            const deleteResult = await client.query('DELETE FROM cook_recipes_v2 WHERE id = $1', [recipeId]);
+
+            if (deleteResult.rowCount === 0) {
+                await client.query('ROLLBACK');
+                return res.status(404).json({ success: false, message: '找不到要刪除的食譜' });
+            }
+
+            await client.query('COMMIT');
+            res.json({ success: true, message: '食譜已成功刪除' });
+
+        } catch (error) {
+            await client.query('ROLLBACK');
+            console.error(`Error deleting recipe ${recipeId}:`, error);
+            res.status(500).json({ success: false, message: '刪除食譜失敗' });
+        } finally {
+            client.release();
+        }
+    });
+
 
     // =================================================================
     // ★ 新增：資料庫查詢輔助函數 (V2 遊戲邏輯)
@@ -2680,3 +3191,67 @@ const isAdmin = async (req, res, next) => {
         initCookGameWss
     };
 };
+
+// =================================================================
+// 遊戲公開資訊 API (無需驗證)
+// =================================================================
+
+// 新增：獲取等級獎勵列表
+cookGameApp.get('/cook-api/level-rewards', async (req, res) => {
+    try {
+        // 從資料庫獲取所有等級設定
+        const levelsResult = await pool.query('SELECT * FROM cook_level_settings ORDER BY level ASC');
+        if (levelsResult.rows.length === 0) {
+            return res.status(404).json({ message: '找不到等級設定資訊' });
+        }
+
+        const rewardsByLevel = [];
+        for (const levelSetting of levelsResult.rows) {
+            const unlockedItems = [];
+            // 獲取該等級解鎖的物品
+            if (levelSetting.unlocks && levelSetting.unlocks.item_ids) {
+                for (const itemId of levelSetting.unlocks.item_ids) {
+                    const itemResult = await pool.query('SELECT item_id, item_name, symbol FROM cook_items WHERE item_id = $1', [itemId]);
+                    if (itemResult.rows[0]) {
+                        unlockedItems.push({ ...itemResult.rows[0], type: 'item' });
+                    }
+                }
+            }
+            // 獲取該等級解鎖的食譜
+            if (levelSetting.unlocks && levelSetting.unlocks.recipe_ids) {
+                 for (const recipeId of levelSetting.unlocks.recipe_ids) {
+                    const recipeResult = await pool.query(
+                        `SELECT 
+                            r.recipe_id, 
+                            r.recipe_name, 
+                            i.symbol
+                         FROM cook_recipes_v2 r
+                         LEFT JOIN cook_items i ON r.output_item_id = i.id
+                         WHERE r.recipe_id = $1`, [recipeId]
+                    );
+                    if (recipeResult.rows[0]) {
+                        unlockedItems.push({ 
+                            id: recipeResult.rows[0].recipe_id,
+                            name: recipeResult.rows[0].recipe_name,
+                            symbol: recipeResult.rows[0].symbol,
+                            type: 'recipe'
+                        });
+                    }
+                }
+            }
+            rewardsByLevel.push({
+                level: levelSetting.level,
+                exp_required: levelSetting.exp_required,
+                unlocks: unlockedItems
+            });
+        }
+        res.json(rewardsByLevel);
+    } catch (error) {
+        console.error('獲取等級獎勵時出錯:', error);
+        res.status(500).json({ message: '伺服器內部錯誤' });
+    }
+});
+
+// =================================================================
+// 管理員專用 API (需要管理員權限)
+// =================================================================

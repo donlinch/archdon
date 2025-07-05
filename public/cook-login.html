@@ -364,6 +364,160 @@
                 display: none;
             }
         }
+
+
+        /* 稱號樣式 */
+.player-titles-section {
+  margin-top: 30px;
+  padding: 20px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 10px;
+}
+
+.titles-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.title-item {
+  padding: 15px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid #444;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.title-item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.title-item.equipped {
+  background: rgba(255,215,0,0.1);
+  border-color: #ffd700;
+}
+
+.title-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+.title-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.title-name {
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.title-rarity {
+  font-size: 12px;
+  opacity: 0.8;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(0,0,0,0.2);
+  display: inline-block;
+  margin-bottom: 5px;
+}
+
+.title-description {
+  font-size: 12px;
+  opacity: 0.7;
+  margin-bottom: 10px;
+}
+
+.equipped-badge {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  background: #ffd700;
+  color: #000;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: bold;
+}
+
+.equip-btn {
+  background: #444;
+  border: 1px solid #555;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: auto;
+  align-self: flex-end;
+}
+
+.equip-btn:hover {
+  background: #555;
+}
+
+/* 稀有度樣式 */
+.title-item.common { border-color: #aaaaaa; }
+.title-item.uncommon { border-color: #1eff00; }
+.title-item.rare { border-color: #0070dd; }
+.title-item.epic { border-color: #a335ee; }
+.title-item.legendary { border-color: #ff8000; }
+
+.title-item.common .title-name { color: #ffffff; }
+.title-item.uncommon .title-name { color: #1eff00; }
+.title-item.rare .title-name { color: #0070dd; }
+.title-item.epic .title-name { color: #a335ee; }
+.title-item.legendary .title-name { color: #ff8000; }
+
+/* 通知樣式 */
+.toast {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  padding: 12px 20px;
+  background: rgba(0,0,0,0.8);
+  color: white;
+  border-radius: 5px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.3s ease;
+  z-index: 1000;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.toast.success {
+  border-left: 4px solid #4CAF50;
+}
+
+.toast.error {
+  border-left: 4px solid #F44336;
+}
+
+.loading, .error, .no-titles {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 20px;
+}
+
+.error {
+  color: #F44336;
+}
     </style>
 </head>
 <body>
@@ -376,6 +530,137 @@
     <header class="page-header">
         <h1 class="page-title">料理急先鋒 - BBS風格協作料理遊戲</h1>
     </header>
+
+    <div class="player-titles-section">
+        <h3>我的稱號</h3>
+        <div id="titles-list" class="titles-list">
+          <!-- 由JavaScript動態生成 -->
+          <div class="loading">載入中...</div>
+        </div>
+      </div>
+      
+      <script>
+      // 載入用戶稱號
+      async function loadUserTitles() {
+        try {
+          const titlesList = document.getElementById('titles-list');
+          titlesList.innerHTML = '<div class="loading">載入中...</div>';
+          
+          const response = await fetch('/api/user/titles', {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('cookGameToken')}`
+            }
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            displayUserTitles(data.titles);
+          } else {
+            titlesList.innerHTML = '<div class="error">載入失敗</div>';
+          }
+        } catch (error) {
+          console.error('載入稱號失敗:', error);
+          document.getElementById('titles-list').innerHTML = '<div class="error">載入失敗</div>';
+        }
+      }
+      
+      // 顯示用戶稱號
+      function displayUserTitles(titles) {
+        const titlesList = document.getElementById('titles-list');
+        titlesList.innerHTML = '';
+        
+        if (titles.length === 0) {
+          titlesList.innerHTML = '<p class="no-titles">尚未獲得任何稱號</p>';
+          return;
+        }
+        
+        titles.forEach(title => {
+          const titleElement = document.createElement('div');
+          titleElement.className = `title-item ${title.rarity} ${title.is_equipped ? 'equipped' : ''}`;
+          titleElement.dataset.titleId = title.id;
+          
+          titleElement.innerHTML = `
+            <span class="title-icon">${title.icon_url ? `<img src="${title.icon_url}">` : '🏆'}</span>
+            <span class="title-name" style="color: ${title.color_code || '#ffffff'}">${title.title_name}</span>
+            <span class="title-rarity">${getRarityText(title.rarity)}</span>
+            <span class="title-description">${title.title_description || ''}</span>
+            ${title.is_equipped ? '<span class="equipped-badge">已裝備</span>' : '<button class="equip-btn">裝備</button>'}
+          `;
+          
+          if (!title.is_equipped) {
+            titleElement.querySelector('.equip-btn').addEventListener('click', () => {
+              equipTitle(title.id);
+            });
+          }
+          
+          titlesList.appendChild(titleElement);
+        });
+      }
+      
+      // 裝備稱號
+      async function equipTitle(titleId) {
+        try {
+          const response = await fetch(`/api/user/titles/${titleId}/equip`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('cookGameToken')}`
+            }
+          });
+          
+          if (response.ok) {
+            // 重新載入稱號列表
+            loadUserTitles();
+            // 更新用戶資料顯示
+            if (typeof loadUserProfile === 'function') {
+              loadUserProfile();
+            }
+            
+            showToast('稱號已成功裝備');
+          } else {
+            showToast('裝備稱號失敗', 'error');
+          }
+        } catch (error) {
+          console.error('裝備稱號失敗:', error);
+          showToast('裝備稱號失敗', 'error');
+        }
+      }
+      
+      // 將稱號稀有度轉換為中文
+      function getRarityText(rarity) {
+        switch(rarity) {
+          case 'common': return '普通';
+          case 'uncommon': return '不普通';
+          case 'rare': return '稀有';
+          case 'epic': return '史詩';
+          case 'legendary': return '傳說';
+          default: return rarity;
+        }
+      }
+      
+      // 顯示通知
+      function showToast(message, type = 'success') {
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+          toast.classList.add('show');
+          setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => {
+              document.body.removeChild(toast);
+            }, 300);
+          }, 3000);
+        }, 10);
+      }
+      
+      // 頁面載入時執行
+      document.addEventListener('DOMContentLoaded', () => {
+        loadUserTitles();
+      });
+      </script>
+
 
     <div class="container">
         <div id="quick-login-container" class="quick-login-container" style="display: none;">

@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="zh-TW" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>食譜管理 - 料理急先鋒後台</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --background-color: #2c3e50;
+            --surface-color: #34495e;
+            --text-color: #ecf0f1;
+            --text-muted-color: #bdc3c7;
+            --border-color: #4a6278;
+            --danger-color: #e74c3c;
+            --warning-color: #f1c40f;
+            --success-color: #27ae60;
+        }
+
+        [data-theme="light"] {
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --background-color: #f4f6f8;
+            --surface-color: #ffffff;
+            --text-color: #2c3e50;
+            --text-muted-color: #7f8c8d;
+            --border-color: #dfe4ea;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+            --success-color: #27ae60;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Microsoft JhengHei', 'Helvetica Neue', sans-serif;
+            margin: 0;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 260px;
+            background-color: var(--surface-color);
+            padding: 20px;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border-color);
+        }
+
+        .sidebar .logo {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .sidebar nav a {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            color: var(--text-muted-color);
+            text-decoration: none;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .sidebar nav a i {
+            margin-right: 15px;
+            width: 20px;
+            text-align: center;
+        }
+        
+        .sidebar nav a.active, .sidebar nav a:hover {
+            background-color: var(--primary-color);
+            color: #fff;
+        }
+
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        header {
+            padding: 15px 30px;
+            background-color: var(--surface-color);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .page-content {
+            flex-grow: 1;
+            padding: 20px;
+            display: flex;
+            gap: 20px;
+            overflow: hidden;
+        }
+        
+        .item-panel {
+            width: 320px;
+            flex-shrink: 0;
+            background-color: var(--surface-color);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .item-panel-header {
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .item-panel-header h3 {
+            margin: 0 0 10px 0;
+        }
+
+        .item-search-input {
+            width: 100%;
+            padding: 8px 12px;
+            background-color: var(--background-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .item-list-container {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+        
+        .item-category h4 {
+            margin: 15px 0 10px;
+            color: var(--primary-color);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 5px;
+        }
+        
+        .item-category .item {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .item-category .item:hover {
+            background-color: var(--primary-color);
+        }
+
+        .item-symbol {
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            font-size: 18px;
+            width: 30px;
+            text-align: center;
+            margin-right: 10px;
+        }
+        
+        .recipe-panel {
+            flex-grow: 1;
+            background-color: var(--surface-color);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .recipe-panel-header {
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .filters {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .filters input, .filters select {
+            padding: 8px 12px;
+            background-color: var(--background-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            border-radius: 4px;
+        }
+
+        .btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s, opacity 0.3s;
+        }
+        .btn-primary { background-color: var(--primary-color); color: white; }
+        .btn-primary:hover { opacity: 0.9; }
+        .btn-success { background-color: var(--success-color); color: white; }
+        .btn-success:hover { opacity: 0.9; }
+        .btn-danger { background-color: var(--danger-color); color: white; }
+        .btn-danger:hover { opacity: 0.9; }
+        
+        .table-container {
+            flex-grow: 1;
+            overflow: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--background-color);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        tr:hover {
+            background-color: var(--background-color);
+        }
+
+        .difficulty-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            color: white;
+        }
+        
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+
+        .switch input { display: none; }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider { background-color: var(--secondary-color); }
+        input:checked + .slider:before { transform: translateX(20px); }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.6);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: var(--surface-color);
+            margin: auto;
+            padding: 25px;
+            border: 1px solid var(--border-color);
+            width: 90%;
+            max-width: 600px;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+        
+        .modal-header h2 { margin: 0; }
+        
+        .close-button {
+            color: var(--text-muted-color);
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close-button:hover, .close-button:focus {
+            color: var(--text-color);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            background-color: var(--background-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        
+        .ingredient-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .ingredient-item select { flex-grow: 1; }
+        .ingredient-item input[type="number"] { width: 80px; }
+
+        .modal-footer {
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+            text-align: right;
+        }
+        
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+
+        .toast {
+            background-color: var(--surface-color);
+            color: var(--text-color);
+            padding: 15px 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.25);
+            margin-bottom: 10px;
+            opacity: 0;
+            transition: opacity 0.5s, transform 0.5s;
+            transform: translateX(100%);
+        }
+        
+        .toast.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .toast.success { border-left: 5px solid var(--success-color); }
+        .toast.error { border-left: 5px solid var(--danger-color); }
+        
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            color: white;
+            font-size: 20px;
+        }
+        
+        .recipe-step { display: none; }
+        .recipe-step.active { display: block; }
+        
+        .select-with-add {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .select-with-add select { flex-grow: 1; }
+        .add-new-item-btn {
+            flex-shrink: 0;
+            width: 40px;
+            height: 40px;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="logo">料理後台</div>
+        <nav>
+            <a href="cook-admin.html"><i class="fas fa-tachometer-alt"></i> 總覽</a>
+            <a href="cook-admin-recipes.html" class="active"><i class="fas fa-book-open"></i> 食譜管理</a>
+            <a href="#"><i class="fas fa-users"></i> 玩家管理</a>
+            <a href="#"><i class="fas fa-chart-line"></i> 數據分析</a>
+            <a href="#"><i class="fas fa-cog"></i> 系統設定</a>
+        </nav>
+    </aside>
+
+    <div class="main-content">
+        <header>
+            <h1>食譜管理</h1>
+            <div id="userInfo" style="display: none;">
+                <span id="username"></span>
+                <button id="logoutBtn" class="btn btn-danger btn-sm">登出</button>
+            </div>
+        </header>
+
+        <main class="page-content">
+            <div class="item-panel">
+                <div class="item-panel-header">
+                    <h3>物品列表 (cook_items)</h3>
+                    <input type="text" id="itemSearch" class="item-search-input" placeholder="搜索物品...">
+                </div>
+                <div class="item-list-container" id="itemList">
+                    <!-- Item categories will be populated by JS -->
+                </div>
+                <div class="loading-overlay" style="display: none;">讀取中...</div>
+            </div>
+
+            <div class="recipe-panel">
+                <div class="recipe-panel-header">
+                    <div class="filters">
+                        <input type="text" id="recipeSearch" placeholder="搜索食譜名稱...">
+                        <select id="recipeTypeFilter">
+                            <option value="">所有類型</option>
+                            <option value="cooking">烹飪</option>
+                            <option value="assembly">組合</option>
+                        </select>
+                        <select id="difficultyFilter">
+                            <option value="">所有難度</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                        </select>
+                        <select id="orderableFilter">
+                            <option value="">所有狀態</option>
+                            <option value="true">可訂購</option>
+                            <option value="false">不可訂購</option>
+                        </select>
+                        <button id="addRecipeBtn" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> 新增食譜
+                        </button>
+                        <button id="bulkDeleteBtn" class="btn btn-danger" style="display: none;">
+                            <i class="fas fa-trash"></i> 刪除選中
+                        </button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th><input type="checkbox" id="selectAllCheckbox"></th>
+                                <th>ID</th>
+                                <th>名稱</th>
+                                <th>類型</th>
+                                <th>所需食材</th>
+                                <th>產出物</th>
+                                <th>難度</th>
+                                <th>可訂購</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recipesTableBody">
+                            <!-- Recipe rows will be populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="loading-overlay" style="display: none;">讀取中...</div>
+            </div>
+        </main>
+    </div>
+    
+    <div id="recipeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">新增食譜</h2>
+                <span class="close-button">&times;</span>
+            </div>
+            <form id="recipeForm">
+                <input type="hidden" id="recipeIdHidden">
+
+                <!-- Step 1: Basic Info -->
+                <div class="recipe-step active" id="step1">
+                    <div class="form-group">
+                        <label for="recipeId">食譜ID (英文，唯一)</label>
+                        <input type="text" id="recipeId" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="recipeName">食譜名稱</label>
+                        <input type="text" id="recipeName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="recipeType">食譜類型</label>
+                        <select id="recipeType" required>
+                            <option value="" disabled selected>請選擇...</option>
+                            <option value="cooking">烹飪 (單一食材 -> 加工品)</option>
+                            <option value="assembly">組合 (多食材 -> 新物品)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Step 2 for Cooking -->
+                <div class="recipe-step" id="step2-cooking">
+                     <div class="form-group">
+                        <label for="cookStation">所需廚具</label>
+                        <select id="cookStation" required>
+                            <option value="pan_fry">煎</option>
+                            <option value="bake">烤</option>
+                            <option value="deep_fry">炸</option>
+                            <option value="boil">煮</option>
+                            <!-- Add more stations if needed -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="cookTime">烹飪時間 (秒)</label>
+                        <input type="number" id="cookTime" required min="1">
+                    </div>
+                    <div class="form-group">
+                        <label for="cookingIngredient">輸入食材</label>
+                        <div class="select-with-add">
+                            <select id="cookingIngredient" required></select>
+                            <button type="button" class="btn btn-primary add-new-item-btn" data-target-select="cookingIngredient">+</button>
+                        </div>
+                    </div>
+                     <div class="form-group">
+                        <label for="cookingResult">產出物品</label>
+                        <div class="select-with-add">
+                            <select id="cookingResult" required></select>
+                            <button type="button" class="btn btn-primary add-new-item-btn" data-target-select="cookingResult">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2 for Assembly -->
+                <div class="recipe-step" id="step2-assembly">
+                    <div class="form-group">
+                        <label>輸入食材</label>
+                        <div id="assemblyIngredientsContainer">
+                            <!-- Dynamic ingredient fields here -->
+                        </div>
+                        <button type="button" id="addIngredientField" class="btn btn-secondary">增加食材</button>
+                    </div>
+                     <div class="form-group">
+                        <label for="assemblyResult">產出物品</label>
+                        <div class="select-with-add">
+                            <select id="assemblyResult" required></select>
+                             <button type="button" class="btn btn-primary add-new-item-btn" data-target-select="assemblyResult">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Common fields -->
+                <div class="recipe-step" id="step3">
+                    <div class="form-group">
+                        <label for="difficulty">難度 (1-5)</label>
+                        <input type="number" id="difficulty" required min="1" max="5">
+                    </div>
+                    <div class="form-group">
+                        <label for="isOrderable">是否可訂購</label>
+                        <label class="switch">
+                            <input type="checkbox" id="isOrderable">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" id="prevStepBtn" class="btn btn-secondary" style="display: none;">上一步</button>
+                    <button type="button" id="nextStepBtn" class="btn btn-primary">下一步</button>
+                    <button type="submit" id="saveRecipeBtn" class="btn btn-success" style="display: none;">儲存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div id="newItemModal" class="modal">
+        <div class="modal-content" style="max-width: 450px;">
+            <div class="modal-header">
+                <h2>新增物品</h2>
+                <span class="close-button">&times;</span>
+            </div>
+            <form id="newItemForm">
+                <div class="form-group">
+                    <label for="newItemId">物品ID (英文，唯一)</label>
+                    <input type="text" id="newItemId" required>
+                </div>
+                <div class="form-group">
+                    <label for="newItemName">物品名稱</label>
+                    <input type="text" id="newItemName" required>
+                </div>
+                <div class="form-group">
+                    <label for="newItemSymbol">ASCII 符號</label>
+                    <input type="text" id="newItemSymbol" required>
+                </div>
+                <div class="form-group">
+                    <label for="newItemType">物品類型</label>
+                    <select id="newItemType" required>
+                        <option value="raw_ingredient">基礎食材</option>
+                        <option value="cooked_item">加工品</option>
+                        <option value="assembled_dish">最終料理</option>
+                        <option value="semi_finished">半成品</option>
+                    </select>
+                </div>
+                 <div class="form-group">
+                    <label for="newItemPoints">基礎分數 (僅最終料理有效)</label>
+                    <input type="number" id="newItemPoints" value="0" min="0">
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success">創建物品</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+    
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Globals
+    let allRecipes = [];
+    let allItems = [];
+    let currentModalStep = 1;
+    let targetSelectForNewItem = null;
+
+    // Element Refs
+    const recipeModal = document.getElementById('recipeModal');
+    const newItemModal = document.getElementById('newItemModal');
+    const recipeForm = document.getElementById('recipeForm');
+    const newItemForm = document.getElementById('newItemForm');
+    const modalTitle = document.getElementById('modalTitle');
+    const closeButtons = document.querySelectorAll('.close-button');
+    const addRecipeBtn = document.getElementById('addRecipeBtn');
+    
+    const recipesTableBody = document.getElementById('recipesTableBody');
+    const itemListContainer = document.getElementById('itemList');
+    
+    const recipeSearch = document.getElementById('recipeSearch');
+    const itemSearch = document.getElementById('itemSearch');
+    const recipeTypeFilter = document.getElementById('recipeTypeFilter');
+    const difficultyFilter = document.getElementById('difficultyFilter');
+    const orderableFilter = document.getElementById('orderableFilter');
+    
+    const prevStepBtn = document.getElementById('prevStepBtn');
+    const nextStepBtn = document.getElementById('nextStepBtn');
+    const saveRecipeBtn = document.getElementById('saveRecipeBtn');
+
+    const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+    const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+
+    const API_BASE_URL = '/cook-api';
+    const token = localStorage.getItem('token');
+
+    // --- Authentication ---
+    function checkAdminAuth() {
+        if (!token) {
+            window.location.href = '/cook-login.html';
+            return;
+        }
+        // A more robust solution would be to verify the token on the server
+        // For now, just assume token presence is enough for client-side.
+    }
+    
+    // --- Toast Notifications ---
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.textContent = message;
+        container.appendChild(toast);
+
+        setTimeout(() => toast.classList.add('show'), 100);
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => container.removeChild(toast), 500);
+        }, 3000);
+    }
+
+    // --- API Fetch Utility ---
+    async function apiFetch(endpoint, options = {}) {
+        const defaultOptions = {
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        };
+        const mergedOptions = { ...defaultOptions, ...options };
+        if (mergedOptions.body) {
+            mergedOptions.body = JSON.stringify(mergedOptions.body);
+        }
+
+        try {
+            const response = await fetch(`${API_BASE_URL}${endpoint}`, mergedOptions);
+            if (!response.ok) {
+                if(response.status === 401 || response.status === 403) {
+                   showToast('權限不足或登入已超時，請重新登入。', 'error');
+                   localStorage.removeItem('token');
+                   setTimeout(() => window.location.href = '/cook-login.html', 2000);
+                }
+                const errorData = await response.json().catch(() => ({ message: '無法解析錯誤訊息' }));
+                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('API Fetch Error:', error);
+            showToast(error.message, 'error');
+            throw error;
+        }
+    }
+    
+    // --- Data Loading ---
+    async function loadInitialData() {
+        setLoadingState(true);
+        try {
+            const [itemsData, recipesData] = await Promise.all([
+                apiFetch('/admin/all-items'),
+                apiFetch('/admin/all-recipes')
+            ]);
+            
+            allItems = itemsData;
+            allRecipes = recipesData;
+            
+            renderItems();
+            renderRecipes();
+            populateItemSelects();
+            
+        } catch (error) {
+            console.error('Failed to load initial data', error);
+        } finally {
+            setLoadingState(false);
+        }
+    }
+
+    function setLoadingState(isLoading) {
+        document.querySelectorAll('.loading-overlay').forEach(el => {
+            el.style.display = isLoading ? 'flex' : 'none';
+        });
+    }
+
+    // --- Rendering ---
+    function renderItems() {
+        const searchTerm = itemSearch.value.toLowerCase();
+        const categorizedItems = {
+            raw_ingredient: [],
+            cooked_item: [],
+            semi_finished: [],
+            assembled_dish: [],
+        };
+
+        allItems
+            .filter(item => item.item_name.toLowerCase().includes(searchTerm) || item.item_id.toLowerCase().includes(searchTerm))
+            .forEach(item => {
+                if (categorizedItems[item.item_type]) {
+                    categorizedItems[item.item_type].push(item);
+                }
+            });
+        
+        const categoryNames = {
+            raw_ingredient: '基礎食材',
+            cooked_item: '加工品',
+            semi_finished: '半成品',
+            assembled_dish: '最終料理'
+        };
+
+        itemListContainer.innerHTML = Object.entries(categorizedItems).map(([type, items]) => {
+            if (items.length === 0) return '';
+            return `
+                <div class="item-category">
+                    <h4>${categoryNames[type]} (${items.length})</h4>
+                    ${items.map(item => `
+                        <div class="item" data-item-id="${item.item_id}" title="${item.item_id}">
+                            <span class="item-symbol">${item.ascii_symbol}</span>
+                            <span>${item.item_name}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }).join('');
+    }
+
+    function renderRecipes() {
+        const searchTerm = recipeSearch.value.toLowerCase();
+        const typeFilter = recipeTypeFilter.value;
+        const diffFilter = difficultyFilter.value;
+        const ordFilter = orderableFilter.value;
+
+        const filteredRecipes = allRecipes.filter(recipe => {
+            const nameMatch = recipe.recipe_name.toLowerCase().includes(searchTerm);
+            const typeMatch = !typeFilter || recipe.recipe_type === typeFilter;
+            const diffMatch = !diffFilter || recipe.difficulty == diffFilter;
+            const ordMatch = !ordFilter || String(recipe.is_orderable) === ordFilter;
+            return nameMatch && typeMatch && diffMatch && ordMatch;
+        });
+
+        recipesTableBody.innerHTML = filteredRecipes.map(recipe => {
+            const resultItem = allItems.find(i => i.item_id === recipe.result_item_id);
+            const ingredients = recipe.ingredients.map(ing => {
+                const item = allItems.find(i => i.item_id === ing.item_id);
+                return item ? `<span title="${item.item_name}(${ing.quantity})">${item.ascii_symbol}</span>` : '?';
+            }).join(' + ');
+
+            const difficultyColors = ['#2980b9', '#27ae60', '#f39c12', '#d35400', '#c0392b'];
+            const difficultyColor = difficultyColors[recipe.difficulty - 1] || '#7f8c8d';
+
+            return `
+                <tr data-recipe-id="${recipe.recipe_id}">
+                    <td><input type="checkbox" class="row-checkbox"></td>
+                    <td>${recipe.recipe_id}</td>
+                    <td>${recipe.recipe_name}</td>
+                    <td>${recipe.recipe_type === 'cooking' ? '烹飪' : '組合'}</td>
+                    <td>${ingredients}</td>
+                    <td><span title="${resultItem?.item_name || ''}">${resultItem?.ascii_symbol || '?'}</span></td>
+                    <td><span class="difficulty-badge" style="background-color:${difficultyColor}">${recipe.difficulty}</span></td>
+                    <td>
+                        <label class="switch">
+                            <input type="checkbox" class="orderable-toggle" ${recipe.is_orderable ? 'checked' : ''}>
+                            <span class="slider"></span>
+                        </label>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-primary edit-btn"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-sm btn-danger delete-btn"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+    
+    function populateItemSelects() {
+        const selects = document.querySelectorAll('#recipeModal select, #newItemModal select');
+        const options = allItems.map(item => `<option value="${item.item_id}">${item.item_name} (${item.ascii_symbol})</option>`).join('');
+        
+        document.querySelectorAll('#cookingIngredient, #cookingResult, #assemblyResult, .assembly-ingredient-select').forEach(sel => {
+            const currentValue = sel.value;
+            sel.innerHTML = '<option value="" disabled selected>請選擇物品...</option>' + options;
+            sel.value = currentValue;
+        });
+    }
+
+    // --- Modal Logic ---
+    function openRecipeModal(recipe = null) {
+        recipeForm.reset();
+        resetModalWizard();
+        
+        if (recipe) {
+            modalTitle.textContent = '編輯食譜';
+            document.getElementById('recipeId').value = recipe.recipe_id;
+            document.getElementById('recipeId').readOnly = true;
+            document.getElementById('recipeName').value = recipe.recipe_name;
+            document.getElementById('recipeType').value = recipe.recipe_type;
+            document.getElementById('recipeIdHidden').value = recipe.recipe_id;
+            document.getElementById('recipeType').disabled = true;
+            
+            // This is a simplified edit. A full edit would need to load all data.
+            // For now, we allow editing common properties in step 3.
+            document.getElementById('difficulty').value = recipe.difficulty;
+            document.getElementById('isOrderable').checked = recipe.is_orderable;
+
+            // Pre-fill fields for editing (simplified)
+            // A full implementation would pre-fill all steps based on recipe data
+            // For this example, we'll just allow editing difficulty/orderable
+            // and assume other fields would need complex logic to pre-fill
+            
+        } else {
+            modalTitle.textContent = '新增食譜';
+            document.getElementById('recipeId').readOnly = false;
+            document.getElementById('recipeType').disabled = false;
+        }
+
+        recipeModal.style.display = 'flex';
+    }
+
+    function closeRecipeModal() {
+        recipeModal.style.display = 'none';
+    }
+    
+    function openNewItemModal(targetSelectId) {
+        newItemForm.reset();
+        targetSelectForNewItem = targetSelectId;
+        newItemModal.style.display = 'flex';
+    }
+    
+    function closeNewItemModal() {
+        newItemModal.style.display = 'none';
+    }
+    
+    function resetModalWizard() {
+        currentModalStep = 1;
+        updateWizardView();
+    }
+    
+    function updateWizardView() {
+        document.querySelectorAll('.recipe-step').forEach(step => step.classList.remove('active'));
+        
+        const recipeType = document.getElementById('recipeType').value;
+
+        if (currentModalStep === 1) {
+            document.getElementById('step1').classList.add('active');
+            prevStepBtn.style.display = 'none';
+            nextStepBtn.style.display = 'inline-block';
+            saveRecipeBtn.style.display = 'none';
+        } else if (currentModalStep === 2) {
+            if (recipeType === 'cooking') {
+                document.getElementById('step2-cooking').classList.add('active');
+            } else if (recipeType === 'assembly') {
+                document.getElementById('step2-assembly').classList.add('active');
+                 if (document.querySelectorAll('.assembly-ingredient-select').length === 0) {
+                    addIngredientField();
+                    addIngredientField(); // Start with two fields
+                }
+            }
+            prevStepBtn.style.display = 'inline-block';
+            nextStepBtn.style.display = 'inline-block';
+            saveRecipeBtn.style.display = 'none';
+        } else if (currentModalStep === 3) {
+            document.getElementById('step3').classList.add('active');
+            prevStepBtn.style.display = 'inline-block';
+            nextStepBtn.style.display = 'none';
+            saveRecipeBtn.style.display = 'inline-block';
+        }
+    }
+    
+    function addIngredientField() {
+        const container = document.getElementById('assemblyIngredientsContainer');
+        const div = document.createElement('div');
+        div.className = 'ingredient-item';
+        div.innerHTML = `
+            <div class="select-with-add">
+              <select class="assembly-ingredient-select" required></select>
+              <button type="button" class="btn btn-primary add-new-item-btn">+</button>
+            </div>
+            <input type="number" class="assembly-ingredient-quantity" min="1" value="1" required>
+            <button type="button" class="btn btn-danger remove-ingredient-btn">&times;</button>
+        `;
+        container.appendChild(div);
+        
+        // Populate the new select
+        const newSelect = div.querySelector('select');
+        const options = allItems.map(item => `<option value="${item.item_id}">${item.item_name} (${item.ascii_symbol})</option>`).join('');
+        newSelect.innerHTML = '<option value="" disabled selected>請選擇物品...</option>' + options;
+
+        div.querySelector('.remove-ingredient-btn').onclick = () => div.remove();
+        div.querySelector('.add-new-item-btn').onclick = (e) => {
+             // We need a unique ID for the select to target it after item creation
+            const uniqueId = `assembly-ingredient-${Date.now()}`;
+            newSelect.id = uniqueId;
+            openNewItemModal(uniqueId);
+        };
+    }
+
+    // --- Event Handlers ---
+    addRecipeBtn.addEventListener('click', () => openRecipeModal());
+    closeButtons.forEach(btn => btn.addEventListener('click', () => {
+        closeRecipeModal();
+        closeNewItemModal();
+    }));
+    window.addEventListener('click', (event) => {
+        if (event.target == recipeModal) closeRecipeModal();
+        if (event.target == newItemModal) closeNewItemModal();
+    });
+
+    recipeSearch.addEventListener('input', renderRecipes);
+    itemSearch.addEventListener('input', renderItems);
+    recipeTypeFilter.addEventListener('change', renderRecipes);
+    difficultyFilter.addEventListener('change', renderRecipes);
+    orderableFilter.addEventListener('change', renderRecipes);
+    
+    // Modal Wizard Navigation
+    nextStepBtn.addEventListener('click', () => {
+        if (currentModalStep < 3) {
+            currentModalStep++;
+            updateWizardView();
+        }
+    });
+
+    prevStepBtn.addEventListener('click', () => {
+        if (currentModalStep > 1) {
+            currentModalStep--;
+            updateWizardView();
+        }
+    });
+    
+    document.getElementById('recipeType').addEventListener('change', updateWizardView);
+    document.getElementById('addIngredientField').addEventListener('click', addIngredientField);
+    
+    document.querySelectorAll('.add-new-item-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const selectId = e.currentTarget.dataset.targetSelect;
+            openNewItemModal(selectId);
+        });
+    });
+
+    // --- Form Submissions ---
+    recipeForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const isEditing = !!document.getElementById('recipeIdHidden').value;
+        let payload;
+        const recipeType = document.getElementById('recipeType').value;
+        
+        if (recipeType === 'cooking') {
+            payload = {
+                recipe_id: document.getElementById('recipeId').value,
+                recipe_name: document.getElementById('recipeName').value,
+                recipe_type: 'cooking',
+                cook_station: document.getElementById('cookStation').value,
+                cook_time_seconds: parseInt(document.getElementById('cookTime').value),
+                difficulty: parseInt(document.getElementById('difficulty').value),
+                is_orderable: document.getElementById('isOrderable').checked,
+                ingredients: [{ item_id: document.getElementById('cookingIngredient').value, quantity: 1 }],
+                result_item_id: document.getElementById('cookingResult').value,
+            };
+        } else { // assembly
+            const ingredients = [];
+            document.querySelectorAll('.ingredient-item').forEach(item => {
+                const id = item.querySelector('.assembly-ingredient-select').value;
+                const qty = parseInt(item.querySelector('.assembly-ingredient-quantity').value);
+                if (id && qty > 0) {
+                    ingredients.push({ item_id: id, quantity: qty });
+                }
+            });
+            
+            payload = {
+                recipe_id: document.getElementById('recipeId').value,
+                recipe_name: document.getElementById('recipeName').value,
+                recipe_type: 'assembly',
+                difficulty: parseInt(document.getElementById('difficulty').value),
+                is_orderable: document.getElementById('isOrderable').checked,
+                ingredients: ingredients,
+                result_item_id: document.getElementById('assemblyResult').value,
+            };
+        }
+
+        try {
+            if (isEditing) {
+                // Simplified edit: only update difficulty and orderable status for now
+                await apiFetch(`/admin/update-recipe`, {
+                    method: 'POST', // As per spec doc
+                    body: {
+                        recipe_id: payload.recipe_id,
+                        difficulty: payload.difficulty,
+                        is_orderable: payload.is_orderable,
+                        recipe_name: payload.recipe_name
+                    }
+                });
+                showToast('食譜更新成功！', 'success');
+            } else {
+                await apiFetch('/admin/recipes', { method: 'POST', body: payload });
+                showToast('食譜新增成功！', 'success');
+            }
+            closeRecipeModal();
+            loadInitialData();
+        } catch (error) {
+            console.error('Save recipe failed', error);
+        }
+    });
+    
+    newItemForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = {
+            item_id: document.getElementById('newItemId').value,
+            item_name: document.getElementById('newItemName').value,
+            ascii_symbol: document.getElementById('newItemSymbol').value,
+            item_type: document.getElementById('newItemType').value,
+            base_points: parseInt(document.getElementById('newItemPoints').value),
+        };
+
+        try {
+            const newItem = await apiFetch('/admin/items', { method: 'POST', body: payload });
+            showToast(`物品 "${newItem.item_name}" 已成功創建!`, 'success');
+            
+            // Add to local cache and re-render/re-populate
+            allItems.push(newItem);
+            renderItems();
+            populateItemSelects();
+            
+            // Set the value of the select that triggered this
+            if (targetSelectForNewItem) {
+                document.getElementById(targetSelectForNewItem).value = newItem.item_id;
+            }
+
+            closeNewItemModal();
+        } catch (error) {
+            console.error('Create item failed', error);
+        }
+    });
+
+    // Table Actions
+    recipesTableBody.addEventListener('click', async (e) => {
+        const target = e.target.closest('button.delete-btn, button.edit-btn');
+        if (!target) return;
+
+        const row = target.closest('tr');
+        const recipeId = row.dataset.recipeId;
+        
+        if (target.classList.contains('delete-btn')) {
+            if (confirm(`確定要刪除食譜 "${recipeId}" 嗎？此操作無法復原。`)) {
+                try {
+                    await apiFetch(`/admin/recipes/${recipeId}`, { method: 'DELETE' });
+                    showToast('食譜刪除成功', 'success');
+                    row.remove();
+                    allRecipes = allRecipes.filter(r => r.recipe_id !== recipeId);
+                } catch (error) {
+                    console.error('Delete recipe failed', error);
+                }
+            }
+        }
+        
+        if (target.classList.contains('edit-btn')) {
+            const recipeToEdit = allRecipes.find(r => r.recipe_id === recipeId);
+            openRecipeModal(recipeToEdit);
+        }
+    });
+
+    // Toggle Orderable
+    recipesTableBody.addEventListener('change', async (e) => {
+        if (e.target.classList.contains('orderable-toggle')) {
+            const row = e.target.closest('tr');
+            const recipeId = row.dataset.recipeId;
+            const isOrderable = e.target.checked;
+            
+            try {
+                await apiFetch('/admin/update-recipe', {
+                    method: 'POST',
+                    body: { recipe_id: recipeId, is_orderable: isOrderable }
+                });
+                showToast(`食譜 "${recipeId}" 狀態已更新`, 'success');
+                const recipeInCache = allRecipes.find(r => r.recipe_id === recipeId);
+                if (recipeInCache) recipeInCache.is_orderable = isOrderable;
+            } catch (error) {
+                console.error('Update orderable status failed', error);
+                e.target.checked = !isOrderable; // Revert on failure
+            }
+        }
+    });
+    
+    // Bulk actions
+    selectAllCheckbox.addEventListener('change', (e) => {
+        document.querySelectorAll('.row-checkbox').forEach(cb => {
+            cb.checked = e.target.checked;
+        });
+        toggleBulkDeleteBtn();
+    });
+
+    recipesTableBody.addEventListener('change', (e) => {
+        if (e.target.classList.contains('row-checkbox')) {
+            toggleBulkDeleteBtn();
+        }
+    });
+    
+    function toggleBulkDeleteBtn() {
+        const selectedCount = document.querySelectorAll('.row-checkbox:checked').length;
+        bulkDeleteBtn.style.display = selectedCount > 0 ? 'inline-block' : 'none';
+        bulkDeleteBtn.textContent = `刪除選中 (${selectedCount})`;
+    }
+
+    bulkDeleteBtn.addEventListener('click', async () => {
+        const selectedIds = Array.from(document.querySelectorAll('.row-checkbox:checked'))
+            .map(cb => cb.closest('tr').dataset.recipeId);
+        
+        if (selectedIds.length === 0 || !confirm(`確定要刪除選中的 ${selectedIds.length} 個食譜嗎？`)) {
+            return;
+        }
+
+        try {
+            // Assuming a bulk delete endpoint exists. If not, loop through single deletes.
+            // For this example, let's assume a loop is needed.
+            setLoadingState(true);
+            for (const id of selectedIds) {
+                await apiFetch(`/admin/recipes/${id}`, { method: 'DELETE' });
+            }
+            showToast(`${selectedIds.length} 個食譜已刪除`, 'success');
+            await loadInitialData(); // Reload all data
+        } catch (error) {
+            console.error('Bulk delete failed', error);
+        } finally {
+            setLoadingState(false);
+            selectAllCheckbox.checked = false;
+            toggleBulkDeleteBtn();
+        }
+    });
+
+
+    // --- Init ---
+    checkAdminAuth();
+    loadInitialData();
+});
+</script>
+
+</body>
+</html>
