@@ -343,6 +343,9 @@ function initializeCookGame(pool) {
             // 登入後立即檢查稱號解鎖
             const unlockedTitles = await checkTitleUnlocks(user.user_id);
 
+            // --- DEBUG: 追蹤角色問題 ---
+            console.log('>>> [角色追蹤] 準備查詢角色，完整使用者物件:', JSON.stringify(user, null, 2));
+
             // 查詢用戶角色
             const roleResult = await pool.query(`
                 SELECT role_id 
@@ -350,13 +353,12 @@ function initializeCookGame(pool) {
                 WHERE user_id = $1
             `, [user.user_id]);
 
-            console.log('用戶登入成功:', {
-                userId: user.user_id,
-                username: user.username,
-                roleResult: roleResult.rows
-            });
+            console.log('>>> [角色追蹤] 資料庫角色查詢結果 (roleResult):', JSON.stringify(roleResult, null, 2));
 
             const userRole = roleResult.rows.length > 0 ? roleResult.rows[0].role_id : null;
+            
+            console.log('>>> [角色追蹤] 最終解析出的 userRole:', userRole);
+            // --- END DEBUG ---
 
             res.json({
                 message: '登入成功',
