@@ -4,7 +4,425 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>稱號管理 - 料理急先鋒</title>
-  <link rel="stylesheet" href="/css/cook-admin.css">
+  <style>
+    :root {
+      --primary-color: #e74c3c;
+      --secondary-color: #f39c12;
+      --dark-color: #2c3e50;
+      --light-color: #ecf0f1;
+      --success-color: #2ecc71;
+      --error-color: #e74c3c;
+      --gray-color: #95a5a6;
+      --shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      --transition: all 0.3s ease;
+      --border-radius: 4px;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      background-color: #f5f5f5;
+      color: var(--dark-color);
+      line-height: 1.6;
+    }
+    
+    .admin-container {
+      display: flex;
+      min-height: 100vh;
+    }
+    
+    .admin-sidebar {
+      width: 250px;
+      background-color: var(--dark-color);
+      color: var(--light-color);
+      padding: 20px;
+    }
+    
+    .admin-sidebar h2 {
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .admin-sidebar nav {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .admin-sidebar nav a {
+      color: var(--light-color);
+      text-decoration: none;
+      padding: 10px 15px;
+      margin-bottom: 5px;
+      border-radius: var(--border-radius);
+      transition: var(--transition);
+    }
+    
+    .admin-sidebar nav a:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .admin-sidebar nav a.active {
+      background-color: var(--primary-color);
+      color: white;
+    }
+    
+    .admin-content {
+      flex: 1;
+      padding: 20px;
+    }
+    
+    .admin-content h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .action-bar {
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .primary-btn {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    
+    .primary-btn:hover {
+      background-color: #c0392b;
+    }
+    
+    .titles-list {
+      background-color: white;
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    th, td {
+      padding: 12px 15px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+    
+    th {
+      background-color: #f8f8f8;
+      font-weight: 600;
+    }
+    
+    tbody tr:hover {
+      background-color: #f9f9f9;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: var(--gray-color);
+    }
+    
+    .no-data {
+      text-align: center;
+      padding: 20px;
+      color: var(--gray-color);
+    }
+    
+    .title-name-display {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .title-icon {
+      width: 20px;
+      height: 20px;
+      object-fit: contain;
+    }
+    
+    .status {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    
+    .status.active {
+      background-color: rgba(46, 204, 113, 0.2);
+      color: #27ae60;
+    }
+    
+    .status.inactive {
+      background-color: rgba(149, 165, 166, 0.2);
+      color: #7f8c8d;
+    }
+    
+    .actions {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .edit-btn {
+      background-color: var(--secondary-color);
+      color: white;
+      border: none;
+      padding: 6px 10px;
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      font-size: 14px;
+      transition: var(--transition);
+    }
+    
+    .edit-btn:hover {
+      background-color: #d35400;
+    }
+    
+    .delete-btn {
+      background-color: #e74c3c;
+      color: white;
+      border: none;
+      padding: 6px 10px;
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      font-size: 14px;
+      transition: var(--transition);
+    }
+    
+    .delete-btn:hover {
+      background-color: #c0392b;
+    }
+    
+    /* 稀有度樣式 */
+    .rarity-common {
+      border-left: 4px solid #95a5a6;
+    }
+    
+    .rarity-uncommon {
+      border-left: 4px solid #3498db;
+    }
+    
+    .rarity-rare {
+      border-left: 4px solid #9b59b6;
+    }
+    
+    .rarity-epic {
+      border-left: 4px solid #f1c40f;
+    }
+    
+    .rarity-legendary {
+      border-left: 4px solid #e74c3c;
+    }
+    
+    /* 模態框 */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0, 0, 0, 0.5);
+    }
+    
+    .modal-content {
+      background-color: white;
+      margin: 5% auto;
+      width: 90%;
+      max-width: 600px;
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      animation: modal-in 0.3s ease;
+    }
+    
+    @keyframes modal-in {
+      from {
+        transform: translateY(-50px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 20px;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .modal-header h2 {
+      font-size: 20px;
+      font-weight: 600;
+    }
+    
+    .close {
+      font-size: 24px;
+      font-weight: bold;
+      cursor: pointer;
+      color: var(--gray-color);
+      transition: var(--transition);
+    }
+    
+    .close:hover {
+      color: var(--dark-color);
+    }
+    
+    .modal-body {
+      padding: 20px;
+    }
+    
+    .form-group {
+      margin-bottom: 15px;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+      color: var(--dark-color);
+    }
+    
+    .form-group small {
+      display: block;
+      color: var(--gray-color);
+      font-size: 12px;
+      margin-top: 5px;
+    }
+    
+    .form-group input[type="text"],
+    .form-group input[type="number"],
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: var(--border-radius);
+      font-family: inherit;
+      font-size: 15px;
+    }
+    
+    .form-group textarea {
+      height: 100px;
+      resize: vertical;
+    }
+    
+    .form-group input[type="color"] {
+      width: 50px;
+      height: 40px;
+      border: none;
+      cursor: pointer;
+    }
+    
+    .form-group input[type="text"]#title-color-code {
+      width: calc(100% - 60px);
+      display: inline-block;
+      margin-left: 10px;
+    }
+    
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+    }
+    
+    .checkbox-label input[type="checkbox"] {
+      margin-right: 8px;
+    }
+    
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    
+    .cancel-btn {
+      background-color: var(--light-color);
+      color: var(--dark-color);
+      border: none;
+      padding: 10px 15px;
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    
+    .cancel-btn:hover {
+      background-color: #ddd;
+    }
+    
+    /* 通知 */
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 12px 20px;
+      background-color: var(--success-color);
+      color: white;
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      z-index: 1100;
+      transform: translateX(120%);
+      transition: transform 0.3s ease;
+      max-width: 350px;
+    }
+    
+    .notification.show {
+      transform: translateX(0);
+    }
+    
+    .notification.error {
+      background-color: var(--error-color);
+    }
+    
+    /* 響應式設計 */
+    @media (max-width: 768px) {
+      .admin-container {
+        flex-direction: column;
+      }
+      
+      .admin-sidebar {
+        width: 100%;
+        padding: 15px;
+      }
+      
+      .modal-content {
+        width: 95%;
+        margin: 10% auto;
+      }
+      
+      .actions {
+        flex-direction: column;
+      }
+      
+      .action-bar {
+        flex-wrap: wrap;
+      }
+    }
+  </style>
+  <!-- 添加思源黑體 -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
   <div class="admin-container">
@@ -25,6 +443,7 @@
       
       <div class="action-bar">
         <button id="add-title-btn" class="primary-btn">新增稱號</button>
+        <button id="create-database-btn" class="primary-btn">初始化稱號資料表</button>
       </div>
       
       <div class="titles-list">
@@ -166,14 +585,19 @@
         }
         
         if (!response.ok) {
-          throw new Error('獲取稱號列表失敗');
+          if (response.status === 404) {
+            showNotification('稱號資料表可能尚未建立，請點擊"初始化稱號資料表"按鈕', 'error');
+          } else {
+            throw new Error('獲取稱號列表失敗');
+          }
+          return;
         }
         
         const titles = await response.json();
         displayTitles(titles);
       } catch (error) {
         console.error('載入稱號失敗:', error);
-        showNotification('載入稱號列表失敗', 'error');
+        showNotification('載入稱號列表失敗：' + error.message, 'error');
       }
     }
     
@@ -313,6 +737,8 @@
       // 重置表單
       document.getElementById('title-form').reset();
       document.getElementById('title-id').value = '';
+      document.getElementById('title-color').value = '#ffffff';
+      document.getElementById('title-color-code').value = '#ffffff';
       
       // 更新模態框標題
       document.getElementById('modal-title').textContent = '新增稱號';
@@ -381,7 +807,7 @@
         showNotification('稱號已成功保存');
       } catch (error) {
         console.error('保存稱號失敗:', error);
-        showNotification('保存稱號失敗', 'error');
+        showNotification('保存稱號失敗: ' + error.message, 'error');
       }
     }
     
@@ -425,7 +851,42 @@
         showNotification('稱號已成功刪除');
       } catch (error) {
         console.error('刪除稱號失敗:', error);
-        showNotification('刪除稱號失敗', 'error');
+        showNotification('刪除稱號失敗: ' + error.message, 'error');
+      }
+    }
+    
+    // 初始化稱號資料表
+    async function initializeTitlesTable() {
+      const token = localStorage.getItem('cookGameToken');
+      if (!token) {
+        window.location.href = '/cook-login.html?redirect=/cook-admin-titles.html';
+        return;
+      }
+      
+      if (!confirm('這將創建稱號資料表並添加一些預設稱號。確定要繼續嗎？')) {
+        return;
+      }
+      
+      try {
+        const response = await fetch('/cook-api/admin/initialize-titles', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('初始化稱號資料表失敗');
+        }
+        
+        const result = await response.json();
+        showNotification('稱號資料表初始化成功！已創建 ' + result.titlesCreated + ' 個預設稱號。');
+        
+        // 重新載入稱號列表
+        loadTitles();
+      } catch (error) {
+        console.error('初始化稱號資料表失敗:', error);
+        showNotification('初始化稱號資料表失敗: ' + error.message, 'error');
       }
     }
     
@@ -460,6 +921,7 @@
     
     // 註冊事件監聽器
     document.getElementById('add-title-btn').addEventListener('click', addTitle);
+    document.getElementById('create-database-btn').addEventListener('click', initializeTitlesTable);
     document.getElementById('title-form').addEventListener('submit', saveTitle);
     document.querySelector('.close').addEventListener('click', () => {
       document.getElementById('title-modal').style.display = 'none';
