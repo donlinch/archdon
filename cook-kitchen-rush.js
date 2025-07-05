@@ -278,6 +278,159 @@ function initializeCookGame(pool) {
     });
     // #endregion
 
+    // 管理員API - 獲取 V2 食譜列表
+    cookGameApp.get('/admin/recipes-v2', authenticateToken, isAdmin, async (req, res) => {
+        try {
+            console.log('\n=== 獲取 V2 食譜列表 (cook_recipes_v2) ===');
+
+            const recipesResult = await pool.query(`
+                SELECT
+                    r.id,
+                    r.recipe_name,
+                    r.output_item_id
+                FROM cook_recipes_v2 r
+                ORDER BY r.id ASC
+            `);
+            console.log('食譜查詢結果:', recipesResult.rows);
+
+            const requirementsResult = await pool.query('SELECT * FROM cook_recipe_requirements_v2');
+            console.log('需求查詢結果:', requirementsResult.rows);
+
+            const requirementsMap = {};
+            for (const req of requirementsResult.rows) {
+                if (!requirementsMap[req.recipe_id]) {
+                    requirementsMap[req.recipe_id] = [];
+                }
+                requirementsMap[req.recipe_id].push({
+                    item_id: req.required_item_id,
+                    quantity: req.quantity
+                });
+            }
+            console.log('需求映射:', requirementsMap);
+
+            const recipes = recipesResult.rows.map(recipe => {
+                const recipeWithReqs = {
+                    ...recipe,
+                    requirements: requirementsMap[recipe.id] || []
+                };
+                console.log(`食譜 ${recipe.id} 的需求:`, recipeWithReqs.requirements);
+                return recipeWithReqs;
+            });
+
+            console.log(`查詢到 ${recipes.length} 個 V2 食譜`);
+            res.json(recipes);
+        } catch (error) {
+            console.error('獲取 V2 食譜列表時出錯:', error);
+            res.status(500).json({ success: false, error: '無法獲取 V2 食譜列表' });
+        }
+    });
+
+    // 管理員API - 新增或更新 V2 食譜
+    cookGameApp.post('/admin/recipes-v2', authenticateToken, isAdmin, async (req, res) => {
+        const { id, recipe_name, output_item_id, requirements } = req.body;
+        console.log('\n=== 新增/更新 V2 食譜 ===');
+        console.log('請求數據:', req.body);
+
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+
+            let recipeId;
+            let recipeResult;
+
+            if (id) {
+                // 更新現有食譜
+                console.log(`更新食譜 ID: ${id}`);
+                recipeResult = await client.query(`
+                    UPDATE cook_recipes_v2
+                    SET recipe_name = $1, output_item_id = $2
+                    WHERE id = $3
+                    RETURNING *
+                `, [recipe_name, output_item_id, id]);
+                recipeId = id;
+
+                // 刪除舊的需求
+                await client.query('DELETE FROM cook_recipe_requirements_v2 WHERE recipe_id = $1', [recipeId]);
+                console.log(`已刪除食譜 ID ${recipeId} 的舊需求`);
+
+            } else {
+                // 新增食譜
+                console.log('創建新食譜');
+                recipeResult = await client.query(`
+                    INSERT INTO cook_recipes_v2 (recipe_name, output_item_id)
+                    VALUES ($1, $2)
+                    RETURNING *
+                `, [recipe_name, output_item_id]);
+                recipeId = recipeResult.rows[0].id;
+                console.log(`新食譜創建成功，ID: ${recipeId}`);
+            }
+
+            if (recipeResult.rows.length === 0) {
+                throw new Error('無法找到或創建食譜');
+            }
+
+            // 插入新的需求
+            let insertedRequirements = [];
+            if (requirements && requirements.length > 0) {
+                console.log(`為食譜 ID ${recipeId} 插入 ${requirements.length} 個新需求`);
+                for (const req of requirements) {
+                    const reqResult = await client.query(`
+                        INSERT INTO cook_recipe_requirements_v2 (recipe_id, required_item_id, quantity)
+                        VALUES ($1, $2, $3)
+                        RETURNING *
+                    `, [recipeId, req.item_id, req.quantity]);
+                    insertedRequirements.push({
+                        item_id: reqResult.rows[0].required_item_id,
+                        quantity: reqResult.rows[0].quantity
+                    });
+                }
+            }
+
+            await client.query('COMMIT');
+            console.log('事務已提交');
+
+            const finalRecipe = {
+                ...recipeResult.rows[0],
+                requirements: insertedRequirements
+            };
+            
+            res.status(201).json({ success: true, recipe: finalRecipe });
+
+        } catch (error) {
+            await client.query('ROLLBACK');
+            console.error('新增/更新食譜時出錯:', error);
+            res.status(500).json({ success: false, error: '伺服器錯誤', details: error.message });
+        } finally {
+            client.release();
+        }
+    });
+
+    // 管理員API - 獲取所有烹飪方法
+    cookGameApp.get('/admin/cooking-methods', authenticateToken, isAdmin, async (req, res) => {
+        try {
+            console.log('\n=== 獲取所有烹飪方法 (暫時停用) ===');
+            // 臨時修復：由於 station_type 欄位可能不存在於 v2 表，暫時返回空陣列以避免伺服器錯誤。
+            // 待資料庫結構確認後，再恢復 `SELECT DISTINCT station_type FROM cook_recipes_v2` 的查詢。
+            res.json([]);
+        } catch (error) {
+            console.error('獲取烹飪方法時出錯:', error);
+            res.status(500).json({ success: false, error: '無法獲取烹飪方法列表' });
+        }
+    });
+
+    // 管理員API - 獲取所有物品
+    cookGameApp.get('/admin/all-items', authenticateToken, isAdmin, async (req, res) => {
+        try {
+            console.log('\n=== 獲取所有物品列表 (cook_items) ===');
+            const result = await pool.query('SELECT * FROM cook_items ORDER BY item_id ASC');
+            console.log(`查詢到 ${result.rowCount} 個物品`);
+            res.json(result.rows);
+        } catch (error) {
+            console.error('獲取物品列表時出錯:', error);
+            res.status(500).json({ success: false, error: '無法獲取物品列表' });
+        }
+    });
+
     // 管理員API - 儀表板數據
     cookGameApp.get('/admin/dashboard', authenticateToken, isAdmin, async (req, res) => {
         try {
