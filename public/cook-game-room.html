@@ -1203,7 +1203,7 @@
       
       playerCard.innerHTML = `
         <div class="player-avatar">
-          <img src="${player.avatar || '/images/default-avatar.png'}" alt="${player.username}">
+          <img src="${player.avatar || '/images/default-avatar.png'}" alt="${player.display_name || player.username}">
           <span class="player-level">Lv.${player.level || 1}</span>
         </div>
         <div class="player-info">

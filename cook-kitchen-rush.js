@@ -2406,7 +2406,7 @@ const isAdmin = async (req, res, next) => {
     // 添加每日任務相關的API端點
     
     // API: 獲取用戶的每日任務
-    cookGameApp.get('/api/daily-quests', authenticateToken, async (req, res) => {
+    cookGameApp.get('/cook-api/daily-quests', authenticateToken, async (req, res) => {
         try {
             const userId = req.user.userId;
             
@@ -2436,7 +2436,7 @@ const isAdmin = async (req, res, next) => {
     });
     
     // API: 手動領取每日任務獎勵
-    cookGameApp.post('/api/daily-quests/:questId/claim', authenticateToken, async (req, res) => {
+    cookGameApp.post('/cook-api/daily-quests/:questId/claim', authenticateToken, async (req, res) => {
         try {
             const userId = req.user.userId;
             const questId = req.params.questId;
