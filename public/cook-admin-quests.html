@@ -1,107 +1,118 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-TW" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>任務模板管理 - 料理急先鋒後台</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body {
-            background-color: #f8f9fa;
-        }
-        .sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            bottom: 0;
-            z-index: 100;
-            padding: 48px 0 0;
-            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
-            background-color: #343a40;
-        }
-        .sidebar-sticky {
-            position: relative;
-            top: 0;
-            height: calc(100vh - 48px);
-            padding-top: .5rem;
-            overflow-x: hidden;
-            overflow-y: auto;
-        }
-        .nav-link {
-            font-weight: 500;
-            color: #cda45e;
-        }
-        .nav-link.active {
-            color: #fff;
-        }
-        .nav-link:hover {
-            color: #fff;
-        }
-        .main-content {
-            margin-left: 220px;
-            padding: 20px;
-        }
-        .card {
-            border: 1px solid #cda45e;
-        }
-        .card-header {
-            background-color: #cda45e;
-            color: #fff;
-        }
-        .btn-primary {
-            background-color: #cda45e;
-            border-color: #cda45e;
-        }
-        .btn-primary:hover {
-            background-color: #b38f4a;
-            border-color: #b38f4a;
-        }
-        .admin-sidebar nav a.active {
-            background-color: var(--primary-color);
-            color: white;
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --background-color: #2c3e50;
+            --surface-color: #34495e;
+            --text-color: #ecf0f1;
+            --text-muted-color: #bdc3c7;
+            --border-color: #4a6278;
+            --danger-color: #e74c3c;
+            --warning-color: #f1c40f;
+            --success-color: #27ae60;
         }
 
-        .admin-sidebar .user-profile {
-            padding-bottom: 20px;
-            margin-bottom: 20px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+        [data-theme="light"] {
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --background-color: #f4f6f8;
+            --surface-color: #ffffff;
+            --text-color: #2c3e50;
+            --text-muted-color: #7f8c8d;
+            --border-color: #dfe4ea;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Microsoft JhengHei', 'Helvetica Neue', sans-serif;
+            margin: 0;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 260px;
+            background-color: var(--surface-color);
+            padding: 20px;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border-color);
+        }
+
+        .sidebar nav a {
             display: flex;
             align-items: center;
-            gap: 15px;
+            padding: 12px 15px;
+            color: var(--text-muted-color);
+            text-decoration: none;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            transition: background-color 0.3s, color 0.3s;
         }
-        .admin-sidebar .user-profile img {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid var(--primary-color);
-        }
-        .admin-sidebar .user-profile .user-info {
-            line-height: 1.2;
-            color: var(--light-color);
-        }
-        .admin-sidebar .user-profile .user-info strong {
-            font-size: 16px;
-            display: block;
-            margin-bottom: 4px;
-        }
-        .admin-sidebar .user-profile .user-info span {
-            font-size: 14px;
-            opacity: 0.8;
-        }
+        .sidebar nav a i { margin-right: 15px; width: 20px; text-align: center; }
+        .sidebar nav a.active, .sidebar nav a:hover { background-color: var(--primary-color); color: #fff; }
+        
+        .admin-sidebar { display: flex; flex-direction: column; height: 100%; }
+        .admin-sidebar h2 { text-align: center; margin-bottom: 30px; font-size: 24px; font-weight: bold; color: var(--primary-color); }
+        .admin-sidebar .user-profile { padding-bottom: 20px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 15px; }
+        .admin-sidebar .user-profile img { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-color); }
+        .admin-sidebar .user-profile .user-info { line-height: 1.2; color: var(--text-color); }
+        .admin-sidebar .user-profile .user-info strong { font-size: 16px; display: block; margin-bottom: 4px; }
+        .admin-sidebar .user-profile .user-info span { font-size: 14px; opacity: 0.8; }
 
-        .admin-content {
-            flex: 1;
-            padding: 20px;
-        }
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; height: 100vh; }
+        header { padding: 15px 30px; background-color: var(--surface-color); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+        header h1 { margin: 0; font-size: 24px; }
+        .page-content { flex-grow: 1; padding: 20px; overflow: auto; }
+
+        .btn { padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; transition: background-color 0.3s, opacity 0.3s; }
+        .btn-primary { background-color: var(--primary-color); color: white; }
+        .btn-primary:hover { opacity: 0.9; }
+        .btn-danger { background-color: var(--danger-color); color: white; }
+        .btn-danger:hover { opacity: 0.9; }
+
+        .table-container { overflow: auto; }
+        table { width: 100%; border-collapse: collapse; background-color: var(--surface-color); }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border-color); }
+        th { background-color: var(--background-color); position: sticky; top: 0; z-index: 10; }
+        tr:hover { background-color: var(--background-color); }
+
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
+        .modal-content { background-color: var(--surface-color); margin: auto; padding: 25px; border: 1px solid var(--border-color); width: 90%; max-width: 600px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; }
+        .modal-header h2 { margin: 0; }
+        .close-button { color: var(--text-muted-color); font-size: 28px; font-weight: bold; cursor: pointer; }
+        .close-button:hover, .close-button:focus { color: var(--text-color); }
+        
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: bold; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; background-color: var(--background-color); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 4px; box-sizing: border-box; }
+        
+        .form-check { display: flex; align-items: center; gap: 10px; }
+        .modal-footer { padding-top: 20px; border-top: 1px solid var(--border-color); text-align: right; display:flex; justify-content:flex-end; gap: 10px; }
+
+        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+        .toast { background-color: var(--surface-color); color: var(--text-color); padding: 15px 20px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.25); margin-bottom: 10px; opacity: 0; transition: opacity 0.5s, transform 0.5s; transform: translateX(100%); }
+        .toast.show { opacity: 1; transform: translateX(0); }
+        .toast.success { border-left: 5px solid var(--success-color); }
+        .toast.error { border-left: 5px solid var(--danger-color); }
     </style>
 </head>
 <body>
-    <div class="admin-container">
+    <aside class="sidebar">
         <div class="admin-sidebar">
             <div class="user-profile">
-                <img src="image/a01girlmove.gif" alt="Avatar" id="user-avatar">
+                <img src="/images/a01girlmove.gif" alt="Avatar" id="user-avatar">
                 <div class="user-info">
                     <strong id="user-username">載入中...</strong>
                     <span>等級: <span id="user-level">--</span></span>
@@ -109,66 +120,60 @@
             </div>
             <h2>管理後台</h2>
             <nav>
-                <a href="/cook-admin.html">總覽</a>
-                <a href="/cook-admin-items.html">物品管理</a>
-                <a href="/cook-admin-recipes.html">食譜管理</a>
-                <a href="/cook-admin-titles.html">稱號管理</a>
-                <a href="/cook-admin-quests.html" class="active">任務管理</a>
-                <a href="/cook-lobby.html">返回遊戲</a>
+                <a href="/cook-admin.html"><i class="fas fa-chart-line"></i> 總覽</a>
+                <a href="/cook-admin-items.html"><i class="fas fa-box"></i> 物品管理</a>
+                <a href="/cook-admin-recipes.html"><i class="fas fa-utensils"></i> 食譜管理</a>
+                <a href="/cook-admin-titles.html"><i class="fas fa-trophy"></i> 稱號管理</a>
+                <a href="/cook-admin-quests.html" class="active"><i class="fas fa-tasks"></i> 任務管理</a>
+                <a href="/cook-lobby.html"><i class="fas fa-gamepad"></i> 返回遊戲</a>
             </nav>
         </div>
-        <main class="main-content">
-            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                <h1 class="h2">任務模板管理</h1>
-                <div class="btn-toolbar mb-2 mb-md-0">
-                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#questModal" onclick="prepareCreateForm()">
-                        <i class="bi bi-plus-circle"></i> 新增任務模板
-                    </button>
-                </div>
-            </div>
+    </aside>
 
-            <div class="card">
-                <div class="card-header">
-                    任務模板列表
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover">
-                            <thead>
-                                <tr>
-                                    <th scope="col">ID</th>
-                                    <th scope="col">任務類型</th>
-                                    <th scope="col">描述</th>
-                                    <th scope="col">目標</th>
-                                    <th scope="col">獎勵點數</th>
-                                    <th scope="col">每日任務</th>
-                                    <th scope="col">操作</th>
-                                </tr>
-                            </thead>
-                            <tbody id="questsTableBody">
-                                <!-- Data will be populated by JavaScript -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+    <div class="main-content">
+        <header>
+            <h1>任務模板管理</h1>
+            <button type="button" class="btn btn-primary" id="addQuestBtn">
+                <i class="fas fa-plus"></i> 新增任務模板
+            </button>
+        </header>
+
+        <main class="page-content">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>任務類型</th>
+                            <th>描述</th>
+                            <th>目標</th>
+                            <th>獎勵點數</th>
+                            <th>每日任務</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="questsTableBody">
+                        <!-- Data will be populated by JavaScript -->
+                    </tbody>
+                </table>
             </div>
         </main>
     </div>
 
     <!-- Modal -->
-    <div class="modal fade" id="questModal" tabindex="-1" aria-labelledby="questModalLabel" aria-hidden="true">
+    <div class="modal" id="questModal">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="questModalLabel">編輯任務模板</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h2 id="questModalLabel">編輯任務模板</h2>
+                    <span class="close-button">&times;</span>
                 </div>
                 <div class="modal-body">
                     <form id="questForm">
                         <input type="hidden" id="questId">
-                        <div class="mb-3">
-                            <label for="questType" class="form-label">任務類型</label>
-                            <select class="form-select" id="questType" required>
+                        <div class="form-group">
+                            <label for="questType">任務類型</label>
+                            <select class="form-control" id="questType" required>
                                 <option value="" disabled selected>請選擇任務類型</option>
                                 <option value="complete_games">完成遊戲</option>
                                 <option value="earn_points">賺取點數</option>
@@ -176,106 +181,120 @@
                                 <option value="complete_difficulty_orders">完成指定難度訂單</option>
                             </select>
                         </div>
-                        <div class="mb-3">
-                            <label for="questDescription" class="form-label">描述</label>
+                        <div class="form-group">
+                            <label for="questDescription">描述</label>
                             <textarea class="form-control" id="questDescription" rows="3" required></textarea>
                         </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="questBaseTarget" class="form-label">基礎目標</label>
-                                <input type="number" class="form-control" id="questBaseTarget" required>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="questRewardPoints" class="form-label">獎勵點數</label>
-                                <input type="number" class="form-control" id="questRewardPoints" required>
-                            </div>
+                        <div class="form-group">
+                            <label for="questBaseTarget">基礎目標</label>
+                            <input type="number" class="form-control" id="questBaseTarget" required>
                         </div>
-                        <div class="mb-3 form-check">
+                        <div class="form-group">
+                            <label for="questRewardPoints">獎勵點數</label>
+                            <input type="number" class="form-control" id="questRewardPoints" required>
+                        </div>
+                        <div class="form-group form-check">
                             <input type="checkbox" class="form-check-input" id="questIsDaily">
                             <label class="form-check-label" for="questIsDaily">設為每日任務</label>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
-                    <button type="button" class="btn btn-primary" onclick="submitQuestForm()">儲存</button>
+                    <button type="button" class="btn btn-secondary close-button">關閉</button>
+                    <button type="button" class="btn btn-primary" id="saveQuestBtn">儲存</button>
                 </div>
             </div>
         </div>
     </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <div id="toast-container"></div>
     <script>
-        const API_BASE_URL = ''; // Adjust if you have a specific api path
-        const token = localStorage.getItem('cook_token');
+        const API_BASE_URL = '/cook-api';
+        const questModalEl = document.getElementById('questModal');
 
-        document.addEventListener('DOMContentLoaded', function() {
+        // --- 統一的令牌獲取函數 ---
+        function getUserToken() {
+            const userId = localStorage.getItem('boxCurrentUserId');
+            if (!userId) return null;
+            const tokenKey = `boxUserToken_${userId}`;
+            return localStorage.getItem(tokenKey);
+        }
+
+        // --- API Fetch Utility ---
+        async function apiFetch(endpoint, options = {}) {
+            const token = getUserToken();
             if (!token) {
-                alert('請先登入');
-                window.location.href = '/cook-login.html';
-                return;
+                showToast('權限不足或登入已超時，請重新登入。', 'error');
+                setTimeout(() => window.location.href = '/cook-login.html?redirect=/cook-admin-quests.html', 2000);
+                throw new Error('令牌未找到');
             }
-            loadUserProfile();
-            loadTemplates();
-        });
+            const defaultOptions = {
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
+            };
+            const mergedOptions = { ...defaultOptions, ...options };
+            if (mergedOptions.body) mergedOptions.body = JSON.stringify(mergedOptions.body);
 
-        async function fetchQuests() {
-            try {
-                const response = await fetch(`${API_BASE_URL}/admin/quest-templates`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-                if (!response.ok) {
-                    throw new Error('無法獲取任務模板列表');
-                }
-                const quests = await response.json();
-                populateTable(quests);
-            } catch (error) {
-                console.error('獲取任務模板時出錯:', error);
-                alert(error.message);
+            const response = await fetch(`${API_BASE_URL}${endpoint}`, mergedOptions);
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ message: '無法解析錯誤訊息' }));
+                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
             }
+            return response.json();
         }
 
         function populateTable(quests) {
             const tableBody = document.getElementById('questsTableBody');
             tableBody.innerHTML = '';
+            if (!quests || quests.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="7" class="text-center">沒有找到任務模板。</td></tr>';
+                return;
+            }
             quests.forEach(quest => {
-                const row = `
+                tableBody.innerHTML += `
                     <tr>
                         <td>${quest.id}</td>
                         <td>${quest.quest_type}</td>
                         <td>${quest.description}</td>
                         <td>${quest.base_target}</td>
                         <td>${quest.reward_points}</td>
-                        <td>${quest.is_daily ? '<i class="bi bi-check-circle-fill text-success"></i>' : '<i class="bi bi-x-circle-fill text-danger"></i>'}</td>
+                        <td>${quest.is_daily ? '<i class="fas fa-check-circle text-success"></i>' : '<i class="fas fa-times-circle text-danger"></i>'}</td>
                         <td>
-                            <button class="btn btn-sm btn-outline-primary" onclick='prepareEditForm(${JSON.stringify(quest)})'><i class="bi bi-pencil-square"></i> 編輯</button>
-                            <button class="btn btn-sm btn-outline-danger" onclick="deleteQuest(${quest.id})"><i class="bi bi-trash"></i> 刪除</button>
+                            <button class="btn btn-primary edit-btn" data-quest='${JSON.stringify(quest)}'><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-danger delete-btn" data-id="${quest.id}"><i class="fas fa-trash"></i></button>
                         </td>
                     </tr>
                 `;
-                tableBody.innerHTML += row;
             });
         }
 
-        function prepareCreateForm() {
-            document.getElementById('questForm').reset();
-            document.getElementById('questId').value = '';
-            document.getElementById('questModalLabel').innerText = '新增任務模板';
+        async function loadTemplates() {
+            try {
+                const quests = await apiFetch('/admin/quest-templates');
+                populateTable(quests);
+            } catch (error) {
+                console.error('獲取任務模板時出錯:', error);
+                showToast(error.message || '無法載入資料', 'error');
+            }
+        }
+        
+        function openModal(quest = null) {
+            const form = document.getElementById('questForm');
+            form.reset();
+            document.getElementById('questId').value = quest ? quest.id : '';
+            if (quest) {
+                document.getElementById('questModalLabel').innerText = `編輯任務模板 #${quest.id}`;
+                document.getElementById('questType').value = quest.quest_type;
+                document.getElementById('questDescription').value = quest.description;
+                document.getElementById('questBaseTarget').value = quest.base_target;
+                document.getElementById('questRewardPoints').value = quest.reward_points;
+                document.getElementById('questIsDaily').checked = quest.is_daily;
+            } else {
+                document.getElementById('questModalLabel').innerText = '新增任務模板';
+            }
+            questModalEl.style.display = 'flex';
         }
 
-        function prepareEditForm(quest) {
-            document.getElementById('questId').value = quest.id;
-            document.getElementById('questType').value = quest.quest_type;
-            document.getElementById('questDescription').value = quest.description;
-            document.getElementById('questBaseTarget').value = quest.base_target;
-            document.getElementById('questRewardPoints').value = quest.reward_points;
-            document.getElementById('questIsDaily').checked = quest.is_daily;
-            document.getElementById('questModalLabel').innerText = `編輯任務模板 #${quest.id}`;
-            
-            const modal = new bootstrap.Modal(document.getElementById('questModal'));
-            modal.show();
+        function closeModal() {
+            questModalEl.style.display = 'none';
         }
 
         async function submitQuestForm() {
@@ -289,127 +308,94 @@
             };
 
             if (!questData.quest_type || !questData.description || isNaN(questData.base_target) || isNaN(questData.reward_points)) {
-                alert('請填寫所有必填欄位');
+                showToast('請填寫所有必填欄位', 'error');
                 return;
             }
 
             try {
-                const response = await fetch(`${API_BASE_URL}/admin/quest-templates`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify(questData)
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || '儲存失敗');
-                }
-
-                const result = await response.json();
-                if (result.success) {
-                    alert('任務模板已儲存');
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('questModal'));
-                    modal.hide();
-                    fetchQuests();
-                } else {
-                    alert(result.error || '儲存失敗');
-                }
-
+                await apiFetch('/admin/quest-templates', { method: 'POST', body: questData });
+                showToast('任務模板已儲存', 'success');
+                closeModal();
+                loadTemplates();
             } catch (error) {
-                console.error('儲存任務模板時出錯:', error);
-                alert(error.message);
+                showToast(error.message || '儲存失敗', 'error');
             }
         }
 
         async function deleteQuest(id) {
-            // NOTE: The backend API for deleting a quest template is not yet implemented.
-            // This is a placeholder for when it becomes available.
-            // For now, it will just show an alert.
-            
-            if (confirm(`你確定要刪除任務模板 #${id} 嗎？此操作無法復原。`)) {
-                 alert(`刪除功能尚未實現。無法刪除任務 #${id}。`);
-                /*
+            if (confirm(`你確定要刪除任務模板 #${id} 嗎？`)) {
                 try {
-                    const response = await fetch(`${API_BASE_URL}/admin/quest-templates/${id}`, {
-                        method: 'DELETE',
-                        headers: {
-                            'Authorization': `Bearer ${token}`
-                        }
-                    });
-
-                    if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.message || '刪除失敗');
-                    }
-                    
-                    alert('任務模板已刪除');
-                    fetchQuests();
-
+                    await apiFetch(`/admin/quest-templates/${id}`, { method: 'DELETE' });
+                    showToast('任務模板已刪除', 'success');
+                    loadTemplates();
                 } catch (error) {
-                    console.error(`刪除任務模板 #${id} 時出錯:`, error);
-                    alert(error.message);
+                    showToast(error.message || '刪除失敗', 'error');
                 }
-                */
             }
         }
 
-        // 顯示通知
-        function showNotification(message, type = 'success') {
-            const notification = document.createElement('div');
-            notification.className = `notification ${type}`;
-            notification.textContent = message;
-            
-            document.body.appendChild(notification);
-            
+        // --- Standard Functions ---
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.add('show'), 100);
             setTimeout(() => {
-                notification.classList.add('show');
-            }, 10);
-            
-            setTimeout(() => {
-                notification.classList.remove('show');
-                setTimeout(() => {
-                    document.body.removeChild(notification);
-                }, 300);
+                toast.classList.remove('show');
+                setTimeout(() => container.removeChild(toast), 500);
             }, 3000);
         }
 
-        // 載入使用者個人資料
-        async function loadUserProfile() {
-            const token = localStorage.getItem('cookGameToken');
-            if (!token) {
-                window.location.href = '/cook-login.html?redirect=/cook-admin-quests.html';
+        function updateUserStatus() {
+            const savedUserId = localStorage.getItem('boxCurrentUserId');
+            const savedUserAvatarUrl = localStorage.getItem('boxCurrentUserAvatar');
+            const savedUserName = localStorage.getItem('boxCurrentDisplayName') || localStorage.getItem('boxCurrentUsername');
+            const userAvatar = document.getElementById('user-avatar');
+            const userName = document.getElementById('user-username');
+            if (savedUserId && savedUserName) {
+                userAvatar.src = savedUserAvatarUrl || '/images/a01girlmove.gif';
+                userName.textContent = savedUserName;
+            } else { userName.textContent = '未登入'; }
+        }
+
+        function initializePage() {
+            updateUserStatus();
+            const userId = localStorage.getItem('boxCurrentUserId');
+            const userRole = localStorage.getItem(`boxUserRole_${userId}`);
+            if (!userId || !getUserToken()) {
+                showToast('請先登入', 'error');
+                setTimeout(() => { window.location.href = '/cook-login.html?redirect=/cook-admin-quests.html'; }, 1500);
                 return;
             }
-
-            try {
-                const response = await fetch('/player/profile', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (!response.ok) {
-                    throw new Error('無法獲取用戶資料');
-                }
-                const profile = await response.json();
-
-                // 權限檢查
-                if (!profile.roles || !profile.roles.includes(6)) {
-                    showNotification('權限不足，將返回首頁。', 'error');
-                    setTimeout(() => {
-                        window.location.href = '/index.html';
-                    }, 2000);
-                    return;
-                }
-
-                document.getElementById('user-avatar').src = profile.avatar_url || 'image/a01girlmove.gif';
-                document.getElementById('user-username').textContent = profile.username;
-                document.getElementById('user-level').textContent = profile.level;
-            } catch (error) {
-                console.error('加載用戶資料失敗:', error);
-                document.getElementById('user-username').textContent = '用戶資料錯誤';
+            if (userRole !== '6') {
+                showToast('權限不足', 'error');
+                document.querySelector('.main-content').innerHTML = '<h1>權限不足</h1><p>您沒有權限訪問此頁面。</p>';
+                return;
             }
+            loadTemplates();
+            
+            // Event Listeners
+            document.getElementById('addQuestBtn').addEventListener('click', () => openModal());
+            document.querySelectorAll('.close-button').forEach(btn => btn.addEventListener('click', closeModal));
+            document.getElementById('saveQuestBtn').addEventListener('click', submitQuestForm);
+            window.addEventListener('click', (event) => { if (event.target == questModalEl) closeModal(); });
+            
+            document.getElementById('questsTableBody').addEventListener('click', (e) => {
+                if (e.target.closest('.edit-btn')) {
+                    const quest = JSON.parse(e.target.closest('.edit-btn').dataset.quest);
+                    openModal(quest);
+                }
+                if (e.target.closest('.delete-btn')) {
+                    const id = e.target.closest('.delete-btn').dataset.id;
+                    deleteQuest(id);
+                }
+            });
         }
+        
+        document.addEventListener('DOMContentLoaded', initializePage);
     </script>
 </body>
+</html> 
 </html> 

@@ -744,16 +744,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
 
     const API_BASE_URL = '/cook-api';
-    const token = localStorage.getItem('token');
 
-    // --- Authentication ---
-    function checkAdminAuth() {
-        if (!token) {
-            window.location.href = '/cook-login.html';
-            return;
-        }
-        // A more robust solution would be to verify the token on the server
-        // For now, just assume token presence is enough for client-side.
+    // --- 統一的令牌獲取函數 ---
+    function getUserToken() {
+        const userId = localStorage.getItem('boxCurrentUserId');
+        if (!userId) return null;
+        const tokenKey = `boxUserToken_${userId}`;
+        return localStorage.getItem(tokenKey);
     }
     
     // --- Toast Notifications ---
@@ -771,8 +768,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 3000);
     }
 
-    // --- API Fetch Utility ---
+    // --- API Fetch Utility (已修正) ---
     async function apiFetch(endpoint, options = {}) {
+        const token = getUserToken();
+        if (!token) {
+            showToast('權限不足或登入已超時，請重新登入。', 'error');
+            setTimeout(() => window.location.href = '/cook-login.html?redirect=/cook-admin-recipes.html', 2000);
+            throw new Error('令牌未找到，無法發送請求');
+        }
+
         const defaultOptions = {
             headers: {
                 'Content-Type': 'application/json',
@@ -789,8 +793,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!response.ok) {
                 if(response.status === 401 || response.status === 403) {
                    showToast('權限不足或登入已超時，請重新登入。', 'error');
-                   localStorage.removeItem('token');
-                   setTimeout(() => window.location.href = '/cook-login.html', 2000);
+                   setTimeout(() => window.location.href = '/cook-login.html?redirect=/cook-admin-recipes.html', 2000);
                 }
                 const errorData = await response.json().catch(() => ({ message: '無法解析錯誤訊息' }));
                 throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
@@ -1275,57 +1278,49 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // --- Init ---
-    checkAdminAuth();
-    loadInitialData();
-
-    // 在頁面加載時獲取所有物品和食譜
-    document.addEventListener('DOMContentLoaded', () => {
-        loadUserProfile();
-        fetchAllItems();
-        fetchAllRecipes();
-    });
-
-    // 顯示通知
-    function showNotification(message, type = 'success') {
-        // ... (如果需要，可以在此處實現通知功能)
-        alert(message);
+    // --- 更新使用者資訊 ---
+    function updateUserStatus() {
+        const savedUserId = localStorage.getItem('boxCurrentUserId');
+        const savedUserAvatarUrl = localStorage.getItem('boxCurrentUserAvatar');
+        const savedUserName = localStorage.getItem('boxCurrentDisplayName') || localStorage.getItem('boxCurrentUsername');
+      
+        const userAvatar = document.getElementById('user-avatar');
+        const userName = document.getElementById('user-username');
+      
+        if (savedUserId && savedUserName) {
+            userAvatar.src = savedUserAvatarUrl || 'image/a01girlmove.gif';
+            userName.textContent = savedUserName;
+        } else {
+            userAvatar.src = 'image/a01girlmove.gif';
+            userName.textContent = '未登入';
+        }
     }
 
-    // 載入使用者個人資料
-    async function loadUserProfile() {
-        const token = localStorage.getItem('cookGameToken');
-        if (!token) {
-            window.location.href = '/cook-login.html?redirect=/cook-admin-recipes.html';
+    // --- 頁面初始化與權限檢查 ---
+    function initializePage() {
+        updateUserStatus();
+
+        const userId = localStorage.getItem('boxCurrentUserId');
+        const userRole = localStorage.getItem(`boxUserRole_${userId}`);
+
+        if (!userId || !getUserToken()) {
+            showToast('請先登入', 'error');
+            setTimeout(() => {
+                window.location.href = '/cook-login.html?redirect=' + window.location.pathname;
+            }, 1500);
             return;
         }
 
-        try {
-            const response = await fetch('/player/profile', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (!response.ok) {
-                throw new Error('無法獲取用戶資料');
-            }
-            const profile = await response.json();
-
-            // 權限檢查
-            if (!profile.roles || !profile.roles.includes(6)) {
-                showNotification('權限不足，將返回首頁。', 'error');
-                setTimeout(() => {
-                    window.location.href = '/index.html';
-                }, 2000);
-                return;
-            }
-
-            document.getElementById('user-avatar').src = profile.avatar_url || 'image/a01girlmove.gif';
-            document.getElementById('user-username').textContent = profile.username;
-            document.getElementById('user-level').textContent = profile.level;
-        } catch (error) {
-            console.error('加載用戶資料失敗:', error);
-            document.getElementById('user-username').textContent = '用戶資料錯誤';
+        if (userRole !== '6') {
+            showToast('權限不足', 'error');
+            document.querySelector('.main-content').innerHTML = '<h1><i class="fas fa-exclamation-triangle"></i> 權限不足</h1><p>您沒有權限訪問此頁面。</p>';
+            return;
         }
+        
+        loadInitialData();
     }
+
+    initializePage();
 });
 </script>
 

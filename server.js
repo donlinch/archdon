@@ -1,35 +1,6 @@
 require('dotenv').config();
 
-// ★★★ 強力除錯區塊 START ★★★
-console.log('======================================================');
-console.log('★★★ 環境變數強力除錯 START ★★★');
-console.log(`[DEBUG] __dirname (腳本所在目錄): ${__dirname}`);
-console.log(`[DEBUG] process.cwd() (當前工作目錄): ${process.cwd()}`);
-console.log('[DEBUG] 正在檢查 .env 檔案是否存在...');
-try {
-    const fs = require('fs');
-    const envPath = require('path').join(process.cwd(), '.env');
-    if (fs.existsSync(envPath)) {
-        console.log(`[SUCCESS] .env 檔案找到於: ${envPath}`);
-        // 我們手動讀取並印出內容，來看看 dotenv 到底有沒有讀對
-        const envContent = fs.readFileSync(envPath, 'utf-8');
-        console.log('--- .env 檔案內容 START ---');
-        console.log(envContent);
-        console.log('--- .env 檔案內容 END ---');
-    } else {
-        console.error(`[ERROR] 在 ${envPath} 找不到 .env 檔案！`);
-    }
-} catch (e) {
-    console.error('[ERROR] 檢查 .env 檔案時發生錯誤:', e);
-}
-
-console.log('------------------------------------------------------');
-console.log('[DEBUG] 檢查 process.env 中的變數值:');
-console.log(`[DEBUG] process.env.NODE_ENV = ${process.env.NODE_ENV}`);
-console.log(`[DEBUG] process.env.DATABASE_URL = ${process.env.DATABASE_URL}`);
-console.log('★★★ 環境變數強力除錯 END ★★★');
-console.log('======================================================');
-// ★★★ 強力除錯區塊 END ★★★
+ 
 
  
 const http = require('http'); // <--- Need http module
@@ -4648,8 +4619,16 @@ app.use(['/api/admin', '/api/analytics'], isAdminAuthenticated);
 
 // --- 靜態文件服務 ---
  
-app.use('/uploads', express.static(uploadDir)); // uploadDir 的值是 '/data/uploads'
-console.log(`設定靜態檔案服務: /uploads 將映射到 ${uploadDir}`);
+// 在開發環境中重定向 /uploads 到生產環境
+if (process.env.NODE_ENV !== 'production') {
+    app.use('/uploads', (req, res) => {
+        const targetUrl = `https://sunnyyummy.onrender.com/uploads${req.url}`;
+        res.redirect(targetUrl);
+    });
+} else {
+    app.use('/uploads', express.static(uploadDir));
+    console.log(`設定靜態檔案服務: /uploads 將映射到 ${uploadDir}`);
+}
 
 // --- 公開 API Routes (保持不變) ---
 // ... (保留所有其他的公開 API，如 guestbook, scores, news, products, music, banners 等) ...

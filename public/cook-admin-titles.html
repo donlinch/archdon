@@ -1,460 +1,427 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-TW" data-theme="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>稱號管理 - 料理急先鋒</title>
-  <style>
-    :root {
-      --primary-color: #e74c3c;
-      --secondary-color: #f39c12;
-      --dark-color: #2c3e50;
-      --light-color: #ecf0f1;
-      --success-color: #2ecc71;
-      --error-color: #e74c3c;
-      --gray-color: #95a5a6;
-      --shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-      --transition: all 0.3s ease;
-      --border-radius: 4px;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>稱號管理 - 料理急先鋒後台</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --background-color: #2c3e50;
+            --surface-color: #34495e;
+            --text-color: #ecf0f1;
+            --text-muted-color: #bdc3c7;
+            --border-color: #4a6278;
+            --danger-color: #e74c3c;
+            --warning-color: #f1c40f;
+            --success-color: #27ae60;
+            --shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+            --border-radius: 4px;
+        }
+
+        [data-theme="light"] {
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --background-color: #f4f6f8;
+            --surface-color: #ffffff;
+            --text-color: #2c3e50;
+            --text-muted-color: #7f8c8d;
+            --border-color: #dfe4ea;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+            --success-color: #27ae60;
+        }
+
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', 'Microsoft JhengHei', 'Helvetica Neue', sans-serif;
+            margin: 0;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 260px;
+            background-color: var(--surface-color);
+            padding: 20px;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border-color);
+        }
+
+        .sidebar .logo {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .sidebar nav a {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            color: var(--text-muted-color);
+            text-decoration: none;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .sidebar nav a i {
+            margin-right: 15px;
+            width: 20px;
+            text-align: center;
+        }
+        
+        .sidebar nav a.active, .sidebar nav a:hover {
+            background-color: var(--primary-color);
+            color: #fff;
+        }
+        
+        .admin-sidebar { /* For compatibility */
+             display: flex;
+             flex-direction: column;
+             height: 100%;
+        }
+
+        .admin-sidebar h2 {
+          text-align: center;
+          margin-bottom: 30px;
+          font-size: 24px;
+          font-weight: bold;
+          color: var(--primary-color);
+        }
+        
+        .admin-sidebar .user-profile {
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .admin-sidebar .user-profile img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--primary-color);
+        }
+
+        .admin-sidebar .user-profile .user-info {
+            line-height: 1.2;
+            color: var(--text-color);
+        }
+
+        .admin-sidebar .user-profile .user-info strong {
+            font-size: 16px;
+            display: block;
+            margin-bottom: 4px;
+        }
+        .admin-sidebar .user-profile .user-info span {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        header {
+            padding: 15px 30px;
+            background-color: var(--surface-color);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .page-content {
+            flex-grow: 1;
+            padding: 20px;
+            overflow: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: var(--surface-color);
+        }
+        
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--background-color);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        tr:hover {
+            background-color: var(--background-color);
+        }
+        
+        /* Specific styles from titles.html, adapted */
+        .info-box {
+            background-color: var(--surface-color);
+            border-left: 4px solid var(--primary-color);
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: var(--border-radius);
+            font-size: 15px;
+            line-height: 1.7;
+        }
+        .info-box code {
+            background-color: var(--background-color);
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+
+        .titles-list {
+            background-color: var(--surface-color);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .loading, .no-data, .error {
+          text-align: center;
+          padding: 20px;
+          color: var(--text-muted-color);
+        }
+        .error { color: var(--danger-color); }
+
+        .btn, .primary-btn, .edit-btn, .delete-btn, .cancel-btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s, opacity 0.3s;
+        }
+        .primary-btn { background-color: var(--primary-color); color: white; }
+        .primary-btn:hover { opacity: 0.9; }
+        .edit-btn { background-color: var(--warning-color); color: white; }
+        .edit-btn:hover { opacity: 0.9; }
+        .delete-btn { background-color: var(--danger-color); color: white; }
+        .delete-btn:hover { opacity: 0.9; }
+        .cancel-btn { background-color: var(--border-color); color: white; }
+        .cancel-btn:hover { opacity: 0.9; }
+
+        .status {
+          display: inline-block;
+          padding: 4px 8px;
+          border-radius: 20px;
+          font-size: 12px;
+          font-weight: 500;
+        }
+        
+        .status.active {
+          background-color: rgba(46, 204, 113, 0.2);
+          color: #27ae60;
+        }
+        
+        .status.inactive {
+          background-color: rgba(149, 165, 166, 0.2);
+          color: #7f8c8d;
+        }
     
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    
-    body {
-      font-family: 'Noto Sans TC', sans-serif;
-      background-color: #f5f5f5;
-      color: var(--dark-color);
-      line-height: 1.6;
-    }
-    
-    .admin-container {
-      display: flex;
-      min-height: 100vh;
-    }
-    
-    .admin-sidebar {
-      width: 250px;
-      background-color: var(--dark-color);
-      color: var(--light-color);
-      padding: 20px;
-    }
-    
-    .admin-sidebar h2 {
-      margin-bottom: 20px;
-      padding-bottom: 10px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    }
-    
-    .admin-sidebar nav {
-      display: flex;
-      flex-direction: column;
-    }
-    
-    .admin-sidebar nav a {
-      color: var(--light-color);
-      text-decoration: none;
-      padding: 10px 15px;
-      margin-bottom: 5px;
-      border-radius: var(--border-radius);
-      transition: var(--transition);
-    }
-    
-    .admin-sidebar nav a:hover {
-      background-color: rgba(255, 255, 255, 0.1);
-    }
-    
-    .admin-sidebar nav a.active {
-      background-color: var(--primary-color);
-      color: white;
-    }
-    
-    .admin-sidebar .user-profile {
-      padding-bottom: 20px;
-      margin-bottom: 20px;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
-      display: flex;
-      align-items: center;
-      gap: 15px;
-    }
-    .admin-sidebar .user-profile img {
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 2px solid var(--primary-color);
-    }
-    .admin-sidebar .user-profile .user-info {
-      line-height: 1.2;
-      color: var(--light-color);
-    }
-    .admin-sidebar .user-profile .user-info strong {
-      font-size: 16px;
-      display: block;
-      margin-bottom: 4px;
-    }
-    .admin-sidebar .user-profile .user-info span {
-      font-size: 14px;
-      opacity: 0.8;
-    }
-    
-    .admin-content {
-      flex: 1;
-      padding: 20px;
-    }
-    
-    .admin-content h1 {
-      font-size: 24px;
-      margin-bottom: 20px;
-      padding-bottom: 10px;
-      border-bottom: 1px solid #eee;
-    }
-    
-    .action-bar {
-      margin-bottom: 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    
-    .primary-btn {
-      background-color: var(--primary-color);
-      color: white;
-      border: none;
-      padding: 10px 15px;
-      border-radius: var(--border-radius);
-      cursor: pointer;
-      transition: var(--transition);
-    }
-    
-    .primary-btn:hover {
-      background-color: #c0392b;
-    }
-    
-    .titles-list {
-      background-color: white;
-      border-radius: var(--border-radius);
-      box-shadow: var(--shadow);
-      overflow: hidden;
-    }
-    
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    
-    th, td {
-      padding: 12px 15px;
-      text-align: left;
-      border-bottom: 1px solid #eee;
-    }
-    
-    th {
-      background-color: #f8f8f8;
-      font-weight: 600;
-    }
-    
-    tbody tr:hover {
-      background-color: #f9f9f9;
-    }
-    
-    .loading {
-      text-align: center;
-      padding: 20px;
-      color: var(--gray-color);
-    }
-    
-    .no-data {
-      text-align: center;
-      padding: 20px;
-      color: var(--gray-color);
-    }
-    
-    .title-name-display {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    
-    .title-icon {
-      width: 20px;
-      height: 20px;
-      object-fit: contain;
-    }
-    
-    .status {
-      display: inline-block;
-      padding: 4px 8px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 500;
-    }
-    
-    .status.active {
-      background-color: rgba(46, 204, 113, 0.2);
-      color: #27ae60;
-    }
-    
-    .status.inactive {
-      background-color: rgba(149, 165, 166, 0.2);
-      color: #7f8c8d;
-    }
-    
-    .actions {
-      display: flex;
-      gap: 8px;
-    }
-    
-    .edit-btn {
-      background-color: var(--secondary-color);
-      color: white;
-      border: none;
-      padding: 6px 10px;
-      border-radius: var(--border-radius);
-      cursor: pointer;
-      font-size: 14px;
-      transition: var(--transition);
-    }
-    
-    .edit-btn:hover {
-      background-color: #d35400;
-    }
-    
-    .delete-btn {
-      background-color: #e74c3c;
-      color: white;
-      border: none;
-      padding: 6px 10px;
-      border-radius: var(--border-radius);
-      cursor: pointer;
-      font-size: 14px;
-      transition: var(--transition);
-    }
-    
-    .delete-btn:hover {
-      background-color: #c0392b;
-    }
-    
-    /* 稀有度樣式 */
-    .rarity-common {
-      border-left: 4px solid #95a5a6;
-    }
-    
-    .rarity-uncommon {
-      border-left: 4px solid #3498db;
-    }
-    
-    .rarity-rare {
-      border-left: 4px solid #9b59b6;
-    }
-    
-    .rarity-epic {
-      border-left: 4px solid #f1c40f;
-    }
-    
-    .rarity-legendary {
-      border-left: 4px solid #e74c3c;
-    }
-    
-    /* 模態框 */
-    .modal {
-      display: none;
-      position: fixed;
-      z-index: 1000;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      overflow: auto;
-      background-color: rgba(0, 0, 0, 0.5);
-    }
-    
-    .modal-content {
-      background-color: white;
-      margin: 5% auto;
-      width: 90%;
-      max-width: 600px;
-      border-radius: var(--border-radius);
-      box-shadow: var(--shadow);
-      animation: modal-in 0.3s ease;
-    }
-    
-    @keyframes modal-in {
-      from {
-        transform: translateY(-50px);
-        opacity: 0;
-      }
-      to {
-        transform: translateY(0);
-        opacity: 1;
-      }
-    }
-    
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 15px 20px;
-      border-bottom: 1px solid #eee;
-    }
-    
-    .modal-header h2 {
-      font-size: 20px;
-      font-weight: 600;
-    }
-    
-    .close {
-      font-size: 24px;
-      font-weight: bold;
-      cursor: pointer;
-      color: var(--gray-color);
-      transition: var(--transition);
-    }
-    
-    .close:hover {
-      color: var(--dark-color);
-    }
-    
-    .modal-body {
-      padding: 20px;
-    }
-    
-    .form-group {
-      margin-bottom: 15px;
-    }
-    
-    .form-group label {
-      display: block;
-      margin-bottom: 5px;
-      font-weight: 500;
-      color: var(--dark-color);
-    }
-    
-    .form-group small {
-      display: block;
-      color: var(--gray-color);
-      font-size: 12px;
-      margin-top: 5px;
-    }
-    
-    .form-group input[type="text"],
-    .form-group input[type="number"],
-    .form-group select,
-    .form-group textarea {
-      width: 100%;
-      padding: 10px;
-      border: 1px solid #ddd;
-      border-radius: var(--border-radius);
-      font-family: inherit;
-      font-size: 15px;
-    }
-    
-    .form-group textarea {
-      height: 100px;
-      resize: vertical;
-    }
-    
-    .form-group input[type="color"] {
-      width: 50px;
-      height: 40px;
-      border: none;
-      cursor: pointer;
-    }
-    
-    .form-group input[type="text"]#title-color-code {
-      width: calc(100% - 60px);
-      display: inline-block;
-      margin-left: 10px;
-    }
-    
-    .checkbox-label {
-      display: flex;
-      align-items: center;
-      cursor: pointer;
-    }
-    
-    .checkbox-label input[type="checkbox"] {
-      margin-right: 8px;
-    }
-    
-    .form-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-      margin-top: 20px;
-    }
-    
-    .cancel-btn {
-      background-color: var(--light-color);
-      color: var(--dark-color);
-      border: none;
-      padding: 10px 15px;
-      border-radius: var(--border-radius);
-      cursor: pointer;
-      transition: var(--transition);
-    }
-    
-    .cancel-btn:hover {
-      background-color: #ddd;
-    }
-    
-    /* 通知 */
-    .notification {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      padding: 12px 20px;
-      background-color: var(--success-color);
-      color: white;
-      border-radius: var(--border-radius);
-      box-shadow: var(--shadow);
-      z-index: 1100;
-      transform: translateX(120%);
-      transition: transform 0.3s ease;
-      max-width: 350px;
-    }
-    
-    .notification.show {
-      transform: translateX(0);
-    }
-    
-    .notification.error {
-      background-color: var(--error-color);
-    }
-    
-    /* 響應式設計 */
-    @media (max-width: 768px) {
-      .admin-container {
-        flex-direction: column;
-      }
-      
-      .admin-sidebar {
-        width: 100%;
-        padding: 15px;
-      }
-      
-      .modal-content {
-        width: 95%;
-        margin: 10% auto;
-      }
-      
-      .actions {
-        flex-direction: column;
-      }
-      
-      .action-bar {
-        flex-wrap: wrap;
-      }
-    }
-  </style>
-  <!-- 添加思源黑體 -->
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+        .actions {
+          display: flex;
+          gap: 8px;
+        }
+
+        /* Modal styles from recipes.html */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.6);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: var(--surface-color);
+            margin: auto;
+            padding: 25px;
+            border: 1px solid var(--border-color);
+            width: 90%;
+            max-width: 600px;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+        
+        .modal-header h2 { margin: 0; }
+        
+        .close {
+            color: var(--text-muted-color);
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover, .close:focus { color: var(--text-color); }
+        .modal-body { padding: 0; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: bold; }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            background-color: var(--background-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .form-group small {
+            display: block;
+            color: var(--text-muted-color);
+            font-size: 12px;
+            margin-top: 5px;
+        }
+        .form-actions {
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+            text-align: right;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        .form-group input[type="color"] {
+            width: 50px;
+            height: 40px;
+            border: none;
+            cursor: pointer;
+            padding: 2px;
+        }
+        .form-group input[type="text"]#title-color-code {
+            width: calc(100% - 60px);
+            display: inline-block;
+            margin-left: 10px;
+        }
+
+        /* Notification styles from titles.html */
+        .notification {
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          padding: 12px 20px;
+          color: white;
+          border-radius: var(--border-radius);
+          box-shadow: var(--shadow);
+          z-index: 1100;
+          transform: translateX(120%);
+          transition: transform 0.3s ease;
+          max-width: 350px;
+          background-color: var(--success-color);
+        }
+        .notification.show { transform: translateX(0); }
+        .notification.error { background-color: var(--danger-color); }
+
+        /* Debug panel styles from titles.html */
+        .debug-panel {
+          position: fixed;
+          bottom: 10px;
+          right: 10px;
+          background: rgba(0, 0, 0, 0.8);
+          color: #00ff00;
+          font-family: monospace;
+          padding: 10px;
+          border-radius: 5px;
+          z-index: 9999;
+          max-width: 500px;
+          max-height: 300px;
+          overflow: auto;
+          font-size: 12px;
+        }
+        .debug-panel h4 { margin: 0 0 5px 0; color: #fff; }
+        .debug-panel pre { margin: 0; white-space: pre-wrap; }
+        .debug-panel button {
+          background: #333;
+          color: #fff;
+          border: 1px solid #555;
+          padding: 3px 8px;
+          margin-top: 5px;
+          cursor: pointer;
+        }
+        
+        .default-titles-section {
+            margin-top: 30px;
+            background-color: var(--surface-color);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 20px;
+        }
+        .toggle-section {
+            cursor: pointer;
+            color: var(--primary-color);
+            text-decoration: underline;
+            margin-top: 20px;
+            display: inline-block;
+        }
+        .default-titles-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .default-titles-table th, .default-titles-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+    </style>
 </head>
-<body>
-  <div class="admin-container">
+<body data-theme="dark">
+
+  <!-- 調試面板 -->
+  <div id="debug-panel" class="debug-panel" style="display: none;">
+    <h4>認證狀態調試</h4>
+    <pre id="debug-info">載入中...</pre>
+    <button id="refresh-debug">刷新</button>
+    <button id="try-login">嘗試登入</button>
+  </div>
+
+  <aside class="sidebar">
     <div class="admin-sidebar">
       <div class="user-profile">
         <img src="/images/a01girlmove.gif" alt="Avatar" id="user-avatar">
@@ -465,20 +432,30 @@
       </div>
       <h2>管理後台</h2>
       <nav>
-        <a href="/cook-admin.html">總覽</a>
-         <a href="/cook-admin-recipes.html">食譜管理</a>
-        <a href="/cook-admin-titles.html" class="active">稱號管理</a>
-        <a href="/cook-admin-quests.html">任務管理</a>
-        <a href="/cook-lobby.html">返回遊戲</a>
+        <a href="/cook-admin.html"><i class="fas fa-chart-line"></i> 總覽</a>
+        <a href="/cook-admin-items.html"><i class="fas fa-box"></i> 物品管理</a>
+        <a href="/cook-admin-recipes.html"><i class="fas fa-utensils"></i> 食譜管理</a>
+        <a href="/cook-admin-titles.html" class="active"><i class="fas fa-trophy"></i> 稱號管理</a>
+        <a href="/cook-admin-quests.html"><i class="fas fa-tasks"></i> 任務管理</a>
+        <a href="/cook-lobby.html"><i class="fas fa-gamepad"></i> 返回遊戲</a>
       </nav>
     </div>
+  </aside>
     
-    <div class="admin-content">
-      <h1>稱號管理</h1>
-      
-      <div class="action-bar">
-        <button id="add-title-btn" class="primary-btn">新增稱號</button>
-        <button id="create-database-btn" class="primary-btn">初始化稱號資料表</button>
+  <div class="main-content">
+    <header>
+        <h1>稱號管理</h1>
+    </header>
+
+    <main class="page-content">
+      <div class="info-box">
+        <p>此頁面用於管理遊戲中所有可用的稱號。稱號的解鎖是根據玩家的遊戲數據自動觸發的。</p>
+        <p>
+          系統會將稱號的<strong>解鎖條件</strong>與<strong>解鎖值</strong>，與 <code>cook_players</code> 資料表中的玩家數據進行比對。例如，一個解鎖條件為「等級達到」、解鎖值為「20」的稱號，會在玩家的 <code>cook_players.level</code> 欄位達到 20 時自動解鎖並授予玩家。
+        </p>
+        <p>
+          關聯的玩家數據欄位包括：<code>level</code>、<code>points</code>、<code>games_played</code>、<code>orders_completed</code>。
+        </p>
       </div>
       
       <div class="titles-list">
@@ -502,7 +479,118 @@
           </tbody>
         </table>
       </div>
-    </div>
+      
+      <!-- 預設稱號列表 -->
+      <a href="#" class="toggle-section" id="toggle-default-titles">顯示預設稱號列表 ▼</a>
+      <div class="default-titles-section" id="default-titles-section" style="display:none;">
+        <h2>預設稱號列表 (10個)</h2>
+        <table class="default-titles-table">
+          <thead>
+            <tr>
+              <th>稱號ID</th>
+              <th>稱號名稱</th>
+              <th>稱號描述</th>
+              <th>稀有度</th>
+              <th>解鎖條件</th>
+              <th>解鎖值</th>
+              <th>顏色</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>novice_chef</td>
+              <td>新手廚師</td>
+              <td>剛開始學習烹飪的新手</td>
+              <td>普通 (common)</td>
+              <td>等級達到 (level)</td>
+              <td>1</td>
+              <td><span style="color:#AAAAAA">#AAAAAA</span></td>
+            </tr>
+            <tr>
+              <td>apprentice_chef</td>
+              <td>學徒廚師</td>
+              <td>已有一定烹飪經驗的學徒</td>
+              <td>普通 (common)</td>
+              <td>等級達到 (level)</td>
+              <td>5</td>
+              <td><span style="color:#FFFFFF">#FFFFFF</span></td>
+            </tr>
+            <tr>
+              <td>line_cook</td>
+              <td>廚房小廚</td>
+              <td>能夠熟練處理基本料理的廚師</td>
+              <td>不普通 (uncommon)</td>
+              <td>等級達到 (level)</td>
+              <td>10</td>
+              <td><span style="color:#77CCFF">#77CCFF</span></td>
+            </tr>
+            <tr>
+              <td>sous_chef</td>
+              <td>副主廚</td>
+              <td>能夠協助管理廚房的資深廚師</td>
+              <td>稀有 (rare)</td>
+              <td>等級達到 (level)</td>
+              <td>20</td>
+              <td><span style="color:#AA77FF">#AA77FF</span></td>
+            </tr>
+            <tr>
+              <td>head_chef</td>
+              <td>主廚</td>
+              <td>廚房的指揮官，擁有卓越的烹飪技巧</td>
+              <td>史詩 (epic)</td>
+              <td>等級達到 (level)</td>
+              <td>30</td>
+              <td><span style="color:#FFCC00">#FFCC00</span></td>
+            </tr>
+            <tr>
+              <td>master_chef</td>
+              <td>大廚師長</td>
+              <td>頂尖的廚藝大師，無人能敵</td>
+              <td>傳說 (legendary)</td>
+              <td>等級達到 (level)</td>
+              <td>50</td>
+              <td><span style="color:#FF5522">#FF5522</span></td>
+            </tr>
+            <tr>
+              <td>kitchen_rookie</td>
+              <td>廚房新秀</td>
+              <td>剛開始在廚房工作的新手</td>
+              <td>普通 (common)</td>
+              <td>遊戲場次達到 (games_played)</td>
+              <td>5</td>
+              <td><span style="color:#AAFFAA">#AAFFAA</span></td>
+            </tr>
+            <tr>
+              <td>kitchen_veteran</td>
+              <td>廚房老手</td>
+              <td>在廚房工作多年的資深廚師</td>
+              <td>稀有 (rare)</td>
+              <td>遊戲場次達到 (games_played)</td>
+              <td>100</td>
+              <td><span style="color:#AA77FF">#AA77FF</span></td>
+            </tr>
+            <tr>
+              <td>order_expert</td>
+              <td>訂單專家</td>
+              <td>完成大量訂單的專家</td>
+              <td>史詩 (epic)</td>
+              <td>完成訂單數達到 (orders_completed)</td>
+              <td>500</td>
+              <td><span style="color:#FFAA22">#FFAA22</span></td>
+            </tr>
+            <tr>
+              <td>point_collector</td>
+              <td>積分收集者</td>
+              <td>累積大量積分的玩家</td>
+              <td>稀有 (rare)</td>
+              <td>積分達到 (points)</td>
+              <td>10000</td>
+              <td><span style="color:#22CCFF">#22CCFF</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
   </div>
   
   <!-- 編輯稱號對話框 -->
@@ -589,6 +677,65 @@
   </div>
   
   <script>
+    // 獲取用戶令牌的函數
+    function getUserToken() {
+      const userId = localStorage.getItem('boxCurrentUserId');
+      if (!userId) return null;
+      
+      // 使用正確的令牌鍵名格式：boxUserToken_[userId]
+      const tokenKey = `boxUserToken_${userId}`;
+      return localStorage.getItem(tokenKey);
+    }
+    
+    // 調試功能：顯示所有 localStorage 鍵和認證狀態
+    function updateDebugInfo() {
+      const debugInfo = document.getElementById('debug-info');
+      let info = '== localStorage 鍵 ==\n';
+      
+      // 列出所有 localStorage 鍵（不顯示實際值）
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        const value = localStorage.getItem(key);
+        const valuePreview = value ? (key.toLowerCase().includes('token') ? '******' : value.substring(0, 20) + (value.length > 20 ? '...' : '')) : 'null';
+        info += `${key}: ${valuePreview}\n`;
+      }
+      
+      // 檢查特定的 token
+      info += '\n== 認證令牌檢查 ==\n';
+      const userId = localStorage.getItem('boxCurrentUserId');
+      const userTokenKey = userId ? `boxUserToken_${userId}` : null;
+      const userToken = userTokenKey ? localStorage.getItem(userTokenKey) : null;
+      
+      info += `用戶令牌 (${userTokenKey}): ${userToken ? '存在' : '不存在'}\n`;
+      info += `cookGameToken: ${localStorage.getItem('cookGameToken') ? '存在' : '不存在'}\n`;
+      info += `boxAuthToken: ${localStorage.getItem('boxAuthToken') ? '存在' : '不存在'}\n`;
+      
+      // 檢查用戶資訊
+      info += '\n== 用戶資訊 ==\n';
+      info += `用戶ID: ${localStorage.getItem('boxCurrentUserId') || '未知'}\n`;
+      info += `用戶名: ${localStorage.getItem('boxCurrentDisplayName') || localStorage.getItem('boxCurrentUsername') || '未知'}\n`;
+      
+      debugInfo.textContent = info;
+    }
+    
+    // 嘗試登入
+    function tryLogin() {
+      // 使用正確的令牌鍵名
+      const userId = localStorage.getItem('boxCurrentUserId');
+      if (userId) {
+        const tokenKey = `boxUserToken_${userId}`;
+        // 如果令牌已經存在，不要覆蓋它
+        if (!localStorage.getItem(tokenKey)) {
+          localStorage.setItem(tokenKey, 'test_token_' + Date.now());
+        }
+      } else {
+        // 如果沒有用戶ID，設置一個臨時的cookGameToken
+        localStorage.setItem('cookGameToken', 'test_token_' + Date.now());
+      }
+      updateDebugInfo();
+      showNotification('已設置臨時測試令牌', 'success');
+    }
+    
     // 顯示通知
     function showNotification(message, type = 'success') {
       const notification = document.createElement('div');
@@ -608,29 +755,79 @@
         }, 300);
       }, 3000);
     }
-
+    
     // 載入所有稱號
     async function loadTitles() {
+      // 前端權限檢查
+      const userId = localStorage.getItem('boxCurrentUserId');
+      const userRole = localStorage.getItem(`boxUserRole_${userId}`);
+
+      console.log('\n=== 前端權限檢查 ===');
+      console.log('檢查用戶ID:', userId);
+      console.log('用戶角色:', userRole);
+      console.log('localStorage 內容:', localStorage);
+
+      // 直接檢查 userRole 是否為 6
+      if (userRole !== '6') {
+          console.log('權限檢查失敗：角色不符合要求');
+          showNotification('權限不足');
+          document.querySelector('.titles-list').innerHTML = '<div class="error">權限不足</div>';
+          return;
+      }
+
       try {
-        const token = localStorage.getItem('cookGameToken');
+        const token = getUserToken();
+        if (!token) {
+          console.log('找不到用戶令牌');
+          showNotification('找不到認證令牌，請先登入', 'error');
+          setTimeout(() => {
+            window.location.href = '/cook-login.html?redirect=/cook-admin-titles.html';
+          }, 1500);
+          return;
+        }
         
-        const response = await fetch('/admin/titles', {
+        console.log('發送請求到後端，令牌:', token.substring(0, 10) + '...');
+        console.log('請求URL:', '/cook-api/admin/titles');
+        
+        const response = await fetch('/cook-api/admin/titles', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
         
-        // 移除權限檢查，直接處理回應
+        console.log('收到回應，狀態碼:', response.status);
+        
         if (!response.ok) {
-          if (response.status === 404) {
-            showNotification('稱號資料表可能尚未建立，請點擊"初始化稱號資料表"按鈕', 'error');
+          console.error('獲取稱號列表失敗，狀態碼:', response.status);
+          const errorText = await response.text();
+          console.error('錯誤詳情:', errorText);
+          
+          if (response.status === 403) {
+            console.log('後端返回權限不足錯誤');
+            showNotification('權限不足，無法獲取稱號列表', 'error');
+          } else if (response.status === 404) {
+            console.log('後端返回資源不存在錯誤');
+            showNotification('稱號資料表不存在或API路徑錯誤', 'error');
           } else {
-            throw new Error('獲取稱號列表失敗');
+            throw new Error(`獲取稱號列表失敗 (${response.status})`);
           }
           return;
         }
         
-        const titles = await response.json();
+        // 嘗試解析回應
+        let titles;
+        try {
+          const responseText = await response.text();
+          console.log('API 回應:', responseText.substring(0, 200) + '...');
+          titles = JSON.parse(responseText);
+          console.log('解析後的數據:', titles.length, '個稱號');
+        } catch (parseError) {
+          console.error('解析回應失敗:', parseError);
+          showNotification('解析稱號資料失敗，請查看控制台獲取詳情', 'error');
+          return;
+        }
+        
+        console.log('成功獲取稱號列表:', titles.length, '個稱號');
         displayTitles(titles);
       } catch (error) {
         console.error('載入稱號失敗:', error);
@@ -716,13 +913,16 @@
     // 編輯稱號
     async function editTitle(id) {
       try {
-        const token = localStorage.getItem('cookGameToken');
+        const token = getUserToken();
         if (!token) {
-          window.location.href = '/cook-login.html?redirect=/cook-admin-titles.html';
+          showNotification('找不到認證令牌，請先登入', 'error');
+          setTimeout(() => {
+            window.location.href = '/cook-login.html?redirect=/cook-admin-titles.html';
+          }, 1500);
           return;
         }
         
-        const response = await fetch(`/admin/titles/${id}`, {
+        const response = await fetch(`/cook-api/admin/titles/${id}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -763,34 +963,145 @@
       }
     }
     
-    // 新增稱號
-    function addTitle() {
-      const token = localStorage.getItem('cookGameToken');
+    // 刪除稱號
+    async function deleteTitle(id) {
+      const token = getUserToken();
       if (!token) {
-        window.location.href = '/cook-login.html?redirect=/cook-admin-titles.html';
+        showNotification('找不到認證令牌，請先登入', 'error');
+        setTimeout(() => {
+          window.location.href = '/cook-login.html?redirect=/cook-admin-titles.html';
+        }, 1500);
         return;
       }
       
-      // 重置表單
-      document.getElementById('title-form').reset();
-      document.getElementById('title-id').value = '';
-      document.getElementById('title-color').value = '#ffffff';
-      document.getElementById('title-color-code').value = '#ffffff';
+      if (!confirm('確定要刪除這個稱號嗎？此操作不可恢復。')) {
+        return;
+      }
       
-      // 更新模態框標題
-      document.getElementById('modal-title').textContent = '新增稱號';
-      
-      // 顯示模態框
-      document.getElementById('title-modal').style.display = 'block';
+      try {
+        const response = await fetch(`/cook-api/admin/titles/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.status === 401) {
+          window.location.href = '/cook-login.html?redirect=/cook-admin-titles.html';
+          return;
+        }
+        
+        if (response.status === 403) {
+          showNotification('您沒有權限執行此操作', 'error');
+          return;
+        }
+        
+        if (!response.ok) {
+          throw new Error('刪除稱號失敗');
+        }
+        
+        // 重新載入稱號列表
+        loadTitles();
+        
+        showNotification('稱號已成功刪除');
+      } catch (error) {
+        console.error('刪除稱號失敗:', error);
+        showNotification('刪除稱號失敗: ' + error.message, 'error');
+      }
     }
     
+    // 頁面載入時獲取稱號列表
+    document.addEventListener('DOMContentLoaded', () => {
+      // 更新用戶狀態
+      updateUserStatus();
+      
+      // 隱藏調試面板
+      document.getElementById('debug-panel').style.display = 'none';
+      
+      // 切換預設稱號列表顯示
+      document.getElementById('toggle-default-titles').addEventListener('click', function(e) {
+        e.preventDefault();
+        const section = document.getElementById('default-titles-section');
+        const isVisible = section.style.display !== 'none';
+        section.style.display = isVisible ? 'none' : 'block';
+        this.textContent = isVisible ? '顯示預設稱號列表 ▼' : '隱藏預設稱號列表 ▲';
+      });
+      
+      // 執行權限檢查並載入稱號
+      const userId = localStorage.getItem('boxCurrentUserId');
+      if (!userId || !localStorage.getItem(`boxUserToken_${userId}`)) {
+          showNotification('請先登入', 'error');
+          setTimeout(() => {
+              window.location.href = '/cook-login.html?redirect=' + window.location.pathname;
+          }, 1500);
+      } else {
+          loadTitles();
+      }
+      
+      // 註冊事件監聽器
+      document.getElementById('title-form').addEventListener('submit', saveTitle);
+      document.querySelector('.close').addEventListener('click', () => {
+        document.getElementById('title-modal').style.display = 'none';
+      });
+      document.querySelector('.cancel-btn').addEventListener('click', () => {
+        document.getElementById('title-modal').style.display = 'none';
+      });
+      
+      // 點擊模態框外部關閉
+      window.addEventListener('click', (event) => {
+        const modal = document.getElementById('title-modal');
+        if (event.target === modal) {
+          modal.style.display = 'none';
+        }
+      });
+    });
+    
+    // 更新用戶狀態顯示
+    function updateUserStatus() {
+      // 檢查是否有已保存的登入信息
+      const savedUserId = localStorage.getItem('boxCurrentUserId');
+      const savedUserAvatarUrl = localStorage.getItem('boxCurrentUserAvatar');
+      const savedUserName = localStorage.getItem('boxCurrentDisplayName') || localStorage.getItem('boxCurrentUsername');
+      
+      const userAvatar = document.getElementById('user-avatar');
+      const userName = document.getElementById('user-username');
+      
+      if (savedUserId && savedUserName) {
+        userAvatar.src = savedUserAvatarUrl || '/images/a01girlmove.gif';
+        userName.textContent = savedUserName;
+      } else {
+        userAvatar.src = '/images/a01girlmove.gif';
+        userName.textContent = '未登入';
+        
+        // 提示用戶登入
+        if (!window.location.pathname.includes('cook-login.html')) {
+            showNotification('請先登入', 'error');
+            setTimeout(() => {
+                window.location.href = '/cook-login.html?redirect=' + window.location.pathname;
+            }, 2000);
+        }
+      }
+    }
+    
+    // 顏色選擇器同步
+    document.getElementById('title-color').addEventListener('input', function() {
+      document.getElementById('title-color-code').value = this.value;
+    });
+    
+    document.getElementById('title-color-code').addEventListener('input', function() {
+      document.getElementById('title-color').value = this.value;
+    });
+
     // 保存稱號
     async function saveTitle(event) {
       event.preventDefault();
       
-      const token = localStorage.getItem('cookGameToken');
+      const token = getUserToken();
       if (!token) {
-        window.location.href = '/cook-login.html?redirect=/cook-admin-titles.html';
+        showNotification('找不到認證令牌，請先登入', 'error');
+        setTimeout(() => {
+          window.location.href = '/cook-login.html?redirect=/cook-admin-titles.html';
+        }, 1500);
         return;
       }
       
@@ -812,7 +1123,7 @@
       }
       
       try {
-        const response = await fetch('/admin/titles', {
+        const response = await fetch('/cook-api/admin/titles', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -847,145 +1158,6 @@
         showNotification('保存稱號失敗: ' + error.message, 'error');
       }
     }
-    
-    // 刪除稱號
-    async function deleteTitle(id) {
-      const token = localStorage.getItem('cookGameToken');
-      if (!token) {
-        window.location.href = '/cook-login.html?redirect=/cook-admin-titles.html';
-        return;
-      }
-      
-      if (!confirm('確定要刪除這個稱號嗎？此操作不可恢復。')) {
-        return;
-      }
-      
-      try {
-        const response = await fetch(`/admin/titles/${id}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        if (response.status === 401) {
-          window.location.href = '/cook-login.html?redirect=/cook-admin-titles.html';
-          return;
-        }
-        
-        if (response.status === 403) {
-          showNotification('您沒有權限執行此操作', 'error');
-          return;
-        }
-        
-        if (!response.ok) {
-          throw new Error('刪除稱號失敗');
-        }
-        
-        // 重新載入稱號列表
-        loadTitles();
-        
-        showNotification('稱號已成功刪除');
-      } catch (error) {
-        console.error('刪除稱號失敗:', error);
-        showNotification('刪除稱號失敗: ' + error.message, 'error');
-      }
-    }
-    
-    // 初始化稱號資料表
-    async function initializeTitlesTable() {
-      const token = localStorage.getItem('cookGameToken');
-      if (!confirm('這將創建稱號資料表並添加一些預設稱號。確定要繼續嗎？')) {
-        return;
-      }
-      
-      try {
-        const response = await fetch('/admin/initialize-titles', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.details || '初始化稱號資料表失敗');
-        }
-        
-        const result = await response.json();
-        showNotification('稱號資料表初始化成功！已創建 ' + result.titlesCreated + ' 個預設稱號。');
-        
-        // 重新載入稱號列表
-        loadTitles();
-      } catch (error) {
-        console.error('初始化稱號資料表失敗:', error);
-        showNotification('初始化稱號資料表失敗: ' + error.message, 'error');
-      }
-    }
-    
-    // 頁面載入時獲取稱號列表
-    document.addEventListener('DOMContentLoaded', () => {
-      // 更新用戶狀態
-      updateUserStatus();
-      
-      // 如果有遊戲token，載入稱號列表
-      if (localStorage.getItem('cookGameToken')) {
-        loadTitles();
-      }
-    });
-    
-    // 更新用戶狀態顯示
-    function updateUserStatus() {
-      // 檢查是否有已保存的登入信息
-      const savedUserId = localStorage.getItem('boxCurrentUserId');
-      const savedUserAvatarUrl = localStorage.getItem('boxCurrentUserAvatar');
-      const savedUserName = localStorage.getItem('boxCurrentUsername');
-      
-      const userAvatar = document.getElementById('user-avatar');
-      const userName = document.getElementById('user-username');
-      
-      if (savedUserId && savedUserName) {
-        userAvatar.src = savedUserAvatarUrl || '/images/a01girlmove.gif';
-        userName.textContent = savedUserName;
-      } else {
-        userAvatar.src = '/images/a01girlmove.gif';
-        userName.textContent = '未登入';
-        
-        // 提示用戶登入
-        showNotification('請先登入', 'error');
-        setTimeout(() => {
-          window.location.href = '/cook-login.html?redirect=' + window.location.pathname;
-        }, 2000);
-      }
-    }
-    
-    // 顏色選擇器同步
-    document.getElementById('title-color').addEventListener('input', function() {
-      document.getElementById('title-color-code').value = this.value;
-    });
-    
-    document.getElementById('title-color-code').addEventListener('input', function() {
-      document.getElementById('title-color').value = this.value;
-    });
-    
-    // 註冊事件監聽器
-    document.getElementById('add-title-btn').addEventListener('click', addTitle);
-    document.getElementById('create-database-btn').addEventListener('click', initializeTitlesTable);
-    document.getElementById('title-form').addEventListener('submit', saveTitle);
-    document.querySelector('.close').addEventListener('click', () => {
-      document.getElementById('title-modal').style.display = 'none';
-    });
-    document.querySelector('.cancel-btn').addEventListener('click', () => {
-      document.getElementById('title-modal').style.display = 'none';
-    });
-    
-    // 點擊模態框外部關閉
-    window.addEventListener('click', (event) => {
-      const modal = document.getElementById('title-modal');
-      if (event.target === modal) {
-        modal.style.display = 'none';
-      }
-    });
   </script>
 </body>
 </html>

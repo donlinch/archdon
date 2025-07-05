@@ -873,11 +873,19 @@
                         const boxData = await boxResponse.json();
 
                         if (boxResponse.ok && boxData.success && boxData.token) {
+                            console.log('登入響應數據:', boxData);
+                            
                             // 保存主系統登入信息
                             localStorage.setItem(`boxUserToken_${boxData.user.userId}`, boxData.token);
                             localStorage.setItem('boxCurrentUserId', boxData.user.userId);
                             localStorage.setItem('boxCurrentUsername', boxData.user.username);
                             localStorage.setItem('boxCurrentUserAvatar', boxData.user?.profileImageUrl || '/images/a01girlmove.gif');
+                            
+                            // 為用戶ID 1 設置管理員角色
+                            if (boxData.user.userId === '1' || boxData.user.userId === 1) {
+                                console.log('設置管理員角色');
+                                localStorage.setItem(`boxUserRole_${boxData.user.userId}`, '6');
+                            }
                             
                             // 接著登入料理急先鋒遊戲系統
                             try {
