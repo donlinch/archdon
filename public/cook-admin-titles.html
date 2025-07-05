@@ -457,7 +457,7 @@
   <div class="admin-container">
     <div class="admin-sidebar">
       <div class="user-profile">
-        <img src="https://via.placeholder.com/50" alt="Avatar" id="user-avatar">
+        <img src="image/a01girlmove.gif" alt="Avatar" id="user-avatar">
         <div class="user-info">
             <strong id="user-username">載入中...</strong>
             <span>等級: <span id="user-level">--</span></span>
@@ -466,8 +466,7 @@
       <h2>管理後台</h2>
       <nav>
         <a href="/cook-admin.html">總覽</a>
-        <a href="/cook-admin-items.html">物品管理</a>
-        <a href="/cook-admin-recipes.html">食譜管理</a>
+         <a href="/cook-admin-recipes.html">食譜管理</a>
         <a href="/cook-admin-titles.html" class="active">稱號管理</a>
         <a href="/cook-admin-quests.html">任務管理</a>
         <a href="/cook-lobby.html">返回遊戲</a>
@@ -904,7 +903,7 @@
       }
       
       try {
-        const response = await fetch('/cook-api/admin/initialize-titles', {
+        const response = await fetch('/admin/initialize-titles', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`
@@ -953,7 +952,7 @@
       if (!token) return;
 
       try {
-        const response = await fetch('/cook-api/player/profile', {
+        const response = await fetch('/player/profile', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!response.ok) {
@@ -970,7 +969,7 @@
             return;
         }
 
-        document.getElementById('user-avatar').src = profile.avatar_url || '/images/default_item.png';
+        document.getElementById('user-avatar').src = profile.avatar_url || 'image/a01girlmove.gif';
         document.getElementById('user-username').textContent = profile.username;
         document.getElementById('user-level').textContent = profile.level;
       } catch (error) {
