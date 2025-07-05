@@ -3185,6 +3185,66 @@ cookGameApp.get('/admin/dashboard', authenticateToken, isAdmin, async (req, res)
     // ★★★ API 路由 ★★★
     // =================================================================
 
+    // =================================================================
+    // 遊戲公開資訊 API (無需驗證)
+    // =================================================================
+
+    // 新增：獲取等級獎勵列表
+    cookGameApp.get('/cook-api/level-rewards', async (req, res) => {
+        try {
+            // 從資料庫獲取所有等級設定
+            const levelsResult = await pool.query('SELECT * FROM cook_level_settings ORDER BY level ASC');
+            if (levelsResult.rows.length === 0) {
+                return res.status(404).json({ message: '找不到等級設定資訊' });
+            }
+
+            const rewardsByLevel = [];
+            for (const levelSetting of levelsResult.rows) {
+                const unlockedItems = [];
+                // 獲取該等級解鎖的物品
+                if (levelSetting.unlocks && levelSetting.unlocks.item_ids) {
+                    for (const itemId of levelSetting.unlocks.item_ids) {
+                        const itemResult = await pool.query('SELECT item_id, item_name, symbol FROM cook_items WHERE item_id = $1', [itemId]);
+                        if (itemResult.rows[0]) {
+                            unlockedItems.push({ ...itemResult.rows[0], type: 'item' });
+                        }
+                    }
+                }
+                // 獲取該等級解鎖的食譜
+                if (levelSetting.unlocks && levelSetting.unlocks.recipe_ids) {
+                    for (const recipeId of levelSetting.unlocks.recipe_ids) {
+                        const recipeResult = await pool.query(
+                            `SELECT 
+                                r.recipe_id, 
+                                r.recipe_name, 
+                                i.symbol
+                             FROM cook_recipes_v2 r
+                             LEFT JOIN cook_items i ON r.output_item_id = i.id
+                             WHERE r.recipe_id = $1`, [recipeId]
+                        );
+                        if (recipeResult.rows[0]) {
+                            unlockedItems.push({ 
+                                id: recipeResult.rows[0].recipe_id,
+                                name: recipeResult.rows[0].recipe_name,
+                                symbol: recipeResult.rows[0].symbol,
+                                type: 'recipe'
+                            });
+                        }
+                    }
+                }
+                rewardsByLevel.push({
+                    level: levelSetting.level,
+                    exp_required: levelSetting.exp_required,
+                    unlocks: unlockedItems
+                });
+            }
+            res.json(rewardsByLevel);
+        } catch (error) {
+            console.error('獲取等級獎勵時出錯:', error);
+            res.status(500).json({ message: '伺服器內部錯誤' });
+        }
+    });
+
     // 最後，返回 Express app 和 WebSocket 處理函數
     return {
         cookGameApp,
