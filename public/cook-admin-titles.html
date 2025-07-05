@@ -593,10 +593,6 @@
     async function loadTitles() {
       try {
         const token = localStorage.getItem('cookGameToken');
-        if (!token) {
-          window.location.href = '/cook-login.html?redirect=/cook-admin-titles.html';
-          return;
-        }
         
         const response = await fetch('/admin/titles', {
           headers: {
@@ -879,11 +875,6 @@
     // 初始化稱號資料表
     async function initializeTitlesTable() {
       const token = localStorage.getItem('cookGameToken');
-      if (!token) {
-        window.location.href = '/cook-login.html?redirect=/cook-admin-titles.html';
-        return;
-      }
-      
       if (!confirm('這將創建稱號資料表並添加一些預設稱號。確定要繼續嗎？')) {
         return;
       }
@@ -935,7 +926,6 @@
     // 載入使用者個人資料
     async function loadUserProfile() {
       const token = localStorage.getItem('cookGameToken');
-      if (!token) return;
 
       try {
         const response = await fetch('/player/profile', {
@@ -984,10 +974,60 @@
       }
     });
     
+    // 自動檢查並獲取遊戲Token
+    async function ensureGameTokenAndLoadData() {
+        let token = localStorage.getItem('cookGameToken');
+
+        // 如果沒有遊戲 token，嘗試使用主系統登入資訊進行快速登入
+        if (!token) {
+            const savedUserName = localStorage.getItem('boxCurrentUsername');
+
+            if (savedUserName) {
+                console.log('偵測到主系統登入，嘗試為管理員進行快速遊戲登入...');
+                try {
+                    const response = await fetch('/cook-api/auth/quick-login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            username: savedUserName,
+                            deviceId: 'admin_panel_quick_login'
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok && data.success) {
+                        localStorage.setItem('cookGameToken', data.token);
+                        token = data.token; // 更新 token 供本次使用
+                        showToast('管理員身份驗證成功！', 'success');
+                    } else {
+                        showToast('管理員快速登入失敗，請手動登入。', 'error');
+                        window.location.href = `/cook-login.html?redirect=${window.location.pathname}`;
+                        return;
+                    }
+                } catch (error) {
+                    console.error('管理員快速登入時發生錯誤:', error);
+                    showToast('自動登入失敗，將引導至登入頁面。', 'error');
+                    window.location.href = `/cook-login.html?redirect=${window.location.pathname}`;
+                    return;
+                }
+            } else {
+                // 如果連主系統都沒登入，就跳轉到登入頁
+                window.location.href = `/cook-login.html?redirect=${window.location.pathname}`;
+                return;
+            }
+        }
+
+        // 確認有 token 後，才載入頁面資料
+        if (token) {
+            loadTitles();
+            loadUserProfile();
+        }
+    }
+    
     // 頁面載入時獲取稱號列表
     document.addEventListener('DOMContentLoaded', () => {
-      loadTitles();
-      loadUserProfile();
+      ensureGameTokenAndLoadData();
     });
   </script>
 </body>
