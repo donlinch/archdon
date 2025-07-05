@@ -936,6 +936,15 @@
         }
         const profile = await response.json();
 
+        // 權限檢查：如果用戶角色不包含 6 (系統管理員)，則轉址
+        if (!profile.roles || !profile.roles.includes(6)) {
+            showNotification('權限不足，將返回首頁。', 'error');
+            setTimeout(() => {
+                window.location.href = '/index.html';
+            }, 2000);
+            return;
+        }
+
         // 移除權限檢查，直接顯示用戶資料
         document.getElementById('user-avatar').src = profile.avatar_url || 'image/a01girlmove.gif';
         document.getElementById('user-username').textContent = profile.username;
