@@ -32,10 +32,13 @@ function initializeCookGame(pool) {
         try {
             const userId = req.user.userId;
             const result = await pool.query(`
-                SELECT is_admin FROM cook_players WHERE user_id = $1
+                SELECT r.role_id
+                FROM user_roles ur
+                JOIN roles r ON ur.role_id = r.role_id
+                WHERE ur.user_id = $1 AND r.role_id = 6
             `, [userId]);
 
-            if (result.rows.length > 0 && result.rows[0].is_admin) {
+            if (result.rows.length > 0) {
                 next();
             } else {
                 res.status(403).json({ error: '需要管理員權限' });
@@ -122,7 +125,7 @@ function initializeCookGame(pool) {
     });
 
     // 管理員API - 初始化稱號資料表
-    cookGameApp.post('/cook-api/admin/initialize-titles', authenticateToken, isAdmin, async (req, res) => {
+    cookGameApp.post('/admin/initialize-titles', authenticateToken, isAdmin, async (req, res) => {
         const client = await pool.connect();
         try {
             await client.query('BEGIN');
@@ -308,6 +311,60 @@ function initializeCookGame(pool) {
             res.status(500).json({ success: false, error: '初始化稱號資料表失敗', details: error.message });
         } finally {
             client.release();
+        }
+    });
+
+    // 獲取當前登入玩家的個人資料
+    cookGameApp.get('/player/profile', authenticateToken, async (req, res) => {
+        try {
+            const userId = req.user.userId;
+            const result = await pool.query(`
+                SELECT 
+                    p.user_id, 
+                    p.level, 
+                    p.points, 
+                    p.games_played, 
+                    p.orders_completed,
+                    u.username,
+                    u.avatar_url,
+                    (SELECT array_agg(r.role_id) FROM user_roles r WHERE r.user_id = p.user_id) as roles
+                FROM cook_players p
+                JOIN box_users u ON p.user_id = u.user_id
+                WHERE p.user_id = $1
+            `, [userId]);
+
+            if (result.rows.length === 0) {
+                // Fallback to check box_users directly if no player data
+                const userResult = await pool.query(`
+                    SELECT 
+                        u.user_id, 
+                        u.username, 
+                        u.avatar_url,
+                        (SELECT array_agg(r.role_id) FROM user_roles r WHERE r.user_id = u.user_id) as roles
+                    FROM box_users u 
+                    WHERE u.user_id = $1
+                `, [userId]);
+                if (userResult.rows.length === 0) {
+                     return res.status(404).json({ error: '玩家資料不存在' });
+                }
+                const basicProfile = userResult.rows[0];
+                // return basic profile with default game stats
+                return res.json({
+                    user_id: basicProfile.user_id,
+                    level: 1,
+                    points: 0,
+                    games_played: 0,
+                    orders_completed: 0,
+                    username: basicProfile.username,
+                    avatar_url: basicProfile.avatar_url,
+                    roles: basicProfile.roles || []
+                });
+            }
+            
+            res.json(result.rows[0]);
+        } catch (error) {
+            console.error('獲取玩家資料時出錯:', error);
+            res.status(500).json({ error: '伺服器錯誤' });
         }
     });
 

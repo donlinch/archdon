@@ -72,6 +72,35 @@
       color: white;
     }
     
+    .admin-sidebar .user-profile {
+      padding-bottom: 20px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    .admin-sidebar .user-profile img {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--primary-color);
+    }
+    .admin-sidebar .user-profile .user-info {
+      line-height: 1.2;
+      color: var(--light-color);
+    }
+    .admin-sidebar .user-profile .user-info strong {
+      font-size: 16px;
+      display: block;
+      margin-bottom: 4px;
+    }
+    .admin-sidebar .user-profile .user-info span {
+      font-size: 14px;
+      opacity: 0.8;
+    }
+    
     .admin-content {
       flex: 1;
       padding: 20px;
@@ -427,6 +456,13 @@
 <body>
   <div class="admin-container">
     <div class="admin-sidebar">
+      <div class="user-profile">
+        <img src="https://via.placeholder.com/50" alt="Avatar" id="user-avatar">
+        <div class="user-info">
+            <strong id="user-username">載入中...</strong>
+            <span>等級: <span id="user-level">--</span></span>
+        </div>
+      </div>
       <h2>管理後台</h2>
       <nav>
         <a href="/cook-admin.html">總覽</a>
@@ -876,7 +912,8 @@
         });
         
         if (!response.ok) {
-          throw new Error('初始化稱號資料表失敗');
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.details || '初始化稱號資料表失敗');
         }
         
         const result = await response.json();
@@ -910,6 +947,38 @@
       }, 3000);
     }
     
+    // 載入使用者個人資料
+    async function loadUserProfile() {
+      const token = localStorage.getItem('cookGameToken');
+      if (!token) return;
+
+      try {
+        const response = await fetch('/cook-api/player/profile', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) {
+            throw new Error('無法獲取用戶資料');
+        }
+        const profile = await response.json();
+
+        // 權限檢查：如果用戶角色不包含 6 (系統管理員)，則轉址
+        if (!profile.roles || !profile.roles.includes(6)) {
+            showNotification('權限不足，將返回首頁。', 'error');
+            setTimeout(() => {
+                window.location.href = '/index.html';
+            }, 2000);
+            return;
+        }
+
+        document.getElementById('user-avatar').src = profile.avatar_url || '/images/default_item.png';
+        document.getElementById('user-username').textContent = profile.username;
+        document.getElementById('user-level').textContent = profile.level;
+      } catch (error) {
+          console.error('加載用戶資料失敗:', error);
+          document.getElementById('user-username').textContent = '用戶資料錯誤';
+      }
+    }
+    
     // 顏色選擇器同步
     document.getElementById('title-color').addEventListener('input', function() {
       document.getElementById('title-color-code').value = this.value;
@@ -941,6 +1010,7 @@
     // 頁面載入時獲取稱號列表
     document.addEventListener('DOMContentLoaded', () => {
       loadTitles();
+      loadUserProfile();
     });
   </script>
 </body>
