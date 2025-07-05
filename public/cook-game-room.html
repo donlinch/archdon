@@ -155,14 +155,28 @@
       width: 40px;
       height: 40px;
       border-radius: 50%;
-      background-color: var(--accent-color);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
+      position: relative;
       margin-right: 10px;
-      color: #333;
       flex-shrink: 0;
+      overflow: hidden;
+    }
+    
+    .player-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    .player-level {
+      position: absolute;
+      bottom: -2px;
+      right: -2px;
+      background-color: var(--accent-color);
+      color: #333;
+      font-size: 0.65em;
+      padding: 1px 3px;
+      border-radius: 10px;
+      font-weight: bold;
     }
     
     .player-info {
@@ -175,11 +189,6 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-    }
-    
-    .player-level {
-      font-size: 0.8em;
-      color: #aaa;
     }
     
     .player-status {
@@ -411,57 +420,8 @@
       }
     }
 
-    /* User Status Indicator */
-    .user-status {
-        position: fixed;
-        top: 10px;
-        left: 10px;
-        z-index: 1001;
-        display: flex;
-        align-items: center;
-        background-color: var(--card-bg-color, rgba(0, 0, 0, 0.7));
-        padding: 5px 10px;
-        border-radius: 20px;
-        border: 1px solid var(--border-color, #444);
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
-        transition: all 0.3s ease;
-        cursor: pointer;
-    }
-
-    .user-status:hover {
-        transform: translateY(-2px);
-        background-color: rgba(0, 0, 0, 0.9);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.6);
-    }
-
-    .user-status img {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        border: 2px solid var(--accent-color, #FF9800);
-        object-fit: cover;
-    }
-
-    .user-status .username {
-        margin-left: 8px;
-        font-weight: 600;
-        color: var(--text-color, #f0f0f0);
-        max-width: 120px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
+    /* 移除用户状态指示器样式 */
     
-    @media (max-width: 767px) {
-        .user-status {
-            padding: 3px;
-        }
-        
-        .user-status .username {
-            display: none;
-        }
-    }
-
     .daily-quests {
       background-color: var(--card-bg-color);
       border: 1px solid var(--border-color);
@@ -586,10 +546,7 @@
 </head>
 <body>
   <!-- 用戶狀態指示器 -->
-  <div id="userStatus" class="user-status" style="display: none;">
-      <img id="userStatusAvatar" src="/images/a01girlmove.gif" alt="User">
-      <span id="userStatusName" class="username"></span>
-  </div>
+  <!-- 移除用户状态指示器 -->
 
   <div class="header">
     <div class="header-title" id="roomHeaderTitle">料理急先鋒 - 遊戲房間</div>
@@ -601,7 +558,7 @@
       <h2 class="room-name" id="roomNameDisplay">加載中...</h2>
       <div class="room-detail">
         <span id="roomDifficultyDisplay">難度: 加載中...</span>
-        <span id="roomCreatorDisplay">房主: 加載中...</span>
+        <!-- 移除房主显示 -->
       </div>
     </div>
 
@@ -669,7 +626,6 @@
       const roomHeaderTitle = document.getElementById('roomHeaderTitle');
       const roomStatusLabel = document.getElementById('roomStatusLabel');
       const roomDifficultyDisplay = document.getElementById('roomDifficultyDisplay');
-      const roomCreatorDisplay = document.getElementById('roomCreatorDisplay');
       const playerCountDisplay = document.getElementById('playerCountDisplay');
       const playerContainer = document.getElementById('playerContainer');
       const chatMessages = document.getElementById('chatMessages');
@@ -703,17 +659,6 @@
       .then(data => {
         currentUser = data.user;
         // 成功獲取用戶資料後，再連接WebSocket
-        const userStatus = document.getElementById('userStatus');
-        const userStatusAvatar = document.getElementById('userStatusAvatar');
-        const userStatusName = document.getElementById('userStatusName');
-        
-        userStatusAvatar.src = currentUser.user_profile_image_url || '/images/a01girlmove.gif';
-        userStatusName.textContent = currentUser.display_name || currentUser.username;
-        userStatus.style.display = 'flex';
-        userStatus.addEventListener('click', () => {
-            window.location.href = `member-editor.html?userId=${currentUser.user_id}`;
-        });
-
         connectWebsocket();
       })
       .catch(error => {
@@ -876,7 +821,6 @@
         if (room.difficulty === 'hard') difficultyText = '困難';
         
         roomDifficultyDisplay.textContent = `難度: ${difficultyText}`;
-        roomCreatorDisplay.textContent = `房主: ${room.creator}`;
         
         // 檢查當前用戶是否為房主
         isHost = currentUser && room.creatorId === currentUser.user_id;
@@ -910,7 +854,7 @@
       async function fetchDailyQuests() {
         const questsContainer = document.getElementById('dailyQuestsContainer');
         try {
-          const response = await fetch('/api/daily-quests', {
+          const response = await fetch('/cook-api/daily-quests', {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           if (!response.ok) {
@@ -918,13 +862,17 @@
           }
           const data = await response.json();
           if (data.success && data.quests) {
+            if (data.quests.length === 0) {
+              questsContainer.innerHTML = '<div class="system-message">今天沒有任務</div>';
+              return;
+            }
             renderDailyQuests(data.quests);
           } else {
-            questsContainer.innerHTML = '<div class="system-message">獲取任務失敗</div>';
+            questsContainer.innerHTML = '<div class="system-message">無法載入任務資料</div>';
           }
         } catch (error) {
           console.error('獲取每日任務時出錯:', error);
-          questsContainer.innerHTML = '<div class="system-message">無法載入任務</div>';
+          questsContainer.innerHTML = '<div class="system-message">無法載入任務，請稍後再試</div>';
         }
       }
 
