@@ -99,8 +99,8 @@ app.use(session({
 
 
 
- const initializeCookGame = require('./cook-kitchen-rush'); // require() 會得到一個函式
-const { cookGameApp, initCookGameWss } = initializeCookGame(pool); // 呼叫該函式並傳入 pool
+ const { initializeCookGame } = require('./cook-kitchen-rush'); // 从对象中解构 initializeCookGame
+const cookGameApp = initializeCookGame(pool); // 调用函数获取 Express 路由器
 
 
 // =================================================================
@@ -111,15 +111,15 @@ const { cookGameApp, initCookGameWss } = initializeCookGame(pool); // 呼叫該�
 const server = http.createServer(app);
 
 // 將廚房遊戲的 Express 路由掛載到 /cook-api
-app.use('/cook-api', cookGameApp); // <-- 使用從函式返回的 cookGameApp
+app.use('/cook-api', cookGameApp); // <-- 使用从函式返回的 cookGameApp
 
 // 創建兩個使用 noServer: true 的 WebSocket 服務器實例
 const wssSimpleWalker = new WebSocket.Server({ noServer: true });
 const wssCookGame = new WebSocket.Server({ noServer: true });
 console.log('[WS] 已創建 Simple Walker 和 Cook Game 的 WebSocket 服務實例 (未附加)');
 
-// 調用廚房急先鋒的 WebSocket 初始化函數
-initCookGameWss(wssCookGame);
+// 暂时注释掉 WebSocket 初始化，因为该功能尚未实现
+// initCookGameWss(wssCookGame);
 
 
 // =================================================================
@@ -6256,98 +6256,12 @@ app.put('/api/tags/:tag_id', async (req, res) => {
 });
 
 
-// --- 商品 API ---
-// ... (這裡應該有 GET /api/tags, GET /api/products, GET /api/products/:id 的程式碼) ...
-
-// 新增：建立新商品 (包含處理標籤)
-app.post('/api/products', async (req, res) => {
-    // 從 req.body 接收商品資料，假設 tags 是 tag_id 的陣列，例如 [1, 3, 5]
-    // 注意：如果前端是送 FormData (因為圖片上傳)，處理方式會不同。
-    //       但根據您之前的回覆，您是直接傳 image_url，所以這裡假設是 JSON body。
-    const { name, description, price, image_url, category, seven_eleven_url, tags } = req.body; 
-
-    // --- 基本驗證 ---
-    if (!name || name.trim() === '') {
-        return res.status(400).json({ error: '商品名稱不能為空。' });
-    }
-    // 驗證 tags 是否為陣列 (如果提供了)
-    if (tags && !Array.isArray(tags)) {
-        return res.status(400).json({ error: '標籤資料格式不正確，應為陣列。' });
-    }
-    // 驗證 tags 陣列中的元素是否為數字 (tag_id)
-    if (tags && tags.some(tag => typeof tag !== 'number' || !Number.isInteger(tag))) {
-         return res.status(400).json({ error: '標籤 ID 必須是整數。' });
-    }
-    // 可以添加更多驗證...
-
-    // --- 資料庫交易 ---
-    const client = await pool.connect(); // 從連接池獲取一個客戶端
-
-    try {
-        await client.query('BEGIN'); // 開始交易
-
-        // 1. 插入商品基本資料到 products 表
-        const productInsertQuery = `
-            INSERT INTO products (name, description, price, image_url, category, seven_eleven_url, click_count, created_at, updated_at) 
-            VALUES ($1, $2, $3, $4, $5, $6, 0, NOW(), NOW()) 
-            RETURNING id, name, description, price, image_url, category, seven_eleven_url, click_count, created_at, updated_at`; 
-        
-        const productResult = await client.query(productInsertQuery, [
-            name.trim(),
-            description || null,
-            price, 
-            image_url || null,
-            category || null,
-            seven_eleven_url || null
-        ]);
-        
-        const newProduct = productResult.rows[0]; 
-        const newProductId = newProduct.id;
-
-        // 2. 如果前端傳來了 tags 陣列，則插入 product_tags 關聯
-        let insertedTagNames = []; // 用於最後回傳給前端
-        const validTags = tags ? tags.filter(tagId => typeof tagId === 'number' && Number.isInteger(tagId)) : []; // 確保只處理有效的 tag_id
-
-        if (validTags.length > 0) {
-            // 準備插入 product_tags 的查詢
-            const tagInsertQuery = `
-                INSERT INTO product_tags (product_id, tag_id)
-                SELECT $1, tag_id FROM UNNEST($2::int[]) AS t(tag_id)
-                ON CONFLICT (product_id, tag_id) DO NOTHING -- 如果組合已存在則忽略
-            `;
-            await client.query(tagInsertQuery, [newProductId, validTags]);
-
-            // 查詢剛插入的標籤名稱以便回傳
-            const tagNamesQuery = 'SELECT tag_name FROM tags WHERE tag_id = ANY($1::int[])';
-            const tagNamesResult = await client.query(tagNamesQuery, [validTags]);
-            insertedTagNames = tagNamesResult.rows.map(row => row.tag_name);
-        }
-        
-        await client.query('COMMIT'); // 提交交易
-
-        // 將標籤名稱陣列加入回傳的商品物件中
-        newProduct.tags = insertedTagNames; 
-
-        res.status(201).json(newProduct); // 回傳新增的商品資料 (包含 tags)
-
-    } catch (err) {
-        await client.query('ROLLBACK'); // 如果出錯，回滾交易
-        console.error('新增商品時出錯 (交易已回滾):', err);
-        // 可以根據 err.code 判斷錯誤類型
-        if (err.code === '23503') { // Foreign key violation
-             return res.status(400).json({ error: '提交的標籤 ID 無效或不存在。' });
-        }
-        res.status(500).json({ error: '伺服器內部錯誤，無法新增商品。' });
-    } finally {
-        client.release(); // 釋放客戶端回連接池
-    }
-});
-
 // ... (繼續放置 PUT /api/products/:id, DELETE /api/products/:id 等路由) ...
 
 
 
-// 新增：獲取所有不重複的商品分類
+
+
 app.get('/api/products/categories', async (req, res) => {
     try {
         const queryText = 'SELECT DISTINCT category FROM products WHERE category IS NOT NULL AND category <> \'\' ORDER BY category ASC';

@@ -104,327 +104,211 @@
         }
         
         .page-content {
-            flex-grow: 1;
-            padding: 20px;
-            display: flex;
-            gap: 20px;
-            overflow: hidden;
-        }
-        
-        .item-panel {
-            width: 320px;
-            flex-shrink: 0;
-            background-color: var(--surface-color);
-            border-radius: 8px;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .item-panel-header {
-            padding: 15px;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .item-panel-header h3 {
-            margin: 0 0 10px 0;
-        }
-
-        .item-search-input {
-            width: 100%;
-            padding: 8px 12px;
-            background-color: var(--background-color);
-            border: 1px solid var(--border-color);
-            color: var(--text-color);
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-
-        .item-list-container {
-            flex-grow: 1;
+            padding: 0;
             overflow-y: auto;
-            padding: 15px;
-        }
-        
-        .item-category h4 {
-            margin: 15px 0 10px;
-            color: var(--primary-color);
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 5px;
-        }
-        
-        .item-category .item {
-            display: flex;
-            align-items: center;
-            padding: 8px;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-
-        .item-category .item:hover {
-            background-color: var(--primary-color);
-        }
-
-        .item-symbol {
-            font-family: 'Courier New', Courier, monospace;
-            font-weight: bold;
-            font-size: 18px;
-            width: 30px;
-            text-align: center;
-            margin-right: 10px;
-        }
-        
-        .recipe-panel {
             flex-grow: 1;
-            background-color: var(--surface-color);
-            border-radius: 8px;
+        }
+
+        .content-wrapper {
+            padding: 20px 30px;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
-        }
-
-        .recipe-panel-header {
-            padding: 15px;
-            border-bottom: 1px solid var(--border-color);
+            gap: 40px;
         }
         
-        .filters {
-            display: flex;
-            gap: 15px;
-            align-items: center;
-        }
-
-        .filters input, .filters select {
-            padding: 8px 12px;
-            background-color: var(--background-color);
-            border: 1px solid var(--border-color);
-            color: var(--text-color);
-            border-radius: 4px;
-        }
-
-        .btn {
-            padding: 8px 15px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: background-color 0.3s, opacity 0.3s;
-        }
-        .btn-primary { background-color: var(--primary-color); color: white; }
-        .btn-primary:hover { opacity: 0.9; }
-        .btn-success { background-color: var(--success-color); color: white; }
-        .btn-success:hover { opacity: 0.9; }
-        .btn-danger { background-color: var(--danger-color); color: white; }
-        .btn-danger:hover { opacity: 0.9; }
-        
-        .table-container {
-            flex-grow: 1;
-            overflow: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        
-        th, td {
-            padding: 12px 15px;
-            text-align: left;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        th {
-            background-color: var(--background-color);
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-
-        tr:hover {
-            background-color: var(--background-color);
-        }
-
-        .difficulty-badge {
-            display: inline-block;
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-size: 12px;
-            color: white;
-        }
-        
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 44px;
-            height: 24px;
-        }
-
-        .switch input { display: none; }
-
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 24px;
-        }
-
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 18px;
-            width: 18px;
-            left: 3px;
-            bottom: 3px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
-
-        input:checked + .slider { background-color: var(--secondary-color); }
-        input:checked + .slider:before { transform: translateX(20px); }
-        
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.6);
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal-content {
+        .content-section {
             background-color: var(--surface-color);
-            margin: auto;
-            padding: 25px;
-            border: 1px solid var(--border-color);
-            width: 90%;
-            max-width: 600px;
             border-radius: 8px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            padding: 20px;
         }
 
-        .modal-header {
+        .section-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            margin-bottom: 20px;
             padding-bottom: 15px;
             border-bottom: 1px solid var(--border-color);
-            margin-bottom: 20px;
-        }
-        
-        .modal-header h2 { margin: 0; }
-        
-        .close-button {
-            color: var(--text-muted-color);
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
         }
 
-        .close-button:hover, .close-button:focus {
-            color: var(--text-color);
+        .section-header h2 {
+            margin: 0;
+            color: var(--primary-color);
+            font-size: 22px;
         }
 
-        .form-group {
-            margin-bottom: 20px;
+        .section-header .filters, .section-header .actions {
+            display: flex;
+            gap: 10px;
         }
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: bold;
+        
+        .section-header input {
+            min-width: 250px;
         }
-        .form-group input, .form-group select {
-            width: 100%;
-            padding: 10px;
+        
+        .grid-container {
+            display: grid;
+            gap: 15px;
+        }
+
+        .recipe-grid {
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        }
+
+        .item-grid {
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        }
+        
+        .recipe-card {
             background-color: var(--background-color);
             border: 1px solid var(--border-color);
-            color: var(--text-color);
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-        
-        .ingredient-item {
+            border-radius: 8px;
             display: flex;
+            flex-direction: column;
+            transition: transform 0.2s, box-shadow 0.2s;
+            overflow: hidden;
+        }
+        .recipe-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+        }
+        .recipe-card-header {
+            display: flex;
+            justify-content: space-between;
             align-items: center;
+            padding: 10px 15px;
+            background-color: rgba(0,0,0,0.2);
+        }
+        .recipe-card-header h3 {
+            margin: 0;
+            font-size: 16px;
+        }
+        .recipe-card-body {
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
             gap: 10px;
-            margin-bottom: 10px;
         }
-        .ingredient-item select { flex-grow: 1; }
-        .ingredient-item input[type="number"] { width: 80px; }
-
-        .modal-footer {
-            padding-top: 20px;
-            border-top: 1px solid var(--border-color);
-            text-align: right;
+        .recipe-info-row {
+            display: flex;
+            gap: 10px;
+        }
+        .recipe-info-row strong {
+            color: var(--primary-color);
+            flex-shrink: 0;
+        }
+        .recipe-info-row span {
+            word-break: break-all;
         }
         
-        #toast-container {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 9999;
+        .item-card {
+            background-color: var(--background-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            text-align: center;
         }
-
-        .toast {
+        .item-card .item-symbol-large {
+            font-size: 36px;
+            line-height: 1;
+        }
+        .item-card .item-name {
+            font-weight: bold;
+        }
+        .item-card .item-id-tag {
+            font-size: 12px;
+            color: var(--text-muted-color);
             background-color: var(--surface-color);
-            color: var(--text-color);
-            padding: 15px 20px;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.25);
-            margin-bottom: 10px;
-            opacity: 0;
-            transition: opacity 0.5s, transform 0.5s;
-            transform: translateX(100%);
-        }
-        
-        .toast.show {
-            opacity: 1;
-            transform: translateX(0);
+            padding: 2px 6px;
+            border-radius: 4px;
         }
 
-        .toast.success { border-left: 5px solid var(--success-color); }
-        .toast.error { border-left: 5px solid var(--danger-color); }
-        
-        .loading-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.5);
+        .simulator-main-layout {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 30px;
+        }
+        #simulatorPlayerInventoryPanel, #simulatorCraftingPanel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        #simPlayerInventory {
+            border: 1px dashed var(--border-color);
+            border-radius: 4px;
+            padding: 10px;
+            height: 450px;
+            overflow-y: auto;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-content: flex-start;
+            background-color: var(--background-color);
+        }
+        #simCraftingArea {
+            display: flex;
+            gap: 10px;
+            padding: 10px;
+            border: 2px solid var(--border-color);
+            background-color: var(--background-color);
+            border-radius: 8px;
+            min-height: 100px;
+            flex-wrap: wrap;
+        }
+        .crafting-slot {
+            width: 85px;
+            height: 85px;
+            border: 2px dashed var(--border-color);
+            border-radius: 4px;
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 100;
-            color: white;
-            font-size: 20px;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+        .crafting-slot.drag-over {
+            background-color: var(--primary-color);
+            border-color: var(--secondary-color);
+        }
+        .crafting-slot .sim-item {
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 12px;
+            padding: 4px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+        .crafting-slot .sim-item span:first-child {
+            font-size: 24px;
         }
         
-        .recipe-step { display: none; }
-        .recipe-step.active { display: block; }
-        
-        .select-with-add {
+        #simActions {
             display: flex;
-            align-items: center;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        #simCookingStations {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
             gap: 10px;
         }
-        .select-with-add select { flex-grow: 1; }
-        .add-new-item-btn {
-            flex-shrink: 0;
-            width: 40px;
-            height: 40px;
-            font-size: 20px;
+        .station-btn {
+            padding: 10px 15px;
+            font-size: 14px;
+        }
+        
+        .sim-item {
+             background-color: var(--surface-color);
         }
 
         .admin-sidebar nav a.active {
@@ -465,6 +349,82 @@
             flex: 1;
             padding: 20px;
         }
+
+        .simulator-panel {
+            display: flex;
+            flex-direction: column;
+            width: 400px;
+            flex-shrink: 0;
+        }
+        .simulator-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            gap: 20px;
+            overflow: hidden;
+        }
+        .player-inventory, .cooking-stations {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .player-inventory h4, .cooking-stations h4, .simulator-output h4 {
+            margin: 0;
+            color: var(--primary-color);
+        }
+        #simPlayerInventory {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 10px;
+            border: 1px dashed var(--border-color);
+            border-radius: 4px;
+            min-height: 100px;
+            overflow-y: auto;
+        }
+        .sim-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 10px;
+            background-color: var(--background-color);
+            border-radius: 4px;
+            cursor: grab;
+            border: 1px solid var(--border-color);
+        }
+        .sim-item:active {
+            cursor: grabbing;
+        }
+        .stations-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+        }
+        .station {
+            padding: 20px 10px;
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            text-align: center;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        .station.drag-over {
+            background-color: var(--primary-color);
+            border-color: var(--secondary-color);
+        }
+        .simulator-output {
+            padding: 15px;
+            border-top: 1px solid var(--border-color);
+        }
+        .output-log {
+            background-color: var(--background-color);
+            padding: 10px;
+            border-radius: 4px;
+            min-height: 50px;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        .output-log .success { color: var(--success-color); }
+        .output-log .error { color: var(--danger-color); }
     </style>
 </head>
 <body>
@@ -499,56 +459,104 @@
             </div>
         </header>
 
-        <main class="page-content">
-            <div class="item-panel">
-                <div class="item-panel-header">
-                    <h3>物品列表 (cook_items)</h3>
-                    <input type="text" id="itemSearch" class="item-search-input" placeholder="搜索物品...">
+        <div class="page-content">
+            <div class="content-wrapper">
+                
+                <section class="content-section" id="recipes_section">
+                    <div class="section-header">
+                        <h2>📖 食譜列表</h2>
+                        <div class="filters">
+                            <input type="text" id="recipeSearch" class="item-search-input" placeholder="搜索食譜名稱...">
+                            <button id="addRecipeBtn" class="btn btn-primary"><i class="fas fa-plus"></i> 新增食譜</button>
                 </div>
-                <div class="item-list-container" id="itemList">
-                    <!-- Item categories will be populated by JS -->
+                        <div class="actions">
+                            <button id="analyzeRecipesBtn" class="btn btn-warning"><i class="fas fa-magic"></i> 分析缺漏食譜</button>
+                            <button id="updateSymbolsBtn" class="btn btn-secondary" title="自動匹配物品圖標"><i class="fas fa-sync"></i> 更新圖示</button>
+                            <button id="updateMethodsBtn" class="btn btn-secondary" title="自動修正烹飪方法"><i class="fas fa-wand-magic-sparkles"></i> 更新烹飪法</button>
                 </div>
-                <div class="loading-overlay" style="display: none;">讀取中...</div>
             </div>
-
-            <div class="item-panel">
-                <div class="item-panel-header">
-                    <h3>烹飪手法 (cook_recipe_requirements_v2)</h3>
-                    <input type="text" id="requirementSearch" class="item-search-input" placeholder="搜索手法...">
-                </div>
-                <div class="item-list-container" id="requirementList">
-                    <!-- Requirement categories will be populated by JS -->
-                </div>
-                <div class="loading-overlay" style="display: none;">讀取中...</div>
-            </div>
-
-            <div class="recipe-panel">
-                <div class="recipe-panel-header">
-                    <h3>食譜列表 (cook_recipes_v2)</h3>
-                    <div class="filters">
-                        <input type="text" id="recipeSearch" placeholder="搜索食譜名稱...">
-                        <button id="addRecipeBtn" class="btn btn-primary">
-                            <i class="fas fa-plus"></i> 新增食譜
-                        </button>
+                    <div id="recipesGrid" class="grid-container recipe-grid">
+                        <!-- Recipe cards will be populated by JS -->
                     </div>
+                </section>
+        
+                <section class="content-section" id="ingredients_section">
+                    <div class="section-header">
+                        <h2>🥬 基礎食材</h2>
+                         <input type="text" id="itemSearch" class="item-search-input" placeholder="搜索基礎食材...">
                 </div>
-                <div class="table-container">
-                    <table class="table">
+                    <div id="rawItemsGrid" class="grid-container item-grid">
+                        <!-- Raw item cards will be populated by JS -->
+                </div>
+                </section>
+        
+                <section class="content-section" id="processed_section">
+                    <div class="section-header">
+                        <h2>🍔 加工品/料理</h2>
+                        <input type="text" id="processedItemSearch" class="item-search-input" placeholder="搜索加工品/料理...">
+            </div>
+                    <div id="processedItemsGrid" class="grid-container item-grid">
+                        <!-- Processed item cards will be populated by JS -->
+                    </div>
+                </section>
+        
+                <section class="content-section" id="simulator_section">
+                     <div class="section-header">
+                        <h2>🍳 烹飪模擬器</h2>
+                    </div>
+                     <div class="simulator-main-layout">
+                        <div id="simulatorPlayerInventoryPanel">
+                             <h4>玩家物品欄 (可拖曳)</h4>
+                             <div id="simPlayerInventory"></div>
+                </div>
+                        <div id="simulatorCraftingPanel">
+                            <h4>烹飪組合區 (從左側拖曳物品至此，點擊物品可移除)</h4>
+                            <div id="simCraftingArea">
+                                <!-- Crafting slots will be generated by JS -->
+                            </div>
+                            <div id="simActions">
+                                <h4>選擇烹飪法並點擊執行</h4>
+                                <div id="simCookingStations">
+                                    <!-- Station buttons will be generated by JS -->
+                                </div>
+                                <button id="clearCraftingBtn" class="btn btn-danger">清空組合區</button>
+                            </div>
+                            <h4>模擬結果</h4>
+                            <div id="simOutput" class="output-log">將物品放入組合區，然後選擇烹飪法...</div>
+                        </div>
+                     </div>
+                </section>
+
+            </div>
+        </div>
+    </div>
+    
+    <div id="suggestionsModal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h2>智慧食譜建議</h2>
+                <span class="close-button">&times;</span>
+            </div>
+            <div id="suggestionsContainer">
+                <p>點擊「一鍵新增」將會把建議的食譜加入資料庫。</p>
+                <div class="table-container" style="max-height: 60vh;">
+                    <table>
                         <thead>
                             <tr>
-                                <th>ID</th>
-                                <th>名稱</th>
-                                <th>產出物</th>
-                                <th>需求</th>
+                                <th>建議產出</th>
+                                <th>建議需求</th>
+                                <th>建議方法</th>
                                 <th>操作</th>
                             </tr>
                         </thead>
-                        <tbody id="recipesTableBody"></tbody>
+                        <tbody id="suggestionsTableBody"></tbody>
                     </table>
                 </div>
-                <div class="loading-overlay" style="display: none;">讀取中...</div>
+                 <div id="suggestionsLoading" style="display: none; text-align: center; padding: 20px;">
+                    <i class="fas fa-spinner fa-spin"></i> 正在分析中...
             </div>
-        </main>
+            </div>
+        </div>
     </div>
     
     <div id="recipeModal" class="modal">
@@ -565,6 +573,17 @@
                 <div class="form-group">
                     <label for="recipeName">食譜名稱</label>
                     <input type="text" id="recipeName" required>
+                </div>
+                <div class="form-group">
+                    <label for="cookingMethod">烹飪方法</label>
+                    <select id="cookingMethod" required>
+                        <option value="" disabled selected>選擇烹飪方法...</option>
+                        <option value="grill">烤 (Grill/Bake)</option>
+                        <option value="pan_fry">煎 (Pan-fry)</option>
+                        <option value="deep_fry">炸 (Deep-fry)</option>
+                        <option value="boil">煮 (Boil)</option>
+                        <option value="assembly">組合 (Assembly)</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label>需求 (Ingredients & Requirements)</label>
@@ -606,9 +625,9 @@
                     <label for="newItemType">物品類型</label>
                     <select id="newItemType" required>
                         <option value="raw_ingredient">基礎食材</option>
-                        <option value="cooked_item">加工品</option>
-                        <option value="assembled_dish">最終料理</option>
-                        <option value="semi_finished">半成品</option>
+                        <option value="processed_food">加工品</option>
+                        <option value="intermediate_good">半成品</option>
+                        <option value="final_dish">最終料理</option>
                     </select>
                 </div>
                  <div class="form-group">
@@ -640,14 +659,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const modalTitle = document.getElementById('modalTitle');
     const closeButtons = document.querySelectorAll('.close-button');
     const addRecipeBtn = document.getElementById('addRecipeBtn');
+    const updateSymbolsBtn = document.getElementById('updateSymbolsBtn');
+    const updateMethodsBtn = document.getElementById('updateMethodsBtn');
     
     const recipesTableBody = document.getElementById('recipesTableBody');
     const itemListContainer = document.getElementById('itemList');
-    const requirementListContainer = document.getElementById('requirementList');
+    const processedItemListContainer = document.getElementById('processedItemList');
+    const simPlayerInventory = document.getElementById('simPlayerInventory');
+    const simCookingStations = document.getElementById('simCookingStations');
+    const simOutput = document.getElementById('simOutput');
     
     const recipeSearch = document.getElementById('recipeSearch');
     const itemSearch = document.getElementById('itemSearch');
-    const requirementSearch = document.getElementById('requirementSearch');
+    const processedItemSearch = document.getElementById('processedItemSearch');
     
     const saveRecipeBtn = document.getElementById('saveRecipeBtn');
 
@@ -703,8 +727,8 @@ document.addEventListener('DOMContentLoaded', function() {
                    showToast('權限不足或登入已超時，請重新登入。', 'error');
                    setTimeout(() => window.location.href = '/cook-login.html?redirect=/cook-admin-recipes.html', 2000);
                 }
-                const errorData = await response.json().catch(() => ({ message: '無法解析錯誤訊息' }));
-                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+                const errorData = await response.json().catch(() => ({ message: '無法解析來自伺服器的錯誤訊息' }));
+                throw new Error(errorData.error || errorData.message || `HTTP 錯誤! 狀態碼: ${response.status}`);
             }
             return await response.json();
         } catch (error) {
@@ -718,19 +742,19 @@ document.addEventListener('DOMContentLoaded', function() {
     async function loadInitialData() {
         setLoadingState(true);
         try {
-            const [itemsData, recipesData, cookingMethodsData] = await Promise.all([
+            // 不再獲取 cooking-methods
+            const [itemsData, recipesData] = await Promise.all([
                 apiFetch('/admin/all-items'),
-                apiFetch('/admin/recipes-v2'),
-                apiFetch('/admin/cooking-methods')
+                apiFetch('/admin/recipes-v2')
             ]);
             
             allItems = itemsData;
             allRecipes = recipesData;
-            allCookingMethods = cookingMethodsData;
             
-            renderItems();
+            renderItems(); // 渲染基礎食材
+            renderProcessedItems(); // 渲染加工品
             renderRecipes();
-            renderCookingMethods();
+            initializeSimulator(); // 初始化模擬器
             
         } catch (error) {
             console.error('Failed to load initial data', error);
@@ -747,81 +771,80 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- Rendering ---
     function renderItems() {
-        const searchTerm = itemSearch.value.toLowerCase();
-        const categorizedItems = {
-            raw_ingredient: [],
-            cooked_item: [],
-            semi_finished: [],
-            assembled_dish: [],
-        };
+        const searchTerm = document.getElementById('itemSearch').value.toLowerCase();
+        const rawIngredients = allItems.filter(item => 
+            item.item_type === 'raw_ingredient' &&
+            (item.item_name.toLowerCase().includes(searchTerm) || (item.item_id && item.item_id.toLowerCase().includes(searchTerm)))
+        );
 
-        allItems
-            .filter(item => item.item_name.toLowerCase().includes(searchTerm) || item.item_id.toLowerCase().includes(searchTerm))
-            .forEach(item => {
-                if (categorizedItems[item.item_type]) {
-                    categorizedItems[item.item_type].push(item);
-                }
-            });
-        
-        const categoryNames = {
-            raw_ingredient: '基礎食材',
-            cooked_item: '加工品',
-            semi_finished: '半成品',
-            assembled_dish: '最終料理'
-        };
+        const grid = document.getElementById('rawItemsGrid');
+        grid.innerHTML = rawIngredients.map(item => `
+            <div class="item-card" data-item-id="${item.item_id}">
+                <span class="item-symbol-large">${item.ascii_symbol || '?'}</span>
+                <span class="item-name">${item.item_name}</span>
+                <span class="item-id-tag">${item.item_id || 'N/A'}</span>
+            </div>
+        `).join('');
+    }
 
-        itemListContainer.innerHTML = Object.entries(categorizedItems).map(([type, items]) => {
-            if (items.length === 0) return '';
-            return `
-                <div class="item-category">
-                    <h4>${categoryNames[type]} (${items.length})</h4>
-                    ${items.map(item => `
-                        <div class="item" data-item-id="${item.item_id}" title="${item.item_id}">
-                            <span class="item-symbol">${item.ascii_symbol}</span>
-                            <span>${item.item_name}</span>
+    function renderProcessedItems() {
+        const searchTerm = document.getElementById('processedItemSearch').value.toLowerCase();
+        const processedItems = allItems.filter(item => 
+            item.item_type !== 'raw_ingredient' &&
+            (item.item_name.toLowerCase().includes(searchTerm) || (item.item_id && item.item_id.toLowerCase().includes(searchTerm)))
+        );
+
+        const grid = document.getElementById('processedItemsGrid');
+        grid.innerHTML = processedItems.map(item => `
+            <div class="item-card" data-item-id="${item.id}">
+                <span class="item-symbol-large">${item.ascii_symbol || '?'}</span>
+                <span class="item-name">${item.item_name}</span>
+                <span class="item-id-tag">${item.item_type || 'N/A'}</span>
                         </div>
-                    `).join('')}
-                </div>
-            `;
-        }).join('');
+        `).join('');
     }
 
     function renderRecipes() {
-        const searchTerm = recipeSearch.value.toLowerCase();
+        const searchTerm = document.getElementById('recipeSearch').value.toLowerCase();
         const filteredRecipes = allRecipes.filter(recipe => {
             const nameMatch = recipe.recipe_name.toLowerCase().includes(searchTerm);
             return nameMatch;
         });
 
-        // 創建一個物品ID到物品名稱的映射
-        const itemMap = {};
-        allItems.forEach(item => {
-            itemMap[item.item_id] = item.item_name;
-        });
-
-        recipesTableBody.innerHTML = filteredRecipes.map(recipe => {
+        const recipesGrid = document.getElementById('recipesGrid');
+        recipesGrid.innerHTML = filteredRecipes.map(recipe => {
             const requirementsText = recipe.requirements && recipe.requirements.length > 0 ? 
-                recipe.requirements.map(r => {
-                    return itemMap[r.item_id] ? `${itemMap[r.item_id]}(${r.quantity})` : `未知物品(${r.quantity})`;
-                }).join(', ') : '無需求';
-            
-            const outputText = itemMap[recipe.output_item_id] || '未知物品';
+                recipe.requirements.map(r => `${r.item_name}(${r.quantity})`).join(', ') 
+                : '無';
 
             return `
-                <tr data-recipe-id="${recipe.id}">
-                    <td>${recipe.id}</td>
-                    <td>${recipe.recipe_name}</td>
-                    <td>${outputText}</td>
-                    <td>${requirementsText}</td>
-                    <td>
-                        <button class="btn btn-sm btn-primary edit-btn" data-id="${recipe.id}"><i class="fas fa-edit"></i></button>
-                        <button class="btn btn-sm btn-danger delete-btn" data-id="${recipe.id}"><i class="fas fa-trash"></i></button>
-                    </td>
-                </tr>
+            <div class="recipe-card" data-recipe-id="${recipe.recipe_id}">
+                <div class="recipe-card-header">
+                    <h3>${recipe.recipe_name}</h3>
+                    <div class="actions">
+                        <button class="btn btn-sm btn-primary edit-btn" data-id="${recipe.recipe_id}" title="編輯"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-sm btn-danger delete-btn" data-id="${recipe.recipe_id}" title="刪除"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+                <div class="recipe-card-body">
+                    <div class="recipe-info-row">
+                        <strong>產出:</strong>
+                        <span>${recipe.output_item_name || '未知'}</span>
+                    </div>
+                    <div class="recipe-info-row">
+                        <strong>需求:</strong>
+                        <span>${requirementsText}</span>
+                    </div>
+                    <div class="recipe-info-row">
+                        <strong>方法:</strong>
+                        <span>${recipe.cooking_method || '未知'}</span>
+                    </div>
+                </div>
+            </div>
             `;
         }).join('');
 
-        // 添加編輯按鈕事件監聽
+        // Re-attach event listeners
         document.querySelectorAll('.edit-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 const recipeId = this.getAttribute('data-id');
@@ -829,7 +852,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
-        // 添加刪除按鈕事件監聽
         document.querySelectorAll('.delete-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 const recipeId = this.getAttribute('data-id');
@@ -838,35 +860,43 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    function renderCookingMethods() {
-        const searchTerm = requirementSearch.value.toLowerCase();
-        
-        // 確保 allCookingMethods 是一個數組
-        if (!Array.isArray(allCookingMethods)) {
-            allCookingMethods = [];
-            console.warn('烹飪手法數據不是數組，已初始化為空數組');
-        }
-        
-        const filtered = allCookingMethods.filter(method => 
-            method && typeof method === 'string' && method.toLowerCase().includes(searchTerm)
-        );
-
-        requirementListContainer.innerHTML = `
-            <div class="item-category">
-                <h4>所有手法 (${filtered.length})</h4>
-                ${filtered.length > 0 ? filtered.map(method => `
-                    <div class="item" data-method-name="${method}">
-                        <span class="item-symbol"><i class="fas fa-fire"></i></span>
-                        <span>${method}</span>
-                    </div>
-                `).join('') : '<div class="item"><span>尚無烹飪手法數據</span></div>'}
-            </div>
-        `;
-    }
-
     function populateItemSelects(selectElement) {
-        const options = allItems.map(item => `<option value="${item.item_id}">${item.item_name} (${item.ascii_symbol})</option>`).join('');
-        selectElement.innerHTML = '<option value="" disabled selected>選擇物品...</option>' + options;
+        // 按類型對物品進行分組
+        const groupedItems = allItems.reduce((acc, item) => {
+            if (!acc[item.item_type]) {
+                acc[item.item_type] = [];
+            }
+            acc[item.item_type].push(item);
+            return acc;
+        }, {});
+
+        // 定義類型的顯示名稱和順序
+        const typeOrder = {
+            raw_ingredient: { name: '基礎食材', order: 1 },
+            cooked_item: { name: '加工品', order: 2 },
+            semi_finished: { name: '半成品', order: 3 },
+            assembled_dish: { name: '最終料理', order: 4 }
+        };
+
+        // 生成選項HTML
+        let optionsHtml = '<option value="" disabled selected>選擇物品...</option>';
+        
+        // 按順序添加分組
+        Object.entries(typeOrder)
+            .sort((a, b) => a[1].order - b[1].order)
+            .forEach(([type, info]) => {
+                if (groupedItems[type] && groupedItems[type].length > 0) {
+                    optionsHtml += `<optgroup label="${info.name}">`;
+                    groupedItems[type]
+                        .sort((a, b) => a.item_name.localeCompare(b.item_name))
+                        .forEach(item => {
+                            optionsHtml += `<option value="${item.id}">${item.item_name} ${item.ascii_symbol ? `(${item.ascii_symbol})` : ''}</option>`;
+                        });
+                    optionsHtml += '</optgroup>';
+                }
+            });
+
+        selectElement.innerHTML = optionsHtml;
     }
 
     function populateRequirementSelects(selectElement) {
@@ -886,13 +916,24 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('recipeId').readOnly = true;
             document.getElementById('recipeName').value = recipe.recipe_name;
             
+            // 設置烹飪方法
+            if (recipe.cooking_method) {
+                document.getElementById('cookingMethod').value = recipe.cooking_method;
+            } else {
+                document.getElementById('cookingMethod').value = 'assembly'; // 默認為組合
+            }
+            
             if (recipe.requirements && recipe.requirements.length > 0) {
                 recipe.requirements.forEach(req => addRequirementField(req));
             } else {
                 addRequirementField();
             }
             
-            addResultField({item_id: recipe.output_item_id, quantity: 1});
+            addResultField({
+                item_id: recipe.output_item_id,
+                item_name: recipe.output_item_name,
+                quantity: 1
+            });
         } else {
             modalTitle.textContent = '新增食譜';
             document.getElementById('recipeId').value = '';
@@ -922,15 +963,27 @@ document.addEventListener('DOMContentLoaded', function() {
         const div = document.createElement('div');
         div.className = 'ingredient-item';
         div.innerHTML = `
-            <select class="req-id-select flex-grow-1"></select>
-            <input type="number" class="req-quantity-input" min="1" value="${data?.quantity || 1}">
+            <select class="req-id-select flex-grow-1" required></select>
+            <input type="number" class="req-quantity-input" min="1" value="${data?.quantity || 1}" required>
             <button type="button" class="btn btn-danger remove-ingredient-btn">&times;</button>
         `;
         requirementsContainer.appendChild(div);
 
         const idSelect = div.querySelector('.req-id-select');
         populateItemSelects(idSelect);
-        if (data?.item_id) idSelect.value = data.item_id;
+        
+        // 如果是編輯模式，設置選中的值
+        if (data?.item_id) {
+            idSelect.value = data.item_id;
+            // 如果找不到對應的選項，添加一個臨時選項
+            if (!idSelect.value) {
+                const tempOption = document.createElement('option');
+                tempOption.value = data.item_id;
+                tempOption.textContent = data.item_name || `ID: ${data.item_id}`;
+                idSelect.appendChild(tempOption);
+                idSelect.value = data.item_id;
+            }
+        }
 
         div.querySelector('.remove-ingredient-btn').onclick = () => div.remove();
     }
@@ -939,33 +992,91 @@ document.addEventListener('DOMContentLoaded', function() {
         const div = document.createElement('div');
         div.className = 'ingredient-item';
         div.innerHTML = `
-            <select class="res-id-select flex-grow-1"></select>
+            <select class="res-id-select flex-grow-1" required></select>
             <input type="number" class="res-quantity-input" min="1" value="1" disabled>
             <button type="button" class="btn btn-danger remove-ingredient-btn">&times;</button>
         `;
         resultsContainer.appendChild(div);
+        
         const idSelect = div.querySelector('.res-id-select');
         populateItemSelects(idSelect);
+        
+        // 如果是編輯模式，設置選中的值
         if (data?.item_id) {
             idSelect.value = data.item_id;
+            // 如果找不到對應的選項，添加一個臨時選項
+            if (!idSelect.value) {
+                const tempOption = document.createElement('option');
+                tempOption.value = data.item_id;
+                tempOption.textContent = data.item_name || `ID: ${data.item_id}`;
+                idSelect.appendChild(tempOption);
+            idSelect.value = data.item_id;
         }
+        }
+
         div.querySelector('.remove-ingredient-btn').onclick = () => div.remove();
     }
 
     // --- Event Handlers ---
     addRecipeBtn.addEventListener('click', () => openRecipeModal());
+    document.getElementById('analyzeRecipesBtn').addEventListener('click', async () => {
+        openSuggestionsModal();
+        try {
+            const result = await apiFetch('/admin/suggest-missing-recipes', { method: 'POST' });
+            populateSuggestions(result.suggestions);
+        } catch (error) {
+            console.error('分析食譜失敗', error);
+            showToast('分析食譜失敗', 'error');
+            document.getElementById('suggestionsLoading').textContent = '分析失敗，請檢查主控台錯誤。';
+        }
+    });
+    updateSymbolsBtn.addEventListener('click', async () => {
+        if (!confirm('確定要自動更新所有未知圖標嗎？這將會根據物品名稱匹配表情符號。')) {
+            return;
+        }
+        setLoadingState(true);
+        try {
+            const result = await apiFetch('/admin/update-item-symbols', { method: 'POST' });
+            showToast(result.message, 'success');
+            // 重新加載數據以顯示更新後的圖標
+            await loadInitialData();
+        } catch (error) {
+            console.error('更新圖標失敗', error);
+            showToast('更新圖標失敗', 'error');
+        } finally {
+            setLoadingState(false);
+        }
+    });
+    updateMethodsBtn.addEventListener('click', async () => {
+        if (!confirm('確定要自動修正烹飪方法嗎？此操作將會根據食譜名稱關鍵字，更新目前是「組合」的食譜。')) {
+            return;
+        }
+        setLoadingState(true);
+        try {
+            const result = await apiFetch('/admin/update-cooking-methods', { method: 'POST' });
+            showToast(result.message, 'success');
+            await loadInitialData();
+        } catch (error) {
+            console.error('更新烹飪方法失敗', error);
+            showToast('更新烹飪方法失敗', 'error');
+        } finally {
+            setLoadingState(false);
+        }
+    });
     closeButtons.forEach(btn => btn.addEventListener('click', () => {
         closeRecipeModal();
         closeNewItemModal();
+        closeSuggestionsModal();
     }));
     window.addEventListener('click', (event) => {
         if (event.target == recipeModal) closeRecipeModal();
         if (event.target == newItemModal) closeNewItemModal();
+        if (event.target == document.getElementById('suggestionsModal')) closeSuggestionsModal();
     });
 
     recipeSearch.addEventListener('input', renderRecipes);
     itemSearch.addEventListener('input', renderItems);
-    requirementSearch.addEventListener('input', renderCookingMethods);
+    processedItemSearch.addEventListener('input', renderProcessedItems);
     
     document.getElementById('addRequirementField').addEventListener('click', () => addRequirementField());
     document.getElementById('addResultField').addEventListener('click', () => addResultField());
@@ -984,9 +1095,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const isEditing = document.getElementById('recipeId').readOnly;
 
         const requirements = Array.from(document.querySelectorAll('#requirementsContainer .ingredient-item')).map(div => {
-            const id = div.querySelector('.req-id-select').value;
+            const select = div.querySelector('.req-id-select');
+            const id = select.value;
             const quantity = parseInt(div.querySelector('.req-quantity-input').value);
-            return { item_id: id, quantity };
+            const selectedOption = select.options[select.selectedIndex];
+            return { 
+                item_id: id, 
+                item_name: selectedOption ? selectedOption.textContent.split('(')[0].trim() : null,
+                quantity 
+            };
         });
 
         // 獲取產出物
@@ -996,11 +1113,16 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
+        const selectedOption = outputItemSelect.options[outputItemSelect.selectedIndex];
+        const outputItemName = selectedOption ? selectedOption.textContent.split('(')[0].trim() : null;
+        
         const payload = {
-            id: isEditing ? recipeId : null,
+            recipe_id: recipeId,
             recipe_name: document.getElementById('recipeName').value,
             output_item_id: outputItemSelect.value,
-            cook_time_sec: 30, // 預設烹飪時間
+            output_item_name: outputItemName,
+            cooking_method: document.getElementById('cookingMethod').value,
+            cook_time_sec: 30,
             requirements: requirements
         };
 
@@ -1015,7 +1137,7 @@ document.addEventListener('DOMContentLoaded', function() {
             loadInitialData();
         } catch (error) {
             console.error('儲存食譜失敗', error);
-            showToast('儲存食譜失敗', 'error');
+            showToast(`儲存食譜失敗: ${error.message}`, 'error');
         }
     });
     
@@ -1051,7 +1173,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 添加編輯食譜功能
     function editRecipe(recipeId) {
-        const recipe = allRecipes.find(r => r.id == recipeId);
+        const recipe = allRecipes.find(r => r.recipe_id == recipeId);
         if (!recipe) {
             showToast('找不到該食譜', 'error');
             return;
@@ -1064,9 +1186,16 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // 填充表單數據
         modalTitle.textContent = '編輯食譜';
-        document.getElementById('recipeId').value = recipe.id;
+        document.getElementById('recipeId').value = recipe.recipe_id;
         document.getElementById('recipeId').readOnly = true;
         document.getElementById('recipeName').value = recipe.recipe_name;
+        
+        // 設置烹飪方法
+        if (recipe.cooking_method) {
+            document.getElementById('cookingMethod').value = recipe.cooking_method;
+        } else {
+            document.getElementById('cookingMethod').value = 'assembly'; // 默認為組合
+        }
         
         // 添加需求項
         if (recipe.requirements && recipe.requirements.length > 0) {
@@ -1075,8 +1204,12 @@ document.addEventListener('DOMContentLoaded', function() {
             addRequirementField();
         }
         
-        // 添加產出物
-        addResultField({item_id: recipe.output_item_id, quantity: 1});
+        // 添加產出物，包含物品名稱
+        addResultField({
+            item_id: recipe.output_item_id,
+            item_name: recipe.output_item_name,
+            quantity: 1
+        });
         
         // 顯示模態框
         recipeModal.style.display = 'flex';
@@ -1138,6 +1271,237 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         loadInitialData();
+    }
+
+    // --- Simulator Logic ---
+    function initializeSimulator() {
+        // 1. Render player inventory (all items are available in simulator)
+        const simPlayerInventory = document.getElementById('simPlayerInventory');
+        simPlayerInventory.innerHTML = allItems.map(item => createSimItemElement(item)).join('');
+        
+        // 2. Create crafting slots
+        const craftingArea = document.getElementById('simCraftingArea');
+        craftingArea.innerHTML = '';
+        for (let i = 0; i < 5; i++) {
+            const slot = document.createElement('div');
+            slot.className = 'crafting-slot';
+            craftingArea.appendChild(slot);
+        }
+
+        // 3. Render cooking stations as buttons
+        const simCookingStations = document.getElementById('simCookingStations');
+        const cookingMethods = [
+            { id: 'grill', name: '烤爐', icon: '🔥' },
+            { id: 'pan_fry', name: '平底鍋', icon: '🍳' },
+            { id: 'deep_fry', name: '油炸鍋', icon: '💥' },
+            { id: 'boil', name: '湯鍋', icon: '🍲' },
+            { id: 'assembly', name: '組合台', icon: '👐' }
+        ];
+        simCookingStations.innerHTML = cookingMethods.map(method => `
+            <button class="btn btn-secondary station-btn" data-method="${method.id}">
+                ${method.icon} ${method.name}
+            </button>
+        `).join('');
+
+        setupSimulatorInteractions();
+    }
+    
+    function createSimItemElement(item) {
+        return `
+            <div class="sim-item" draggable="true" data-item-id="${item.id}" data-item-name="${item.item_name}" title="${item.item_name}">
+                <span>${item.ascii_symbol || '?'}</span>
+                <span>${item.item_name}</span>
+            </div>
+        `;
+    }
+
+    function setupSimulatorInteractions() {
+        const playerInventory = document.getElementById('simPlayerInventory');
+        const craftingArea = document.getElementById('simCraftingArea');
+        const stationsContainer = document.getElementById('simCookingStations');
+        const clearBtn = document.getElementById('clearCraftingBtn');
+
+        // Event delegation for dragging from inventory
+        playerInventory.addEventListener('dragstart', e => {
+            if (e.target.classList.contains('sim-item')) {
+                e.dataTransfer.setData('text/plain', e.target.dataset.itemId);
+            }
+        });
+
+        // Event delegation for drop zone
+        craftingArea.addEventListener('dragover', e => {
+            e.preventDefault();
+            const slot = e.target.closest('.crafting-slot');
+            if (slot) {
+                slot.classList.add('drag-over');
+            }
+        });
+        
+        craftingArea.addEventListener('dragleave', e => {
+            const slot = e.target.closest('.crafting-slot');
+            if (slot) {
+                slot.classList.remove('drag-over');
+            }
+        });
+
+        craftingArea.addEventListener('drop', e => {
+            e.preventDefault();
+            const slot = e.target.closest('.crafting-slot');
+            if (!slot) return;
+            
+            slot.classList.remove('drag-over');
+
+            // Allow drop only on empty slots
+            if (slot.children.length > 0) return;
+
+            const itemId = e.dataTransfer.getData('text/plain');
+            const itemData = allItems.find(i => i.id == itemId);
+
+            if (itemData) {
+                const itemEl = document.createElement('div');
+                itemEl.className = 'sim-item';
+                itemEl.dataset.itemId = itemData.id;
+                itemEl.title = `點擊移除 - ${itemData.item_name}`;
+                itemEl.innerHTML = `<span>${itemData.ascii_symbol || '?'}</span><span>${itemData.item_name}</span>`;
+                slot.appendChild(itemEl);
+            }
+        });
+        
+        // Event delegation for removing items from crafting area
+        craftingArea.addEventListener('click', e => {
+            const item = e.target.closest('.sim-item');
+            if (item) {
+                item.remove();
+            }
+        });
+
+        // Event delegation for station buttons
+        stationsContainer.addEventListener('click', e => {
+            const stationBtn = e.target.closest('.station-btn');
+            if (stationBtn) {
+                simulateCooking(stationBtn.dataset.method);
+            }
+        });
+        
+        // Clear button
+        clearBtn.addEventListener('click', () => {
+             craftingArea.querySelectorAll('.sim-item').forEach(item => item.remove());
+             document.getElementById('simOutput').textContent = '組合區已清空。';
+        });
+    }
+
+    async function simulateCooking(cookingMethod) {
+        const craftingArea = document.getElementById('simCraftingArea');
+        const itemElements = craftingArea.querySelectorAll('.sim-item');
+
+        if (itemElements.length === 0) {
+            showToast('請先將物品放入組合區', 'error');
+            return;
+        }
+
+        const itemIds = Array.from(itemElements).map(el => el.dataset.itemId);
+        const itemNames = Array.from(itemElements).map(el => {
+            const id = el.dataset.itemId;
+            const item = allItems.find(i => i.id == id);
+            return item ? item.item_name : '未知物品';
+        }).join(', ');
+
+        const simOutput = document.getElementById('simOutput');
+        simOutput.innerHTML = `正在使用 [${cookingMethod}] 烹飪 [${itemNames}]...`;
+        
+        try {
+            const result = await apiFetch('/admin/simulate-cooking', {
+                method: 'POST',
+                body: { itemIds: itemIds.map(id => parseInt(id)), cookingMethod }
+            });
+            
+            if (result.success) {
+                // Clear crafting area on success
+                itemElements.forEach(item => item.remove());
+
+                // Add new item to inventory
+                const newSimItemHTML = createSimItemElement(result.outputItem);
+                const simPlayerInventory = document.getElementById('simPlayerInventory');
+                simPlayerInventory.insertAdjacentHTML('beforeend', newSimItemHTML);
+                
+                // Add item to allItems cache if it's new
+                if (!allItems.some(item => item.id === result.outputItem.id)) {
+                    allItems.push(result.outputItem);
+                }
+
+                simOutput.innerHTML = `<div class="success">✅ 成功! 獲得: ${result.outputItem.item_name}</div>`;
+            } else {
+                simOutput.innerHTML = `<div class="error">❌ 失敗: ${result.error}</div>`;
+            }
+        } catch (error) {
+            simOutput.innerHTML = `<div class="error">❌ 模擬時發生錯誤: ${error.message}</div>`;
+        }
+    }
+
+    // --- Suggestions Modal ---
+    function openSuggestionsModal() {
+        document.getElementById('suggestionsModal').style.display = 'flex';
+        document.getElementById('suggestionsTableBody').innerHTML = '';
+        document.getElementById('suggestionsLoading').style.display = 'block';
+    }
+
+    function closeSuggestionsModal() {
+        document.getElementById('suggestionsModal').style.display = 'none';
+    }
+
+    function populateSuggestions(suggestions) {
+        const tableBody = document.getElementById('suggestionsTableBody');
+        document.getElementById('suggestionsLoading').style.display = 'none';
+
+        if (suggestions.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;">太棒了！沒有發現任何斷裂的食譜鏈。</td></tr>';
+            return;
+        }
+
+        tableBody.innerHTML = suggestions.map((suggestion, index) => {
+            const requirementsText = suggestion.requirements.map(r => `${r.item_name}(${r.quantity})`).join(', ');
+            return `
+                <tr data-suggestion-index="${index}">
+                    <td>${suggestion.output_item_name}</td>
+                    <td>${requirementsText}</td>
+                    <td>${suggestion.cooking_method}</td>
+                    <td>
+                        <button class="btn btn-sm btn-success add-suggestion-btn">一鍵新增</button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+        
+        document.querySelectorAll('.add-suggestion-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const row = e.target.closest('tr');
+                const index = parseInt(row.dataset.suggestionIndex);
+                const recipeToAdd = suggestions[index];
+                
+                // 構造一個符合新增API的payload
+                const payload = {
+                    recipe_id: recipeToAdd.recipe_id,  // 使用建議食譜中的 recipe_id
+                    recipe_name: recipeToAdd.recipe_name,
+                    output_item_id: recipeToAdd.output_item_id,
+                    output_item_name: recipeToAdd.output_item_name,
+                    cooking_method: recipeToAdd.cooking_method,
+                    requirements: recipeToAdd.requirements.map(r => ({ 
+                        item_id: r.item_id, 
+                        item_name: r.item_name,
+                        quantity: r.quantity 
+                    }))
+                };
+
+                try {
+                    await apiFetch('/admin/recipes-v2', { method: 'POST', body: payload });
+                    showToast(`食譜 "${recipeToAdd.recipe_name}" 新增成功!`, 'success');
+                    row.remove(); // 從建議列表中移除
+                    await loadInitialData(); // 重新加載食譜列表
+                } catch (error) {
+                    showToast(`新增食譜失敗: ${error.message}`, 'error');
+                }
+            });
+        });
     }
 
     initializePage();

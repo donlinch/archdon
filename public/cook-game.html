@@ -1823,7 +1823,7 @@
                   showToast(`正在${getCookingMethodName(type)} ${getItemName(currentItem.type)}...`);
                   showCookingAnimation('cooking_station'); // 顯示烹飪動畫
                   sendAction('cook_item', {
-                      stationType: type,
+                      cookingMethod: type, // 明確發送烹飪方法
                       slotIndex: gameState.activeSlot 
                   });
               } else {
