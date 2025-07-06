@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>料理急先鋒 V3 - 物品與食譜管理</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .tier-0 { background-color: #e9ecef; } /* 基礎食材 */
+        .tier-1 { background-color: #fff3cd; } /* 半成品 */
+        .tier-2 { background-color: #d4edda; } /* 最終料理 */
+        
+        .item-card {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 5px;
+            border-radius: 5px;
+        }
+
+        .ascii-preview {
+            font-family: monospace;
+            font-size: 1.2em;
+            padding: 5px;
+            background: #f8f9fa;
+            border-radius: 3px;
+        }
+
+        #recipeValidator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 300px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            display: none;
+        }
+
+        /* 添加导出按钮样式 */
+        .export-btn {
+            margin-bottom: 20px;
+        }
+
+        .recipe-card {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 5px;
+            border-radius: 5px;
+            height: 100%;
+        }
+
+        .recipe-card .requirements-list {
+            list-style: none;
+            padding-left: 0;
+            margin-bottom: 10px;
+        }
+
+        .recipe-card .requirements-list li {
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .recipe-card .badge {
+            margin-left: 5px;
+        }
+
+        .recipe-card .cooking-method {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.9em;
+            margin: 5px 0;
+            background-color: #e9ecef;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">料理急先鋒 V3 管理系統</a>
+            <div class="navbar-nav">
+                <a class="nav-link active" href="#" id="itemsTab">物品管理</a>
+                <a class="nav-link" href="#" id="recipesTab">食譜管理</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-3">
+        <!-- 添加导出按钮和新增物品按钮 -->
+        <div class="row mb-3">
+            <div class="col d-flex justify-content-between">
+                <button id="exportSqlBtn" class="btn btn-secondary export-btn">
+                    匯出 T0/T1 SQL
+                </button>
+                <button id="addItemBtn" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addItemModal">
+                    <i class="fas fa-plus"></i> 新增物品
+                </button>
+            </div>
+        </div>
+        
+        <!-- 物品管理區 -->
+        <div id="itemsSection">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            物品列表
+                            <div class="float-end">
+                                <button class="btn btn-sm btn-outline-secondary" id="refreshItems">
+                                    刷新列表
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div id="itemsList" class="row">
+                                <!-- 物品列表將由 JavaScript 動態填充 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 新增物品 Modal -->
+        <div class="modal fade" id="addItemModal" tabindex="-1" aria-labelledby="addItemModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="addItemModalLabel">新增物品</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="itemForm">
+                            <div class="mb-3">
+                                <label class="form-label">物品ID</label>
+                                <input type="text" class="form-control" id="itemId" required 
+                                       placeholder="例如: raw_beef">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">物品名稱</label>
+                                <input type="text" class="form-control" id="itemName" required
+                                       placeholder="例如: 生牛肉">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">ASCII符號</label>
+                                <input type="text" class="form-control" id="asciiSymbol" required
+                                       placeholder="例如: [牛]" maxlength="10">
+                                <div class="ascii-preview mt-2" id="asciiPreview"></div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">物品層級</label>
+                                <select class="form-select" id="itemTier" required>
+                                    <option value="0">T0 - 基礎食材</option>
+                                    <option value="1">T1 - 半成品</option>
+                                    <option value="2">T2 - 最終料理</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">基礎分數</label>
+                                <input type="number" class="form-control" id="basePoints" 
+                                       placeholder="僅 T2 最終料理需要填寫">
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                        <button type="button" class="btn btn-primary" id="saveItemBtn">儲存物品</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 食譜管理區 -->
+        <div id="recipesSection" style="display: none;">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="d-flex justify-content-end mb-3">
+                        <button id="addRecipeBtn" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addRecipeModal">
+                            <i class="fas fa-plus"></i> 新增食譜
+                        </button>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            食譜列表
+                            <div class="float-end">
+                                <button class="btn btn-sm btn-outline-secondary" id="refreshRecipes">
+                                    刷新列表
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div id="recipesList">
+                                <!-- 食譜列表將由 JavaScript 動態填充 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 新增食譜 Modal -->
+        <div class="modal fade" id="addRecipeModal" tabindex="-1" aria-labelledby="addRecipeModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="addRecipeModalLabel">新增食譜</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="recipeForm">
+                            <div class="mb-3">
+                                <label class="form-label">食譜ID</label>
+                                <input type="text" class="form-control" id="recipeId" required
+                                       placeholder="例如: cook_beef_patty">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">食譜名稱</label>
+                                <input type="text" class="form-control" id="recipeName" required
+                                       placeholder="例如: 煎牛肉餅">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">產出物品</label>
+                                <select class="form-select" id="outputItemId" required>
+                                    <!-- 由 JavaScript 動態填充 -->
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">烹飪方法</label>
+                                <select class="form-select" id="cookingMethod" required>
+                                    <option value="grill">烤製</option>
+                                    <option value="pan_fry">煎炒</option>
+                                    <option value="deep_fry">油炸</option>
+                                    <option value="boil">水煮</option>
+                                    <option value="assembly">組合</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">需求食材</label>
+                                <div id="requirementsList">
+                                    <!-- 需求列表將由 JavaScript 動態管理 -->
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-secondary mt-2" 
+                                        id="addRequirement">
+                                    新增需求
+                                </button>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">烹飪時間 (秒)</label>
+                                <input type="number" class="form-control" id="cookTime" 
+                                       value="30" required>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                        <button type="button" class="btn btn-primary" id="saveRecipeBtn">儲存食譜</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 食譜驗證器 -->
+        <div id="recipeValidator">
+            <h6>食譜驗證</h6>
+            <div id="validationResult"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 全局變數
+        let currentItems = [];
+        let currentRecipes = [];
+        
+        // 獲取用戶令牌
+        function getUserToken() {
+            const userId = localStorage.getItem('boxCurrentUserId');
+            if (!userId) return null;
+            const tokenKey = `boxUserToken_${userId}`;
+            return localStorage.getItem(tokenKey);
+        }
+
+        // API 請求工具函數
+        async function apiFetch(endpoint, options = {}) {
+            const token = getUserToken();
+            if (!token) {
+                alert('權限不足或登入已超時，請重新登入。');
+                window.location.href = '/cook-login.html?redirect=/cook-admin-recipes-v3.html';
+                throw new Error('令牌未找到，無法發送請求');
+            }
+
+            const defaultOptions = {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            };
+            const mergedOptions = { ...defaultOptions, ...options };
+            if (mergedOptions.body) {
+                mergedOptions.body = JSON.stringify(mergedOptions.body);
+            }
+
+            try {
+                const response = await fetch(`/cook-api${endpoint}`, mergedOptions);
+                if (!response.ok) {
+                    if(response.status === 401 || response.status === 403) {
+                        alert('權限不足或登入已超時，請重新登入。');
+                        window.location.href = '/cook-login.html?redirect=/cook-admin-recipes-v3.html';
+                        throw new Error('認證失敗');
+                    }
+                    const errorData = await response.json().catch(() => ({ message: '無法解析來自伺服器的錯誤訊息' }));
+                    throw new Error(errorData.error || errorData.message || `HTTP 錯誤! 狀態碼: ${response.status}`);
+                }
+                return await response.json();
+            } catch (error) {
+                console.error('API Fetch Error:', error);
+                throw error;
+            }
+        }
+
+        // 頁面切換
+        document.getElementById('itemsTab').addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('itemsSection').style.display = 'block';
+            document.getElementById('recipesSection').style.display = 'none';
+            this.classList.add('active');
+            document.getElementById('recipesTab').classList.remove('active');
+        });
+
+        document.getElementById('recipesTab').addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('itemsSection').style.display = 'none';
+            document.getElementById('recipesSection').style.display = 'block';
+            this.classList.add('active');
+            document.getElementById('itemsTab').classList.remove('active');
+        });
+
+        // ASCII 預覽
+        document.getElementById('asciiSymbol').addEventListener('input', function(e) {
+            document.getElementById('asciiPreview').textContent = e.target.value;
+        });
+
+        // 載入物品列表
+        async function loadItems() {
+            try {
+                const items = await apiFetch('/v3/items');
+                currentItems = items;
+                renderItems();
+                updateItemSelects();
+            } catch (error) {
+                console.error('載入物品失敗:', error);
+                alert(`載入物品失敗: ${error.message}`);
+            }
+        }
+
+        // 載入食譜列表
+        async function loadRecipes() {
+            try {
+                console.log('Fetching recipes...');
+                const recipes = await apiFetch('/v3/recipes');
+                console.log('Received recipes:', recipes);
+                currentRecipes = recipes;
+                console.log('Current recipes set to:', currentRecipes);
+                renderRecipes();
+            } catch (error) {
+                console.error('載入食譜失敗:', error);
+                alert(`載入食譜失敗: ${error.message}`);
+            }
+        }
+
+        // 物品表單提交
+        document.getElementById('saveItemBtn').addEventListener('click', async function() {
+            const form = document.getElementById('itemForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const formData = {
+                item_id: document.getElementById('itemId').value,
+                item_name: document.getElementById('itemName').value,
+                ascii_symbol: document.getElementById('asciiSymbol').value,
+                item_tier: parseInt(document.getElementById('itemTier').value),
+                base_points: parseInt(document.getElementById('basePoints').value) || 0
+            };
+
+            try {
+                await apiFetch('/v3/items', {
+                    method: 'PUT', // 改用 PUT 方法進行更新
+                    body: formData
+                });
+                alert('物品更新成功！');
+                loadItems();
+                form.reset();
+                // 關閉 Modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('addItemModal'));
+                modal.hide();
+            } catch (error) {
+                alert(`錯誤：${error.message}`);
+            }
+        });
+
+        // 當物品 Modal 開啟時
+        document.getElementById('addItemModal').addEventListener('show.bs.modal', function (event) {
+            // 如果是通過新增按鈕打開的，重置表單並啟用所有欄位
+            if (event.relatedTarget && event.relatedTarget.id === 'addItemBtn') {
+                document.getElementById('itemId').disabled = false;
+                document.getElementById('itemTier').disabled = false;
+                document.getElementById('itemForm').reset();
+                document.getElementById('asciiPreview').textContent = '';
+            }
+        });
+
+        // 食譜表單提交
+        document.getElementById('saveRecipeBtn').addEventListener('click', async function() {
+            const form = document.getElementById('recipeForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const requirements = Array.from(document.querySelectorAll('.requirement-row')).map(row => ({
+                item_id: row.querySelector('.req-item').value,
+                quantity: parseInt(row.querySelector('.req-quantity').value)
+            }));
+
+            const formData = {
+                recipe_id: document.getElementById('recipeId').value,
+                recipe_name: document.getElementById('recipeName').value,
+                output_item_id: document.getElementById('outputItemId').value,
+                cooking_method: document.getElementById('cookingMethod').value,
+                requirements: requirements,
+                cook_time_sec: parseInt(document.getElementById('cookTime').value)
+            };
+
+            try {
+                await apiFetch('/v3/recipes', {
+                    method: 'POST',
+                    body: formData
+                });
+                alert('食譜儲存成功！');
+                loadRecipes();
+                form.reset();
+                // 清空需求列表
+                document.getElementById('requirementsList').innerHTML = '';
+                // 關閉 Modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('addRecipeModal'));
+                modal.hide();
+            } catch (error) {
+                alert(`錯誤：${error.message}`);
+            }
+        });
+
+        // 當食譜 Modal 關閉時重置表單
+        document.getElementById('addRecipeModal').addEventListener('hidden.bs.modal', function () {
+            document.getElementById('recipeForm').reset();
+            document.getElementById('requirementsList').innerHTML = '';
+        });
+
+        // 當選擇產出物品時，根據其層級過濾可選擇的需求物品
+        document.getElementById('outputItemId').addEventListener('change', function() {
+            const selectedItem = currentItems.find(item => item.item_id === this.value);
+            if (!selectedItem) return;
+
+            // 清空現有需求列表
+            document.getElementById('requirementsList').innerHTML = '';
+
+            // 如果是 T2 物品，自動設置烹飪方法為 assembly
+            if (selectedItem.item_tier === 2) {
+                document.getElementById('cookingMethod').value = 'assembly';
+                document.getElementById('cookingMethod').disabled = true;
+            } else {
+                document.getElementById('cookingMethod').disabled = false;
+            }
+        });
+
+        // 新增需求行
+        document.getElementById('addRequirement').addEventListener('click', function() {
+            const requirementsList = document.getElementById('requirementsList');
+            const row = document.createElement('div');
+            row.className = 'requirement-row input-group mb-2';
+            row.innerHTML = `
+                <select class="form-select req-item">
+                    ${currentItems.map(item => `
+                        <option value="${item.item_id}">${item.item_name}</option>
+                    `).join('')}
+                </select>
+                <input type="number" class="form-control req-quantity" value="1" min="1">
+                <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">
+                    ×
+                </button>
+            `;
+            requirementsList.appendChild(row);
+        });
+
+        // 渲染物品列表
+        function renderItems() {
+            const itemsList = document.getElementById('itemsList');
+            itemsList.innerHTML = currentItems.map(item => `
+                <div class="col-md-4 mb-3">
+                    <div class="item-card tier-${item.item_tier}">
+                        <div class="d-flex justify-content-end mb-2">
+                            <button class="btn btn-sm btn-outline-primary me-2" onclick="editItem('${item.item_id}')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="checkAndDeleteItem('${item.item_id}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                        <h5>${item.item_name}</h5>
+                        <div class="ascii-preview">${item.ascii_symbol}</div>
+                        <div class="text-muted">ID: ${item.item_id}</div>
+                        <div>層級: T${item.item_tier}</div>
+                        ${item.item_tier === 2 ? `<div>基礎分數: ${item.base_points}</div>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 更新物品選擇下拉選單
+        function updateItemSelects() {
+            const outputSelect = document.getElementById('outputItemId');
+            if (outputSelect) {
+                outputSelect.innerHTML = currentItems.map(item => `
+                    <option value="${item.item_id}">${item.item_name} (T${item.item_tier})</option>
+                `).join('');
+            }
+        }
+
+        // 渲染食譜列表
+        function renderRecipes() {
+            console.log('Starting renderRecipes with currentRecipes:', currentRecipes);
+            console.log('Current items:', currentItems);
+            const recipesList = document.getElementById('recipesList');
+
+            // 将食谱按 T1 和 T2 分组
+            const t1Recipes = currentRecipes.filter(recipe => {
+                const outputItem = currentItems.find(item => item.id === recipe.output_item_id);
+                return outputItem && outputItem.item_tier === 1;
+            });
+
+            const t2Recipes = currentRecipes.filter(recipe => {
+                const outputItem = currentItems.find(item => item.id === recipe.output_item_id);
+                return outputItem && outputItem.item_tier === 2;
+            });
+
+            // 内部渲染函数，用于创建单个食谱卡片
+            const renderRecipeCard = (recipe) => {
+                const outputItem = currentItems.find(item => item.id === recipe.output_item_id);
+                
+                const cookingMethodMap = {
+                    'grill': '烤製',
+                    'pan_fry': '煎炒',
+                    'deep_fry': '油炸',
+                    'boil': '水煮',
+                    'assembly': '組合'
+                };
+                const cookingMethodDisplay = cookingMethodMap[recipe.cooking_method] || recipe.cooking_method;
+                
+                const tierClass = outputItem && outputItem.item_tier === 2 ? 'tier-2' : 
+                                 (outputItem && outputItem.item_tier === 1 ? 'tier-1' : '');
+                
+                const tierLabel = outputItem && outputItem.item_tier === 2 ? '<span class="badge bg-success">T2</span>' : 
+                                 (outputItem && outputItem.item_tier === 1 ? '<span class="badge bg-warning">T1</span>' : '');
+                
+                const requirementsHtml = recipe.requirements.map(req => {
+                    const reqItem = currentItems.find(item => item.item_id === req.item_id);
+                    const reqTierLabel = reqItem && reqItem.item_tier === 1 ? 
+                                       '<span class="badge bg-warning">T1</span>' : 
+                                       (reqItem && reqItem.item_tier === 0 ? 
+                                       '<span class="badge bg-secondary">T0</span>' : '');
+                    return `<li>${reqItem ? reqItem.item_name : req.item_id} × ${req.quantity} ${reqTierLabel}</li>`;
+                }).join('');
+
+                return `
+                    <div class="col-md-4 mb-3">
+                        <div class="recipe-card ${tierClass}">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="mb-0">${recipe.recipe_name} ${tierLabel}</h5>
+                                <div>
+                                    <button class="btn btn-sm btn-outline-primary me-2" onclick="editRecipe('${recipe.recipe_id}')">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="checkAndDeleteRecipe('${recipe.recipe_id}')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="text-muted small">ID: ${recipe.recipe_id}</div>
+                            <div class="mt-2">
+                                <strong>產出:</strong> ${outputItem ? outputItem.item_name : recipe.output_item_id}
+                            </div>
+                            <div class="cooking-method mt-2">
+                                <i class="fas fa-utensils me-1"></i>${cookingMethodDisplay}
+                            </div>
+                            <div class="mt-2">
+                                <strong>需求:</strong>
+                                <ul class="requirements-list">
+                                    ${requirementsHtml}
+                                </ul>
+                            </div>
+                            <div class="text-muted small">
+                                <i class="fas fa-clock me-1"></i>${recipe.cook_time_sec}秒
+                            </div>
+                        </div>
+                    </div>
+                `;
+            };
+
+            let finalHtml = `
+                <div class="mb-4">
+                    <h4>T1 食譜 (半成品)</h4>
+                    <hr>
+                    <div class="row">
+                        ${t1Recipes.length > 0 ? t1Recipes.map(renderRecipeCard).join('') : 
+                          '<div class="col"><p class="text-muted">目前沒有 T1 食譜。</p></div>'}
+                    </div>
+                </div>
+                <div>
+                    <h4>T2 食譜 (最終料理)</h4>
+                    <hr>
+                    <div class="row">
+                        ${t2Recipes.length > 0 ? t2Recipes.map(renderRecipeCard).join('') : 
+                          '<div class="col"><p class="text-muted">目前沒有 T2 食譜。</p></div>'}
+                    </div>
+                </div>
+            `;
+
+            recipesList.innerHTML = finalHtml;
+        }
+
+        // 編輯物品
+        async function editItem(itemId) {
+            const item = currentItems.find(i => i.item_id === itemId);
+            if (!item) return;
+
+            // 檢查此物品是否被食譜使用
+            const recipesUsingItem = currentRecipes.filter(recipe => {
+                return recipe.output_item_id === item.id || 
+                       recipe.requirements.some(req => req.item_id === item.item_id);
+            });
+
+            // 填充表單
+            document.getElementById('itemId').value = item.item_id;
+            document.getElementById('itemId').disabled = true; // 禁止修改 item_id
+            document.getElementById('itemName').value = item.item_name;
+            document.getElementById('asciiSymbol').value = item.ascii_symbol;
+            document.getElementById('itemTier').value = item.item_tier;
+            document.getElementById('itemTier').disabled = true; // 禁止修改層級
+            document.getElementById('basePoints').value = item.base_points || 0;
+            document.getElementById('asciiPreview').textContent = item.ascii_symbol;
+
+            // 根據物品層級顯示不同的警告
+            if (item.item_tier === 0) {
+                const t1Recipes = recipesUsingItem.filter(r => {
+                    const outItem = currentItems.find(i => i.id === r.output_item_id);
+                    return outItem && outItem.item_tier === 1;
+                });
+                const t2Recipes = recipesUsingItem.filter(r => {
+                    const outItem = currentItems.find(i => i.id === r.output_item_id);
+                    return outItem && outItem.item_tier === 2;
+                });
+                
+                if (t1Recipes.length > 0 || t2Recipes.length > 0) {
+                    let warning = '注意：修改此基礎食材會影響以下食譜：\n\n';
+                    if (t1Recipes.length > 0) {
+                        warning += '半成品食譜：\n- ' + t1Recipes.map(r => r.recipe_name).join('\n- ') + '\n\n';
+                    }
+                    if (t2Recipes.length > 0) {
+                        warning += '最終料理食譜：\n- ' + t2Recipes.map(r => r.recipe_name).join('\n- ');
+                    }
+                    alert(warning + '\n\n請謹慎修改！');
+                }
+            } else if (item.item_tier === 1) {
+                const t2Recipes = recipesUsingItem.filter(r => {
+                    const outItem = currentItems.find(i => i.id === r.output_item_id);
+                    return outItem && outItem.item_tier === 2;
+                });
+                
+                if (t2Recipes.length > 0) {
+                    alert('注意：修改此半成品會影響以下最終料理：\n\n- ' + 
+                          t2Recipes.map(r => r.recipe_name).join('\n- ') + 
+                          '\n\n請謹慎修改！');
+                }
+            }
+
+            // 打開 Modal
+            const modal = new bootstrap.Modal(document.getElementById('addItemModal'));
+            modal.show();
+        }
+
+        // 編輯食譜
+        async function editRecipe(recipeId) {
+            const recipe = currentRecipes.find(r => r.recipe_id === recipeId);
+            if (!recipe) return;
+
+            // 填充表單
+            document.getElementById('recipeId').value = recipe.recipe_id;
+            document.getElementById('recipeName').value = recipe.recipe_name;
+            document.getElementById('outputItemId').value = recipe.output_item_id;
+            document.getElementById('cookingMethod').value = recipe.cooking_method;
+            document.getElementById('cookTime').value = recipe.cook_time_sec;
+
+            // 清空並重建需求列表
+            const requirementsList = document.getElementById('requirementsList');
+            requirementsList.innerHTML = '';
+            recipe.requirements.forEach(req => {
+                const row = document.createElement('div');
+                row.className = 'requirement-row input-group mb-2';
+                row.innerHTML = `
+                    <select class="form-select req-item">
+                        ${currentItems.map(item => `
+                            <option value="${item.item_id}" ${req.item_id === item.item_id ? 'selected' : ''}>
+                                ${item.item_name}
+                            </option>
+                        `).join('')}
+                    </select>
+                    <input type="number" class="form-control req-quantity" value="${req.quantity}" min="1">
+                    <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">
+                        ×
+                    </button>
+                `;
+                requirementsList.appendChild(row);
+            });
+
+            // 打開 Modal
+            const modal = new bootstrap.Modal(document.getElementById('addRecipeModal'));
+            modal.show();
+        }
+
+        // 檢查並刪除物品
+        async function checkAndDeleteItem(itemId) {
+            const item = currentItems.find(i => i.item_id === itemId);
+            if (!item) return;
+
+            // 檢查此物品是否被食譜使用
+            const recipesUsingItem = currentRecipes.filter(recipe => {
+                return recipe.output_item_id === item.id || 
+                       recipe.requirements.some(req => req.item_id === item.item_id);
+            });
+
+            if (recipesUsingItem.length > 0) {
+                const recipeNames = recipesUsingItem.map(r => r.recipe_name).join('\n- ');
+                alert(`無法刪除此物品！\n\n此物品正在被以下食譜使用：\n- ${recipeNames}\n\n請先刪除這些食譜。`);
+                return;
+            }
+
+            if (confirm(`確定要刪除物品「${item.item_name}」嗎？`)) {
+                try {
+                    await apiFetch(`/v3/items/${item.item_id}`, {
+                        method: 'DELETE'
+                    });
+                    alert('物品刪除成功！');
+                    loadItems();
+                } catch (error) {
+                    alert(`刪除失敗：${error.message}`);
+                }
+            }
+        }
+
+        // 檢查並刪除食譜
+        async function checkAndDeleteRecipe(recipeId) {
+            const recipe = currentRecipes.find(r => r.recipe_id === recipeId);
+            if (!recipe) return;
+
+            if (confirm(`確定要刪除食譜「${recipe.recipe_name}」嗎？`)) {
+                try {
+                    await apiFetch(`/v3/recipes/${recipe.recipe_id}`, {
+                        method: 'DELETE'
+                    });
+                    alert('食譜刪除成功！');
+                    loadRecipes();
+                } catch (error) {
+                    alert(`刪除失敗：${error.message}`);
+                }
+            }
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadItems();
+            loadRecipes();
+        });
+
+        // 刷新按鈕事件
+        document.getElementById('refreshItems').addEventListener('click', loadItems);
+        document.getElementById('refreshRecipes').addEventListener('click', loadRecipes);
+
+        // 添加导出 SQL 功能
+        document.getElementById('exportSqlBtn').addEventListener('click', async function() {
+            try {
+                // 获取所有物品和食谱
+                const items = await apiFetch('/v3/items');
+                const recipes = await apiFetch('/v3/recipes');
+                
+                // 过滤出 T0、T1 和 T2 的物品
+                const t0Items = items.filter(item => item.item_tier === 0);
+                const t1Items = items.filter(item => item.item_tier === 1);
+                const t2Items = items.filter(item => item.item_tier === 2);
+                
+                // 过滤出产出为 T1 的食谱
+                const t1Recipes = recipes.filter(recipe => {
+                    const outputItem = items.find(item => item.item_id === recipe.output_item_id);
+                    return outputItem && outputItem.item_tier === 1;
+                });
+                
+                // 过滤出产出为 T2 的食谱
+                const t2Recipes = recipes.filter(recipe => {
+                    const outputItem = items.find(item => item.item_id === recipe.output_item_id);
+                    return outputItem && outputItem.item_tier === 2;
+                });
+                
+                // 生成 SQL 语句
+                let sqlStatements = '-- T0 物品（基础食材）\n';
+                sqlStatements += 'INSERT INTO cook_items_v3 (item_id, item_name, ascii_symbol, item_tier) VALUES\n';
+                
+                t0Items.forEach((item, index) => {
+                    sqlStatements += `('${item.item_id}', '${item.item_name}', '${item.ascii_symbol}', ${item.item_tier})`;
+                    if (index < t0Items.length - 1) sqlStatements += ',\n';
+                    else sqlStatements += ';\n\n';
+                });
+                
+                sqlStatements += '-- T1 物品（半成品）\n';
+                sqlStatements += 'INSERT INTO cook_items_v3 (item_id, item_name, ascii_symbol, item_tier) VALUES\n';
+                
+                t1Items.forEach((item, index) => {
+                    sqlStatements += `('${item.item_id}', '${item.item_name}', '${item.ascii_symbol}', ${item.item_tier})`;
+                    if (index < t1Items.length - 1) sqlStatements += ',\n';
+                    else sqlStatements += ';\n\n';
+                });
+                
+                sqlStatements += '-- T2 物品（最终料理）\n';
+                sqlStatements += 'INSERT INTO cook_items_v3 (item_id, item_name, ascii_symbol, item_tier, base_points) VALUES\n';
+                
+                t2Items.forEach((item, index) => {
+                    sqlStatements += `('${item.item_id}', '${item.item_name}', '${item.ascii_symbol}', ${item.item_tier}, ${item.base_points || 0})`;
+                    if (index < t2Items.length - 1) sqlStatements += ',\n';
+                    else sqlStatements += ';\n\n';
+                });
+                
+                sqlStatements += '-- T1 食譜\n';
+                sqlStatements += 'INSERT INTO cook_recipes_v3 (recipe_id, recipe_name, output_item_id, cooking_method, requirements, cook_time_sec) VALUES\n';
+                
+                t1Recipes.forEach((recipe, index) => {
+                    const requirementsStr = JSON.stringify(recipe.requirements).replace(/'/g, "''");
+                    sqlStatements += `('${recipe.recipe_id}', '${recipe.recipe_name}', ` +
+                        `(SELECT id FROM cook_items_v3 WHERE item_id = '${recipe.output_item_id}'), ` +
+                        `'${recipe.cooking_method}', '${requirementsStr}', ${recipe.cook_time_sec})`;
+                    if (index < t1Recipes.length - 1) sqlStatements += ',\n';
+                    else sqlStatements += ';\n\n';
+                });
+                
+                sqlStatements += '-- T2 食譜\n';
+                sqlStatements += 'INSERT INTO cook_recipes_v3 (recipe_id, recipe_name, output_item_id, cooking_method, requirements, cook_time_sec) VALUES\n';
+                
+                t2Recipes.forEach((recipe, index) => {
+                    const requirementsStr = JSON.stringify(recipe.requirements).replace(/'/g, "''");
+                    sqlStatements += `('${recipe.recipe_id}', '${recipe.recipe_name}', ` +
+                        `(SELECT id FROM cook_items_v3 WHERE item_id = '${recipe.output_item_id}'), ` +
+                        `'${recipe.cooking_method}', '${requirementsStr}', ${recipe.cook_time_sec})`;
+                    if (index < t2Recipes.length - 1) sqlStatements += ',\n';
+                    else sqlStatements += ';\n';
+                });
+                
+                // 添加生成规则和提示词说明
+                const rulesAndTips = `
+/*
+-- V3 物品和食譜生成規則 --
+
+1. 物品层級 (item_tier):
+   - T0 (0): 基础食材，無法通過食譜製作，是所有加工鏈的起點
+   - T1 (1): 半成品，由 T0 食材通過食譜加工而成
+   - T2 (2): 最終料理，由 T1 半成品和/或 T0 食材組合而成
+
+2. 食譜規則:
+   - T1 食譜: 只能使用 T0 食材作為原料
+   - T2 食譜: 可以使用 T1 半成品和/或 T0 食材作為原料
+   - T2 食譜必須使用 'assembly' (組合) 烹飪方法
+
+3. 烹飪方法 (cooking_method):
+   - pan_fry: 煎炒類烹飪方法
+   - deep_fry: 油炸類烹飪方法
+   - grill: 烤製類烹飪方法
+   - boil: 水煮類烹飪方法
+   - assembly: 組合類處理方法
+
+4. ID 對應關係說明:
+   - items 表中的 id: 自動生成的主鍵，用於被其他表參照
+   - item_id: 人類可讀的唯一標識符，如 'raw_beef'
+   - 食譜表中的 output_item_id: 參照 items 表的 id (不是 item_id)
+   - 食譜需求中的 item_id: 使用人類可讀的 item_id (不是資料庫 id)
+
+5. 需求格式 (requirements):
+   - JSON 數組格式: [{"item_id":"食材ID","quantity":數量}, ...]
+   - 例如: [{"item_id":"raw_beef","quantity":1},{"item_id":"salt","quantity":1}]
+   - 注意: JSON 字符串必須使用單引號包裹，內部使用雙引號
+   - item_id 使用人類可讀的標識符（如 'raw_beef'）
+
+6. 命名規則:
+   - item_id: 使用英文小寫和下劃線，例如 raw_beef, fried_potatoes
+   - recipe_id: 通常使用動詞開頭，例如 make_beef_patty, fry_potatoes
+   - 確保 item_id 和 recipe_id 在數據庫中唯一，避免重複
+
+7. SQL 語法使用說明:
+   - 插入物品時，確保 item_id 不重複
+   - 插入食譜時，確保 recipe_id 不重複
+   - 食譜參照物品時，使用子查詢: (SELECT id FROM cook_items_v3 WHERE item_id = '物品ID')
+   - 食譜需求中使用人類可讀的 item_id: '[{"item_id":"raw_beef","quantity":1}]'
+   - 如遇到重複鍵錯誤，可以:
+     a) 使用不同的ID (例如添加後綴 _v2, _new)
+     b) 先刪除舊記錄: DELETE FROM cook_recipes_v3 WHERE recipe_id = 'recipe_id';
+     c) 或更新現有記錄: UPDATE cook_items_v3 SET ... WHERE item_id = 'item_id';
+
+-- 範例 --
+1. 添加 T0 食材:
+   INSERT INTO cook_items_v3 (item_id, item_name, ascii_symbol, item_tier) 
+   VALUES ('raw_beef', '生牛肉', '🐄', 0);
+
+2. 添加 T1 半成品:
+   INSERT INTO cook_items_v3 (item_id, item_name, ascii_symbol, item_tier) 
+   VALUES ('grilled_beef', '烤牛肉', '🥩', 1);
+
+3. 添加 T1 食譜 (注意 output_item_id 使用子查詢):
+   INSERT INTO cook_recipes_v3 (recipe_id, recipe_name, output_item_id, cooking_method, requirements, cook_time_sec)
+   VALUES ('grill_beef', '烤牛肉', 
+          (SELECT id FROM cook_items_v3 WHERE item_id = 'grilled_beef'),
+          'grill', 
+          '[{"item_id":"raw_beef","quantity":1}]', 
+          30);
+
+4. 添加 T2 最終料理:
+   INSERT INTO cook_items_v3 (item_id, item_name, ascii_symbol, item_tier, base_points) 
+   VALUES ('beef_burger', '牛肉漢堡', '🍔', 2, 120);
+
+5. 添加 T2 食譜 (注意需求中使用 item_id):
+   INSERT INTO cook_recipes_v3 (recipe_id, recipe_name, output_item_id, cooking_method, requirements, cook_time_sec)
+   VALUES ('make_beef_burger', '製作牛肉漢堡', 
+          (SELECT id FROM cook_items_v3 WHERE item_id = 'beef_burger'),
+          'assembly', 
+          '[{"item_id":"grilled_beef","quantity":1},{"item_id":"baked_bread","quantity":1}]', 
+          15);
+
+6. 常見錯誤處理:
+   -- 檢查物品是否存在
+   SELECT * FROM cook_items_v3 WHERE item_id = 'beef_burger';
+   
+   -- 檢查食譜的 output_item_id 是否正確
+   SELECT r.*, i.item_id, i.item_name 
+   FROM cook_recipes_v3 r 
+   JOIN cook_items_v3 i ON r.output_item_id = i.id 
+   WHERE r.recipe_id = 'make_beef_burger';
+   
+   -- 檢查食譜需求中的 item_id 是否存在
+   SELECT * FROM cook_items_v3 WHERE item_id IN ('grilled_beef', 'baked_bread');
+*/
+`;
+                
+                // 将规则说明添加到 SQL 语句前面
+                sqlStatements = rulesAndTips + sqlStatements;
+                
+                // 复制到剪贴板
+                await navigator.clipboard.writeText(sqlStatements);
+                alert('SQL 語句已複製到剪貼簿！包含 T0、T1 和 T2 的物品和食譜。');
+                
+                // 在控制台也输出一份，以防剪贴板访问被阻止
+                console.log('匯出的 SQL 語句（含規則說明）：');
+                console.log(sqlStatements);
+                
+            } catch (error) {
+                console.error('匯出失敗:', error);
+                alert(`匯出失敗: ${error.message}`);
+            }
+        });
+    </script>
+</body>
+</html> 

@@ -3,6 +3,42 @@
 ## 1. 遊戲概述
 ## 2. 系統架構與資料表設計
    - 2.1 資料表設計
+     - **2.1.1 食譜系統資料表 (cook_recipes_v2)**
+       - **設計理念**:
+         1. 單一職責: 每個食譜記錄專注於一個特定的烹飪結果
+         2. 完整性約束: 使用外鍵確保食材和產出物的有效性
+         3. 可追蹤性: 記錄創建和修改時間戳
+         4. 擴展性: 預留欄位支持未來功能擴展
+       
+       - **資料表結構**:
+         ```sql
+         CREATE TABLE cook_recipes_v2 (
+             recipe_id VARCHAR(50) PRIMARY KEY,
+             recipe_name VARCHAR(100) NOT NULL,
+             output_item_id INTEGER REFERENCES cook_items(id),
+             output_item_name VARCHAR(100),
+             cooking_method VARCHAR(20) NOT NULL,
+             cook_time_sec INTEGER DEFAULT 30,
+             requirements JSONB NOT NULL DEFAULT '[]',
+             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+         );
+         ```
+       
+       - **欄位說明**:
+         - recipe_id: 食譜唯一標識符
+         - recipe_name: 食譜名稱
+         - output_item_id: 產出物品ID (外鍵關聯)
+         - output_item_name: 產出物品名稱 (冗餘欄位，提高查詢效率)
+         - cooking_method: 烹飪方法 (grill/pan_fry/deep_fry/boil/assembly)
+         - requirements: JSON格式存儲食材需求清單
+         - cook_time_sec: 烹飪所需時間(秒)
+         
+       - **資料完整性保證**:
+         1. 主鍵約束確保食譜ID唯一性
+         2. 外鍵約束確保產出物存在於物品表
+         3. NOT NULL 約束確保必要資料存在
+         4. DEFAULT 約束提供預設值
    - 2.2 會員認證機制
    - 2.3 會員專屬功能
    - 2.4 網頁路由結構
@@ -75,6 +111,62 @@
 ## 13. 遊戲核心設計：食材、配方與訂單 (資料庫驅動內容範例)
    - 13.1 基礎食材列表 (共20種)
    - 13.2 加工與烹飪配方
+     - **13.2.1 食譜驗證系統**:
+       1. **自動化測試**:
+          - 使用模擬器測試所有食譜的可行性
+          - 檢查原料取得途徑是否完整
+          - 驗證烹飪方法的合理性
+       
+       2. **資料一致性檢查**:
+          - 確保所有食材都有對應的物品記錄
+          - 檢查產出物的有效性
+          - 驗證烹飪方法是否在允許範圍內
+       
+       3. **遊戲平衡性分析**:
+          - 計算每個食譜的成本效益比
+          - 分析製作難度與獎勵的平衡
+          - 檢查原料獲取難度的合理性
+       
+       4. **管理工具支持**:
+          - 後台提供食譜模擬器
+          - 一鍵分析缺漏食譜功能
+          - 自動更新圖示和烹飪方法
+     
+     - **13.2.2 食譜設計原則**:
+       1. **階層性**:
+          - 基礎食材 → 簡單加工品 → 複雜料理
+          - 確保每個階段都有明確的進階路徑
+       
+       2. **多樣性**:
+          - 同一食材可用於不同烹飪方法
+          - 相似食材可產出不同結果
+          - 鼓勵玩家嘗試不同組合
+       
+       3. **平衡性**:
+          - 較難獲得的食材應有更高價值
+          - 複雜的烹飪過程應有相應獎勵
+          - 保持不同製作路徑的可行性
+       
+       4. **趣味性**:
+          - 加入特殊組合的驚喜效果
+          - 設計富有創意的料理名稱
+          - 通過食譜講述有趣的故事
+     
+     - **13.2.3 食譜管理流程**:
+       1. **新增食譜**:
+          - 檢查原料可得性
+          - 驗證烹飪方法合理性
+          - 確認產出物價值平衡
+       
+       2. **修改食譜**:
+          - 記錄修改歷史
+          - 評估對遊戲平衡的影響
+          - 確保不破壞現有玩家進度
+       
+       3. **刪除食譜**:
+          - 檢查依賴關係
+          - 評估對遊戲經濟的影響
+          - 確保不影響任務和成就
    - 13.3 最終組裝與出餐 (Final Assembly & Serving)
    - 13.4 範例訂單與解法路徑 (Sample Orders & Solution Paths)
 ## 14. 系統架構與技術實現規劃
@@ -100,12 +192,27 @@
    - 19.3 後端與網路通訊
    - 19.4 遊戲房間穩定性與後端邏輯重構
    - 19.5 資料庫整合與用戶資料處理
+     - **19.5.1 遊戲後端與資料庫連接 (2024-07-29)**: `cook-kitchen-rush.js` 的 `initializeCookGame` 和 `initializeCookGameWss` 函數已重構，現在會接收由 `server.js` 傳入的 `pool` (PostgreSQL 連接池) 物件。這使得遊戲後端的所有資料庫操作都使用統一的連接池，提高了性能和可管理性。
    - 19.6 WebSocket 連接管理
+     - **19.6.1 WebSocket 玩家身份驗證 (2024-07-29)**: `initializeCookGameWss` 內部邏輯已更新。當一個新的 WebSocket 連接建立時，伺服器會：
+       1. 接收來自客戶端的 JWT (JSON Web Token)。
+       2. 解析 Token 以獲取 `user_id`。
+       3. 使用傳入的 `pool` 物件查詢 `box_users` 資料表，獲取該用戶的 `username` 和 `display_name`。
+       4. 將 `player_id` (即 `user_id`)、`username` 和 `display_name` 儲存到 WebSocket 的 `ws.player` 物件中，以便在整個連接生命週期中使用。
+       5. 這確保了只有經過身份驗證的合法玩家才能維持 WebSocket 連接，並為後續的遊戲互動提供了玩家數據基礎。
    - 19.7 下一步優化計劃
    - 19.8 完整遊戲循環與核心機制實現
    - 19.9 重大UI/UX重構與操作流程優化
    - 19.10 遊戲難度系統與動態訂單
 ## 20. 後端核心邏輯重構與資料庫驅動化
+- **20.1 後端模組化與資料庫連接池傳遞 (2024-07-29)**:
+  - **核心變更**: 為了實現真正的資料庫驅動，我們修改了應用程式的啟動流程。現在，PostgreSQL 的連接池 (`pool`) 在主入口文件 `server.js` 中被創建和管理。
+  - **傳遞機制**: 這個 `pool` 物件隨後作為參數，被顯式地傳遞給 `cook-kitchen-rush.js` 模組的初始化函數 (`initializeCookGame` 和 `initializeCookGameWss`)。
+  - **優勢**: 這種模式取代了之前可能存在的、在各個模組中獨立創建資料庫連接的方式。它帶來了以下好處：
+    1.  **單一數據源**: 整個應用程式共享同一個資料庫連接池，避免了資源浪費。
+    2.  **清晰的依賴關係**: 模組的依賴（需要資料庫連接）變得非常明確，有利於測試和維護。
+    3.  **集中管理**: 資料庫的配置和管理被集中在 `server.js` 中，使架構更加清晰。
+  - **後續步驟**: 這個重構是實現新遊戲系統（如任務、成就、排行榜）的基礎，因為這些系統都需要頻繁地與資料庫互動。下一步將是在前端實現 WebSocket 客戶端，以利用這個新的後端架構。
 
 ---
 
@@ -197,9 +304,9 @@ CREATE DATABASE sunnyyummy_db; # 如果已存在會跳過
 * │   ├── cook-game.html      # 遊戲主頁面
 * │   ├── cook-result.html    # 遊戲結果頁面
 * │   ├── cook-help.html      # 遊戲說明頁面
-  │   ├── cook-admin.html      # 總覽
+  │   ├── cook-admin.html      # 總覽
   │   ├── cook-admin-recipes.html     # 食譜管理
-  │   ├── cook-admin-quests.html      # 任務管理
+  │   ├── cook-admin-quests.html      # 任務管理
   │   ├── cook-leaderboard.html       # 排行榜
   ├── package.json            # 項目配置
 * ├── .env                    # 環境變數

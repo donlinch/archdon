@@ -46,7 +46,7 @@ if (process.env.NODE_ENV === 'production') {
 
 // 強制使用 .env 檔案中的 URL，並且強制啟用 SSL
 // 這段程式碼專門為你的本地開發環境設計
-console.log('[DB] 正在使用【最終除錯確認版】的資料庫設定...');
+ 
 
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL, 
