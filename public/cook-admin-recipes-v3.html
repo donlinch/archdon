@@ -1,14 +1,76 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-TW" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>料理急先鋒 V3 - 物品與食譜管理</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        .tier-0 { background-color: #e9ecef; } /* 基礎食材 */
-        .tier-1 { background-color: #fff3cd; } /* 半成品 */
-        .tier-2 { background-color: #d4edda; } /* 最終料理 */
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --background-color: #2c3e50;
+            --surface-color: #34495e;
+            --text-color: #fff;   /* #edf3f5; */
+            --text-muted-color: #bdc3c7;
+            --border-color: #4a6278;
+            --danger-color: #e74c3c;
+            --warning-color: #f1c40f;
+            --success-color: #27ae60;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Microsoft JhengHei', 'Helvetica Neue', sans-serif;
+            margin: 0;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 260px;
+            background-color: var(--surface-color);
+            padding: 20px;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border-color);
+            flex-shrink: 0;
+        }
+        
+        .sidebar nav a {
+            
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            color: var(--text-muted-color);
+            text-decoration: none;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .sidebar nav a i { margin-right: 15px; width: 20px; text-align: center; }
+        .sidebar nav a.active, .sidebar nav a:hover { background-color: var(--primary-color); color: #fff; }
+        
+        .admin-sidebar { display: flex; flex-direction: column; height: 100%; }
+        .admin-sidebar h2 { text-align: center; margin-bottom: 30px; font-size: 24px; font-weight: bold; color: var(--primary-color); }
+        .admin-sidebar .user-profile { padding-bottom: 20px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 15px; }
+        .admin-sidebar .user-profile img { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-color); }
+        .admin-sidebar .user-profile .user-info { line-height: 1.2; color: #ecf0f1; }
+        .admin-sidebar .user-profile .user-info strong { font-size: 16px; display: block; margin-bottom: 4px; }
+        .admin-sidebar .user-profile .user-info span { font-size: 14px; opacity: 0.8; }
+
+        .main-content {  flex-grow: 1; display: flex; flex-direction: column; height: 100vh; overflow: hidden;}
+        header { padding: 15px 30px; background-color: var(--surface-color); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;}
+        header h1 { margin: 0; font-size: 24px; color: #ecf0f1;}
+        .page-content { flex-grow: 1; overflow-y: auto; padding: 20px; }
+
+        .tier-0 { background-color: #e9ecef; color: #212529; } /* 基礎食材 */
+        .tier-1 { background-color: #fff3cd; color: #212529; } /* 半成品 */
+        .tier-2 { background-color: #d4edda; color: #212529; } /* 最終料理 */
         
         .item-card {
             border: 1px solid #ddd;
@@ -76,199 +138,481 @@
             margin: 5px 0;
             background-color: #e9ecef;
         }
+
+        /* 模擬器相關樣式 */
+        .sim-item {
+            width: 80px;
+            height: 80px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: white;
+            cursor: grab;
+            position: relative;
+            user-select: none;
+        }
+
+        .sim-item:active {
+            cursor: grabbing;
+        }
+
+        .sim-item .ascii-symbol {
+            font-size: 24px;
+            line-height: 1;
+        }
+
+        .sim-item .item-name {
+            font-size: 12px;
+            text-align: center;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            width: 100%;
+            padding: 0 4px;
+        }
+
+        .sim-item .tier-badge {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            font-size: 10px;
+            padding: 1px 4px;
+            border-radius: 3px;
+        }
+
+        .crafting-slot {
+            position: relative;
+            transition: background-color 0.2s;
+        }
+
+        .crafting-slot.drag-over {
+            background-color: rgba(52, 152, 219, 0.2) !important;
+        }
+
+        .crafting-slot .sim-item {
+            width: 100%;
+            height: 100%;
+        }
+
+        .cooking-method-btn.active {
+            background-color: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+
+        .cooking-method-btn.recommended {
+            background-color: #2ecc71;
+            color: white;
+            border-color: #2ecc71;
+        }
+
+        #simulationResults {
+            font-family: 'Consolas', 'Monaco', monospace;
+            line-height: 1.5;
+        }
+
+        .simulation-success {
+            color: #2ecc71;
+        }
+
+        .simulation-error {
+            color: #e74c3c;
+        }
+
+        .simulation-info {
+            color: #3498db;
+        }
+
+        .view-path-btn {
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            padding: 1px 5px;
+            font-size: 12px;
+            line-height: 1.2;
+        }
+
+        #synthesisPathContent ul {
+            padding-left: 20px;
+            list-style-type: none;
+        }
+        #synthesisPathContent li {
+            position: relative;
+        }
+        #synthesisPathContent li::before {
+            content: '';
+            position: absolute;
+            left: -20px;
+            top: -1.2em;
+            border-left: 1px dashed #999;
+            border-bottom: 1px dashed #999;
+            width: 15px;
+            height: 100%;
+        }
+        #synthesisPathContent li:last-child::before {
+             border-left: 1px dashed #999;
+        }
+
+        .card-header {
+            color: #212529;
+        }
+
+        .mb-3 {
+            color: #212529;
+        }
+        
+        #itemsList h4 {
+            color: #212529;
+        }
+
+        #recipesList h4 {
+            color: #212529;
+        }
+
+        #simulatorSection h5 {
+            color: #212529;
+        }
+
+        .nav-pills .nav-link:not(.active) {
+            color: var(--text-muted-color);
+        }
     </style>
 </head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="#">料理急先鋒 V3 管理系統</a>
-            <div class="navbar-nav">
-                <a class="nav-link active" href="#" id="itemsTab">物品管理</a>
-                <a class="nav-link" href="#" id="recipesTab">食譜管理</a>
-            </div>
-        </div>
-    </nav>
-
-    <div class="container-fluid mt-3">
-        <!-- 添加导出按钮和新增物品按钮 -->
-        <div class="row mb-3">
-            <div class="col d-flex justify-content-between">
-                <button id="exportSqlBtn" class="btn btn-secondary export-btn">
-                    匯出 T0/T1 SQL
-                </button>
-                <button id="addItemBtn" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addItemModal">
-                    <i class="fas fa-plus"></i> 新增物品
-                </button>
-            </div>
-        </div>
-        
-        <!-- 物品管理區 -->
-        <div id="itemsSection">
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="card">
-                        <div class="card-header">
-                            物品列表
-                            <div class="float-end">
-                                <button class="btn btn-sm btn-outline-secondary" id="refreshItems">
-                                    刷新列表
-                                </button>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <div id="itemsList" class="row">
-                                <!-- 物品列表將由 JavaScript 動態填充 -->
-                            </div>
-                        </div>
-                    </div>
+<body style="--bs-body-bg: var(--background-color); --bs-body-color: var(--text-color);">
+    <aside class="sidebar">
+        <div class="admin-sidebar">
+            <div class="user-profile">
+                <img src="/images/a01girlmove.gif" alt="Avatar" id="user-avatar">
+                <div class="user-info">
+                    <strong id="user-username">載入中...</strong>
+                    <span>等級: <span id="user-level">--</span></span>
                 </div>
             </div>
+            <h2>管理後台</h2>
+            <nav>
+                <a href="/cook-admin.html"><i class="fas fa-chart-line"></i> 總覽</a>
+                 <a href="/cook-admin-recipes-v3.html" class="active"><i class="fas fa-utensils"></i> 食譜管理 V3</a>
+                <a href="/cook-admin-titles.html"><i class="fas fa-trophy"></i> 稱號管理</a>
+                <a href="/cook-admin-quests.html"><i class="fas fa-tasks"></i> 任務管理</a>
+                <a href="/cook-lobby.html"><i class="fas fa-gamepad"></i> 返回遊戲</a>
+            </nav>
         </div>
+    </aside>
 
-        <!-- 新增物品 Modal -->
-        <div class="modal fade" id="addItemModal" tabindex="-1" aria-labelledby="addItemModalLabel" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="addItemModalLabel">新增物品</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <form id="itemForm">
-                            <div class="mb-3">
-                                <label class="form-label">物品ID</label>
-                                <input type="text" class="form-control" id="itemId" required 
-                                       placeholder="例如: raw_beef">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">物品名稱</label>
-                                <input type="text" class="form-control" id="itemName" required
-                                       placeholder="例如: 生牛肉">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">ASCII符號</label>
-                                <input type="text" class="form-control" id="asciiSymbol" required
-                                       placeholder="例如: [牛]" maxlength="10">
-                                <div class="ascii-preview mt-2" id="asciiPreview"></div>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">物品層級</label>
-                                <select class="form-select" id="itemTier" required>
-                                    <option value="0">T0 - 基礎食材</option>
-                                    <option value="1">T1 - 半成品</option>
-                                    <option value="2">T2 - 最終料理</option>
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">基礎分數</label>
-                                <input type="number" class="form-control" id="basePoints" 
-                                       placeholder="僅 T2 最終料理需要填寫">
-                            </div>
-                        </form>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                        <button type="button" class="btn btn-primary" id="saveItemBtn">儲存物品</button>
-                    </div>
-                </div>
+    <div class="main-content">
+        <header>
+            <h1>料理急先鋒 V3</h1>
+            <div class="d-flex align-items-center">
+                <ul class="nav nav-pills">
+                    <li class="nav-item"><a class="nav-link active" href="#" id="itemsTab">物品管理</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" id="recipesTab">食譜管理</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" id="simulatorTab">烹飪模擬器</a></li>
+                </ul>
             </div>
-        </div>
+        </header>
 
-        <!-- 食譜管理區 -->
-        <div id="recipesSection" style="display: none;">
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="d-flex justify-content-end mb-3">
-                        <button id="addRecipeBtn" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addRecipeModal">
-                            <i class="fas fa-plus"></i> 新增食譜
+        <main class="page-content">
+            <div class="container-fluid">
+                <!-- 添加导出按钮和新增物品按钮 -->
+                <div class="row mb-3">
+                    <div class="col d-flex justify-content-between">
+                        <button id="exportSqlBtn" class="btn btn-secondary export-btn">
+                            匯出 T0/T1 SQL
+                        </button>
+                        <button id="addItemBtn" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addItemModal">
+                            <i class="fas fa-plus"></i> 新增物品
                         </button>
                     </div>
-                    <div class="card">
-                        <div class="card-header">
-                            食譜列表
-                            <div class="float-end">
-                                <button class="btn btn-sm btn-outline-secondary" id="refreshRecipes">
-                                    刷新列表
-                                </button>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <div id="recipesList">
-                                <!-- 食譜列表將由 JavaScript 動態填充 -->
-                            </div>
-                        </div>
-                    </div>
                 </div>
-            </div>
-        </div>
-
-        <!-- 新增食譜 Modal -->
-        <div class="modal fade" id="addRecipeModal" tabindex="-1" aria-labelledby="addRecipeModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="addRecipeModalLabel">新增食譜</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <form id="recipeForm">
-                            <div class="mb-3">
-                                <label class="form-label">食譜ID</label>
-                                <input type="text" class="form-control" id="recipeId" required
-                                       placeholder="例如: cook_beef_patty">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">食譜名稱</label>
-                                <input type="text" class="form-control" id="recipeName" required
-                                       placeholder="例如: 煎牛肉餅">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">產出物品</label>
-                                <select class="form-select" id="outputItemId" required>
-                                    <!-- 由 JavaScript 動態填充 -->
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">烹飪方法</label>
-                                <select class="form-select" id="cookingMethod" required>
-                                    <option value="grill">烤製</option>
-                                    <option value="pan_fry">煎炒</option>
-                                    <option value="deep_fry">油炸</option>
-                                    <option value="boil">水煮</option>
-                                    <option value="assembly">組合</option>
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">需求食材</label>
-                                <div id="requirementsList">
-                                    <!-- 需求列表將由 JavaScript 動態管理 -->
+                
+                <!-- 物品管理區 -->
+                <div id="itemsSection">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    物品列表
+                                    <div class="float-end">
+                                        <button class="btn btn-sm btn-outline-secondary" id="refreshItems">
+                                            刷新列表
+                                        </button>
+                                    </div>
                                 </div>
-                                <button type="button" class="btn btn-sm btn-outline-secondary mt-2" 
-                                        id="addRequirement">
-                                    新增需求
+                                <div class="card-body">
+                                    <div id="itemsList" class="row">
+                                        <!-- 物品列表將由 JavaScript 動態填充 -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 新增物品 Modal -->
+                <div class="modal fade" id="addItemModal" tabindex="-1" aria-labelledby="addItemModalLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="addItemModalLabel">新增物品</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="itemForm">
+                                    <div class="mb-3">
+                                        <label class="form-label">物品ID</label>
+                                        <input type="text" class="form-control" id="itemId" required 
+                                               placeholder="例如: raw_beef">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">物品名稱</label>
+                                        <input type="text" class="form-control" id="itemName" required
+                                               placeholder="例如: 生牛肉">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">ASCII符號</label>
+                                        <input type="text" class="form-control" id="asciiSymbol" required
+                                               placeholder="例如: [牛]" maxlength="10">
+                                        <div class="ascii-preview mt-2" id="asciiPreview"></div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">物品層級</label>
+                                        <select class="form-select" id="itemTier" required>
+                                            <option value="0">T0 - 基礎食材</option>
+                                            <option value="1">T1 - 半成品</option>
+                                            <option value="2">T2 - 最終料理</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">基礎分數</label>
+                                        <input type="number" class="form-control" id="basePoints" 
+                                               placeholder="僅 T2 最終料理需要填寫">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">分類</label>
+                                        <select class="form-select" id="itemCategory" required>
+                                            <option value="肉類">肉類</option>
+                                            <option value="蔬菜">蔬菜</option>
+                                            <option value="加工品">加工品</option>
+                                            <option value="調味醬料">調味醬料</option>
+                                        </select>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                                <button type="button" class="btn btn-primary" id="saveItemBtn">儲存物品</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 食譜管理區 -->
+                <div id="recipesSection" style="display: none;">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="d-flex justify-content-end mb-3">
+                                <button id="addRecipeBtn" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addRecipeModal">
+                                    <i class="fas fa-plus"></i> 新增食譜
                                 </button>
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label">烹飪時間 (秒)</label>
-                                <input type="number" class="form-control" id="cookTime" 
-                                       value="30" required>
+                            <div class="card">
+                                <div class="card-header">
+                                    食譜列表
+                                    <div class="float-end">
+                                        <button class="btn btn-sm btn-outline-secondary" id="refreshRecipes">
+                                            刷新列表
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div id="recipesList">
+                                        <!-- 食譜列表將由 JavaScript 動態填充 -->
+                                    </div>
+                                </div>
                             </div>
-                        </form>
+                        </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                        <button type="button" class="btn btn-primary" id="saveRecipeBtn">儲存食譜</button>
+                </div>
+
+                <!-- 新增食譜 Modal -->
+                <div class="modal fade" id="addRecipeModal" tabindex="-1" aria-labelledby="addRecipeModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="addRecipeModalLabel">新增食譜</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="recipeForm">
+                                    <div class="mb-3">
+                                        <label class="form-label">食譜ID</label>
+                                        <input type="text" class="form-control" id="recipeId" required
+                                               placeholder="例如: cook_beef_patty">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">食譜名稱</label>
+                                        <input type="text" class="form-control" id="recipeName" required
+                                               placeholder="例如: 煎牛肉餅">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">產出物品</label>
+                                        <select class="form-select" id="outputItemId" required>
+                                            <!-- 由 JavaScript 動態填充 -->
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">烹飪方法</label>
+                                        <select class="form-select" id="cookingMethod" required>
+                                            <option value="grill">烤製</option>
+                                            <option value="pan_fry">煎炒</option>
+                                            <option value="deep_fry">油炸</option>
+                                            <option value="boil">水煮</option>
+                                            <option value="assembly">組合</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">需求食材</label>
+                                        <div id="requirementsList">
+                                            <!-- 需求列表將由 JavaScript 動態管理 -->
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary mt-2" 
+                                                id="addRequirement">
+                                            新增需求
+                                        </button>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">烹飪時間 (秒)</label>
+                                        <input type="number" class="form-control" id="cookTime" 
+                                               value="30" required>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                                <button type="button" class="btn btn-primary" id="saveRecipeBtn">儲存食譜</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 烹飪模擬器區 -->
+                <div id="simulatorSection" style="display: none;">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    烹飪模擬器 (V3)
+                                    <div class="float-end">
+                                        <button class="btn btn-sm btn-outline-secondary" id="resetSimulator">
+                                            重置模擬器
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <!-- 左側：物品庫 -->
+                                        <div class="col-md-4">
+                                            <h5>物品庫</h5>
+                                            
+                                            <!-- T0 基礎食材區 -->
+                                            <div class="mb-3">
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <h6>T0: 基礎食材</h6>
+                                                    <div id="t0CategoryFilters" class="btn-group btn-group-sm" role="group">
+                                                    </div>
+                                                </div>
+                                                <div id="t0ItemsContainer" class="d-flex flex-wrap gap-2 p-2 border rounded" style="min-height: 100px; background-color: #f8f9fa;">
+                                                    <!-- T0 物品將由 JavaScript 動態填充 -->
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- T1 半成品區 -->
+                                            <div class="mb-3">
+                                                <h6>T1: 半成品</h6>
+                                                <div id="t1ItemsContainer" class="d-flex flex-wrap gap-2 p-2 border rounded" style="min-height: 100px; background-color: #fff3cd;">
+                                                    <!-- 模擬產生的 T1 物品將在這裡顯示 -->
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- T2 最終料理區 -->
+                                            <div class="mb-3">
+                                                <h6>T2: 最終料理</h6>
+                                                <div id="t2ItemsContainer" class="d-flex flex-wrap gap-2 p-2 border rounded" style="min-height: 100px; background-color: #d4edda;">
+                                                    <!-- 模擬產生的 T2 物品將在這裡顯示 -->
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- 右側：模擬工作區 -->
+                                        <div class="col-md-8">
+                                            <h5>模擬工作區</h5>
+                                            
+                                            <!-- 組合區 -->
+                                            <div class="mb-3">
+                                                <h6>組合區 (從左側拖曳物品，點擊可移除)</h6>
+                                                <div id="craftingArea" class="d-flex flex-wrap gap-2 p-3 border rounded" style="min-height: 220px; background-color: #f8f9fa;">
+                                                    <div class="crafting-slot border rounded d-flex justify-content-center align-items-center" style="width: 100px; height: 100px; background-color: white;"></div>
+                                                    <div class="crafting-slot border rounded d-flex justify-content-center align-items-center" style="width: 100px; height: 100px; background-color: white;"></div>
+                                                    <div class="crafting-slot border rounded d-flex justify-content-center align-items-center" style="width: 100px; height: 100px; background-color: white;"></div>
+                                                    <div class="crafting-slot border rounded d-flex justify-content-center align-items-center" style="width: 100px; height: 100px; background-color: white;"></div>
+                                                    <div class="crafting-slot border rounded d-flex justify-content-center align-items-center" style="width: 100px; height: 100px; background-color: white;"></div>
+                                                    <div class="crafting-slot border rounded d-flex justify-content-center align-items-center" style="width: 100px; height: 100px; background-color: white;"></div>
+                                                    <div class="crafting-slot border rounded d-flex justify-content-center align-items-center" style="width: 100px; height: 100px; background-color: white;"></div>
+                                                    <div class="crafting-slot border rounded d-flex justify-content-center align-items-center" style="width: 100px; height: 100px; background-color: white;"></div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- 烹飪方法選擇 -->
+                                            <div class="mb-3">
+                                                <h6>選擇烹飪方法</h6>
+                                                <div class="btn-group w-100">
+                                                    <button class="btn btn-outline-secondary cooking-method-btn" data-method="grill">烤製</button>
+                                                    <button class="btn btn-outline-secondary cooking-method-btn" data-method="pan_fry">煎炒</button>
+                                                    <button class="btn btn-outline-secondary cooking-method-btn" data-method="deep_fry">油炸</button>
+                                                    <button class="btn btn-outline-secondary cooking-method-btn" data-method="boil">水煮</button>
+                                                    <button class="btn btn-outline-secondary cooking-method-btn" data-method="assembly">組合</button>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- 模擬結果 -->
+                                            <div class="mb-3">
+                                                <h6>模擬結果</h6>
+                                                <div id="simulationResults" class="p-3 border rounded" style="min-height: 150px; background-color: #f8f9fa; overflow-y: auto;">
+                                                    <p class="text-muted">將物品拖曳到組合區，選擇烹飪方法，然後點擊「開始模擬」...</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 食譜驗證器 -->
+                <div id="recipeValidator">
+                    <h6>食譜驗證</h6>
+                    <div id="validationResult"></div>
+                </div>
+            </div>
+
+            <!-- Synthesis Path Modal -->
+            <div class="modal fade" id="synthesisPathModal" tabindex="-1" aria-labelledby="synthesisPathModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="synthesisPathModalLabel">合成路徑</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body" id="synthesisPathContent">
+                            <!-- Path tree will be rendered here -->
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-
-        <!-- 食譜驗證器 -->
-        <div id="recipeValidator">
-            <h6>食譜驗證</h6>
-            <div id="validationResult"></div>
-        </div>
-    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -327,16 +671,31 @@
             e.preventDefault();
             document.getElementById('itemsSection').style.display = 'block';
             document.getElementById('recipesSection').style.display = 'none';
+            document.getElementById('simulatorSection').style.display = 'none';
             this.classList.add('active');
             document.getElementById('recipesTab').classList.remove('active');
+            document.getElementById('simulatorTab').classList.remove('active');
         });
 
         document.getElementById('recipesTab').addEventListener('click', function(e) {
             e.preventDefault();
             document.getElementById('itemsSection').style.display = 'none';
             document.getElementById('recipesSection').style.display = 'block';
+            document.getElementById('simulatorSection').style.display = 'none';
             this.classList.add('active');
             document.getElementById('itemsTab').classList.remove('active');
+            document.getElementById('simulatorTab').classList.remove('active');
+        });
+
+        document.getElementById('simulatorTab').addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('itemsSection').style.display = 'none';
+            document.getElementById('recipesSection').style.display = 'none';
+            document.getElementById('simulatorSection').style.display = 'block';
+            this.classList.add('active');
+            document.getElementById('itemsTab').classList.remove('active');
+            document.getElementById('recipesTab').classList.remove('active');
+            initializeSimulator(); // 初始化模擬器
         });
 
         // ASCII 預覽
@@ -380,25 +739,36 @@
                 return;
             }
 
+            const itemId = document.getElementById('itemId').value;
+            if (/\s/.test(itemId)) {
+                alert('物品ID不能包含空格，請使用底線 (_) 代替。');
+                return;
+            }
+            const isEditing = document.getElementById('itemId').disabled;
+
             const formData = {
-                item_id: document.getElementById('itemId').value,
+                item_id: itemId,
                 item_name: document.getElementById('itemName').value,
                 ascii_symbol: document.getElementById('asciiSymbol').value,
                 item_tier: parseInt(document.getElementById('itemTier').value),
-                base_points: parseInt(document.getElementById('basePoints').value) || 0
+                base_points: parseInt(document.getElementById('basePoints').value) || 0,
+                category: document.getElementById('itemCategory').value
             };
 
             try {
-                await apiFetch('/v3/items', {
-                    method: 'PUT', // 改用 PUT 方法進行更新
+                const method = isEditing ? 'PUT' : 'POST';
+                await apiFetch(`/v3/items${isEditing ? `/${itemId}` : ''}`, {
+                    method: method,
                     body: formData
                 });
-                alert('物品更新成功！');
+                alert(`物品${isEditing ? '更新' : '新增'}成功！`);
                 loadItems();
                 form.reset();
                 // 關閉 Modal
                 const modal = bootstrap.Modal.getInstance(document.getElementById('addItemModal'));
                 modal.hide();
+                document.getElementById('itemForm').reset();
+                document.getElementById('asciiPreview').textContent = '';
             } catch (error) {
                 alert(`錯誤：${error.message}`);
             }
@@ -428,8 +798,15 @@
                 quantity: parseInt(row.querySelector('.req-quantity').value)
             }));
 
+            const recipeId = document.getElementById('recipeId').value;
+            if (/\s/.test(recipeId)) {
+                alert('食譜ID不能包含空格，請使用底線 (_) 代替。');
+                return;
+            }
+            const isEditing = document.getElementById('recipeId').disabled;
+
             const formData = {
-                recipe_id: document.getElementById('recipeId').value,
+                recipe_id: recipeId,
                 recipe_name: document.getElementById('recipeName').value,
                 output_item_id: document.getElementById('outputItemId').value,
                 cooking_method: document.getElementById('cookingMethod').value,
@@ -438,11 +815,12 @@
             };
 
             try {
-                await apiFetch('/v3/recipes', {
-                    method: 'POST',
+                const method = isEditing ? 'PUT' : 'POST';
+                await apiFetch(`/v3/recipes${isEditing ? `/${recipeId}` : ''}`, {
+                    method: method,
                     body: formData
                 });
-                alert('食譜儲存成功！');
+                alert(`食譜${isEditing ? '更新' : '儲存'}成功！`);
                 loadRecipes();
                 form.reset();
                 // 清空需求列表
@@ -455,10 +833,16 @@
             }
         });
 
-        // 當食譜 Modal 關閉時重置表單
-        document.getElementById('addRecipeModal').addEventListener('hidden.bs.modal', function () {
-            document.getElementById('recipeForm').reset();
-            document.getElementById('requirementsList').innerHTML = '';
+        // 當食譜 Modal 開啟時，準備表單
+        document.getElementById('addRecipeModal').addEventListener('show.bs.modal', function (event) {
+            // 如果是通過新增按鈕打開的，重置表單並啟用欄位
+            if (event.relatedTarget && event.relatedTarget.id === 'addRecipeBtn') {
+                document.getElementById('recipeForm').reset();
+                document.getElementById('requirementsList').innerHTML = '';
+                document.getElementById('recipeId').disabled = false;
+                document.getElementById('outputItemId').disabled = false;
+                document.getElementById('cookingMethod').disabled = false;
+            }
         });
 
         // 當選擇產出物品時，根據其層級過濾可選擇的需求物品
@@ -500,7 +884,12 @@
         // 渲染物品列表
         function renderItems() {
             const itemsList = document.getElementById('itemsList');
-            itemsList.innerHTML = currentItems.map(item => `
+            
+            const t0Items = currentItems.filter(item => item.item_tier === 0);
+            const t1Items = currentItems.filter(item => item.item_tier === 1);
+            const t2Items = currentItems.filter(item => item.item_tier === 2);
+
+            const renderItemCard = (item) => `
                 <div class="col-md-4 mb-3">
                     <div class="item-card tier-${item.item_tier}">
                         <div class="d-flex justify-content-end mb-2">
@@ -515,10 +904,61 @@
                         <div class="ascii-preview">${item.ascii_symbol}</div>
                         <div class="text-muted">ID: ${item.item_id}</div>
                         <div>層級: T${item.item_tier}</div>
+                        ${item.item_tier === 0 && item.category ? `<div>分類: ${item.category}</div>` : ''}
                         ${item.item_tier === 2 ? `<div>基礎分數: ${item.base_points}</div>` : ''}
                     </div>
                 </div>
-            `).join('');
+            `;
+            
+            let finalHtml = '';
+
+            // 渲染 T0 物品
+            if (t0Items.length > 0) {
+                const t0Categorized = t0Items.reduce((acc, item) => {
+                    const category = item.category || '未分類';
+                    if (!acc[category]) {
+                        acc[category] = [];
+                    }
+                    acc[category].push(item);
+                    return acc;
+                }, {});
+
+                finalHtml += '<div class="mb-4"><h4>T0 基礎食材</h4><hr>';
+                const sortedCategories = Object.keys(t0Categorized).sort((a, b) => {
+                    if (a === '未分類') return 1;
+                    if (b === '未分類') return -1;
+                    return a.localeCompare(b);
+                });
+
+                sortedCategories.forEach(category => {
+                    finalHtml += `<div class="mb-3"><h5>${category}</h5><div class="row">`;
+                    finalHtml += t0Categorized[category].map(renderItemCard).join('');
+                    finalHtml += `</div></div>`;
+                });
+                finalHtml += '</div>';
+            }
+
+            // 渲染 T1 物品
+            if (t1Items.length > 0) {
+                finalHtml += '<div class="mb-4"><h4>T1 半成品</h4><hr>';
+                finalHtml += '<div class="row">';
+                finalHtml += t1Items.map(renderItemCard).join('');
+                finalHtml += '</div></div>';
+            }
+
+            // 渲染 T2 物品
+            if (t2Items.length > 0) {
+                finalHtml += '<div class="mb-4"><h4>T2 最終料理</h4><hr>';
+                finalHtml += '<div class="row">';
+                finalHtml += t2Items.map(renderItemCard).join('');
+                finalHtml += '</div></div>';
+            }
+
+            if (finalHtml === '') {
+                finalHtml = '<div class="col"><p class="text-muted">目前沒有任何物品。</p></div>';
+            }
+
+            itemsList.innerHTML = finalHtml;
         }
 
         // 更新物品選擇下拉選單
@@ -539,18 +979,18 @@
 
             // 将食谱按 T1 和 T2 分组
             const t1Recipes = currentRecipes.filter(recipe => {
-                const outputItem = currentItems.find(item => item.id === recipe.output_item_id);
+                const outputItem = currentItems.find(item => item.item_id === recipe.output_item_id);
                 return outputItem && outputItem.item_tier === 1;
             });
 
             const t2Recipes = currentRecipes.filter(recipe => {
-                const outputItem = currentItems.find(item => item.id === recipe.output_item_id);
+                const outputItem = currentItems.find(item => item.item_id === recipe.output_item_id);
                 return outputItem && outputItem.item_tier === 2;
             });
 
             // 内部渲染函数，用于创建单个食谱卡片
             const renderRecipeCard = (recipe) => {
-                const outputItem = currentItems.find(item => item.id === recipe.output_item_id);
+                const outputItem = currentItems.find(item => item.item_id === recipe.output_item_id);
                 
                 const cookingMethodMap = {
                     'grill': '烤製',
@@ -640,7 +1080,7 @@
 
             // 檢查此物品是否被食譜使用
             const recipesUsingItem = currentRecipes.filter(recipe => {
-                return recipe.output_item_id === item.id || 
+                return recipe.output_item_id === item.item_id || 
                        recipe.requirements.some(req => req.item_id === item.item_id);
             });
 
@@ -653,6 +1093,7 @@
             document.getElementById('itemTier').disabled = true; // 禁止修改層級
             document.getElementById('basePoints').value = item.base_points || 0;
             document.getElementById('asciiPreview').textContent = item.ascii_symbol;
+            document.getElementById('itemCategory').value = item.category || '肉類';
 
             // 根據物品層級顯示不同的警告
             if (item.item_tier === 0) {
@@ -700,8 +1141,10 @@
 
             // 填充表單
             document.getElementById('recipeId').value = recipe.recipe_id;
+            document.getElementById('recipeId').disabled = true; // 編輯時鎖定ID
             document.getElementById('recipeName').value = recipe.recipe_name;
             document.getElementById('outputItemId').value = recipe.output_item_id;
+            document.getElementById('outputItemId').disabled = true; // 編輯時鎖定產出
             document.getElementById('cookingMethod').value = recipe.cooking_method;
             document.getElementById('cookTime').value = recipe.cook_time_sec;
 
@@ -739,7 +1182,7 @@
 
             // 檢查此物品是否被食譜使用
             const recipesUsingItem = currentRecipes.filter(recipe => {
-                return recipe.output_item_id === item.id || 
+                return recipe.output_item_id === item.item_id || 
                        recipe.requirements.some(req => req.item_id === item.item_id);
             });
 
@@ -804,22 +1247,23 @@
                 
                 // 过滤出产出为 T1 的食谱
                 const t1Recipes = recipes.filter(recipe => {
-                    const outputItem = items.find(item => item.item_id === recipe.output_item_id);
+                    const outputItem = items.find(item => item.id === recipe.output_item_id);
                     return outputItem && outputItem.item_tier === 1;
                 });
                 
                 // 过滤出产出为 T2 的食谱
                 const t2Recipes = recipes.filter(recipe => {
-                    const outputItem = items.find(item => item.item_id === recipe.output_item_id);
+                    const outputItem = items.find(item => item.id === recipe.output_item_id);
                     return outputItem && outputItem.item_tier === 2;
                 });
                 
                 // 生成 SQL 语句
                 let sqlStatements = '-- T0 物品（基础食材）\n';
-                sqlStatements += 'INSERT INTO cook_items_v3 (item_id, item_name, ascii_symbol, item_tier) VALUES\n';
+                sqlStatements += 'INSERT INTO cook_items_v3 (item_id, item_name, ascii_symbol, item_tier, category) VALUES\n';
                 
                 t0Items.forEach((item, index) => {
-                    sqlStatements += `('${item.item_id}', '${item.item_name}', '${item.ascii_symbol}', ${item.item_tier})`;
+                    const categoryValue = item.category ? `'${item.category}'` : 'NULL';
+                    sqlStatements += `('${item.item_id}', '${item.item_name}', '${item.ascii_symbol}', ${item.item_tier}, ${categoryValue})`;
                     if (index < t0Items.length - 1) sqlStatements += ',\n';
                     else sqlStatements += ';\n\n';
                 });
@@ -847,8 +1291,11 @@
                 
                 t1Recipes.forEach((recipe, index) => {
                     const requirementsStr = JSON.stringify(recipe.requirements).replace(/'/g, "''");
+                    const outputItem = items.find(item => item.id === recipe.output_item_id);
+                    if (!outputItem) return;
+
                     sqlStatements += `('${recipe.recipe_id}', '${recipe.recipe_name}', ` +
-                        `(SELECT id FROM cook_items_v3 WHERE item_id = '${recipe.output_item_id}'), ` +
+                        `(SELECT id FROM cook_items_v3 WHERE item_id = '${outputItem.item_id}'), ` +
                         `'${recipe.cooking_method}', '${requirementsStr}', ${recipe.cook_time_sec})`;
                     if (index < t1Recipes.length - 1) sqlStatements += ',\n';
                     else sqlStatements += ';\n\n';
@@ -859,8 +1306,11 @@
                 
                 t2Recipes.forEach((recipe, index) => {
                     const requirementsStr = JSON.stringify(recipe.requirements).replace(/'/g, "''");
+                    const outputItem = items.find(item => item.id === recipe.output_item_id);
+                    if (!outputItem) return;
+
                     sqlStatements += `('${recipe.recipe_id}', '${recipe.recipe_name}', ` +
-                        `(SELECT id FROM cook_items_v3 WHERE item_id = '${recipe.output_item_id}'), ` +
+                        `(SELECT id FROM cook_items_v3 WHERE item_id = '${outputItem.item_id}'), ` +
                         `'${recipe.cooking_method}', '${requirementsStr}', ${recipe.cook_time_sec})`;
                     if (index < t2Recipes.length - 1) sqlStatements += ',\n';
                     else sqlStatements += ';\n';
@@ -871,10 +1321,14 @@
 /*
 -- V3 物品和食譜生成規則 --
 
-1. 物品层級 (item_tier):
-   - T0 (0): 基础食材，無法通過食譜製作，是所有加工鏈的起點
-   - T1 (1): 半成品，由 T0 食材通過食譜加工而成
-   - T2 (2): 最終料理，由 T1 半成品和/或 T0 食材組合而成
+1. 物品屬性:
+   a. 層級 (item_tier):
+      - T0 (0): 基础食材，無法通過食譜製作，是所有加工鏈的起點
+      - T1 (1): 半成品，由 T0 食材通過食譜加工而成
+      - T2 (2): 最終料理，由 T1 半成品和/或 T0 食材組合而成
+   b. 分類 (category):
+      - 僅對 T0 基礎食材有效，用於在管理後台進行分類顯示。
+      - 目前分為四大類: '肉類', '蔬菜', '加工品', '調味醬料'
 
 2. 食譜規則:
    - T1 食譜: 只能使用 T0 食材作為原料
@@ -917,8 +1371,8 @@
 
 -- 範例 --
 1. 添加 T0 食材:
-   INSERT INTO cook_items_v3 (item_id, item_name, ascii_symbol, item_tier) 
-   VALUES ('raw_beef', '生牛肉', '🐄', 0);
+   INSERT INTO cook_items_v3 (item_id, item_name, ascii_symbol, item_tier, category) 
+   VALUES ('raw_beef', '生牛肉', '🐄', 0, '肉類');
 
 2. 添加 T1 半成品:
    INSERT INTO cook_items_v3 (item_id, item_name, ascii_symbol, item_tier) 
@@ -975,6 +1429,483 @@
                 alert(`匯出失敗: ${error.message}`);
             }
         });
+
+        // 模擬器全局變數
+        let simulatorItems = {
+            t0: [], // 基礎食材
+            t1: [], // 半成品
+            t2: []  // 最終料理
+        };
+        let selectedCookingMethod = '';
+        let simulationHistory = [];
+        let selectedT0Category = '肉類'; // 預設顯示肉類
+
+        // 初始化模擬器
+        function initializeSimulator() {
+            // 載入 T0 物品到模擬器
+            simulatorItems.t0 = currentItems.filter(item => item.item_tier === 0);
+            
+            setupT0CategoryFilters();
+
+            renderSimulatorItems();
+            
+            // 清空 T1 和 T2 區域
+            simulatorItems.t1 = [];
+            simulatorItems.t2 = [];
+            
+            // 清空組合區
+            document.querySelectorAll('.crafting-slot').forEach(slot => {
+                while (slot.firstChild) {
+                    slot.removeChild(slot.firstChild);
+                }
+            });
+            
+            // 重置烹飪方法選擇
+            document.querySelectorAll('.cooking-method-btn').forEach(btn => {
+                btn.classList.remove('active', 'recommended');
+            });
+            selectedCookingMethod = '';
+            
+            // 清空模擬結果
+            document.getElementById('simulationResults').innerHTML = '<p class="text-muted">將物品拖曳到組合區，選擇烹飪方法，然後點擊「開始模擬」...</p>';
+            
+            // 設置拖放事件
+            setupCraftingSlotListeners();
+            setupDraggableItemListeners();
+            
+            // 設置烹飪方法選擇
+            setupCookingMethodSelection();
+            
+            // 設置重置模擬器按鈕事件
+            document.getElementById('resetSimulator').addEventListener('click', initializeSimulator);
+        }
+
+        function setupT0CategoryFilters() {
+            const filterContainer = document.getElementById('t0CategoryFilters');
+            if (!filterContainer) return;
+            filterContainer.innerHTML = '';
+
+            const categories = ['全部', '肉類', '蔬菜', '加工品', '調味醬料'];
+
+            categories.forEach(category => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'btn btn-outline-secondary';
+                button.textContent = category;
+                button.dataset.category = category;
+
+                if (category === selectedT0Category) {
+                    button.classList.add('active');
+                }
+
+                button.addEventListener('click', function() {
+                    selectedT0Category = this.dataset.category;
+                    // Update active state
+                    filterContainer.querySelectorAll('.btn').forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Re-render T0 items and re-attach listeners
+                    renderSimulatorItems();
+                    setupDraggableItemListeners();
+                });
+                filterContainer.appendChild(button);
+            });
+        }
+
+        // 渲染模擬器物品
+        function renderSimulatorItems() {
+            // 渲染 T0 物品
+            const t0Container = document.getElementById('t0ItemsContainer');
+            t0Container.innerHTML = '';
+            
+            const filteredT0Items = selectedT0Category === '全部'
+                ? simulatorItems.t0
+                : simulatorItems.t0.filter(item => item.category === selectedT0Category);
+
+            filteredT0Items.forEach(item => {
+                const itemElement = createSimItemElement(item, 0);
+                t0Container.appendChild(itemElement);
+            });
+            
+            // 渲染 T1 物品
+            const t1Container = document.getElementById('t1ItemsContainer');
+            t1Container.innerHTML = '';
+            simulatorItems.t1.forEach(item => {
+                const itemElement = createSimItemElement(item, 1);
+                t1Container.appendChild(itemElement);
+            });
+            
+            // 渲染 T2 物品
+            const t2Container = document.getElementById('t2ItemsContainer');
+            t2Container.innerHTML = '';
+            simulatorItems.t2.forEach(item => {
+                const itemElement = createSimItemElement(item, 2);
+                t2Container.appendChild(itemElement);
+            });
+            // 為新生成的 T2 物品按鈕綁定事件
+            setupPathButtonListeners();
+        }
+
+        // 創建模擬物品元素
+        function createSimItemElement(item, tier) {
+            const itemElement = document.createElement('div');
+            itemElement.className = 'sim-item';
+            itemElement.draggable = true;
+            itemElement.dataset.itemId = item.item_id;
+            itemElement.dataset.tier = tier;
+            
+            // 添加層級標記
+            const tierBadge = document.createElement('span');
+            tierBadge.className = 'tier-badge badge';
+            tierBadge.classList.add(tier === 0 ? 'bg-secondary' : (tier === 1 ? 'bg-warning' : 'bg-success'));
+            tierBadge.textContent = `T${tier}`;
+            itemElement.appendChild(tierBadge);
+            
+            // 添加 ASCII 符號
+            const symbolElement = document.createElement('div');
+            symbolElement.className = 'ascii-symbol';
+            symbolElement.textContent = item.ascii_symbol || '?';
+            itemElement.appendChild(symbolElement);
+            
+            // 添加物品名稱
+            const nameElement = document.createElement('div');
+            nameElement.className = 'item-name';
+            nameElement.title = item.item_name;
+            nameElement.textContent = item.item_name;
+            itemElement.appendChild(nameElement);
+            
+            if (tier === 2) {
+                const pathButton = document.createElement('button');
+                pathButton.className = 'btn btn-sm btn-outline-info view-path-btn';
+                pathButton.innerHTML = '🌳';
+                pathButton.title = '檢視合成路徑';
+                pathButton.dataset.itemId = item.item_id;
+                itemElement.appendChild(pathButton);
+            }
+
+            return itemElement;
+        }
+
+        // 設置可拖曳物品的事件
+        function setupDraggableItemListeners() {
+            const draggableItems = document.querySelectorAll('#t0ItemsContainer .sim-item, #t1ItemsContainer .sim-item');
+            draggableItems.forEach(item => {
+                item.addEventListener('dragstart', handleDragStart);
+            });
+        }
+
+        // 設置組合區的拖放目標事件 (此函數只應被呼叫一次)
+        function setupCraftingSlotListeners() {
+            const craftingSlots = document.querySelectorAll('.crafting-slot');
+            craftingSlots.forEach(slot => {
+                // 防止重複綁定監聽器
+                if (slot.dataset.listenersAttached) return;
+
+                slot.addEventListener('dragover', handleDragOver);
+                slot.addEventListener('dragleave', handleDragLeave);
+                slot.addEventListener('drop', handleDrop);
+                
+                // 點擊移除物品
+                slot.addEventListener('click', function(e) {
+                    if (e.target.closest('.sim-item')) {
+                        e.target.closest('.sim-item').remove();
+                        updateRecommendedCookingMethod();
+                    }
+                });
+                slot.dataset.listenersAttached = 'true';
+            });
+        }
+
+        // 拖放事件處理函數
+        function handleDragStart(e) {
+            e.dataTransfer.setData('text/plain', JSON.stringify({
+                itemId: this.dataset.itemId,
+                tier: this.dataset.tier
+            }));
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            this.classList.add('drag-over');
+        }
+
+        function handleDragLeave(e) {
+            this.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            this.classList.remove('drag-over');
+            
+            // 檢查槽位是否已有物品
+            if (this.querySelector('.sim-item')) {
+                return; // 槽位已被佔用
+            }
+            
+            // 獲取拖放的物品數據
+            const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+            const itemId = data.itemId;
+            const tier = parseInt(data.tier);
+            
+            // 找到對應的物品
+            let item;
+            if (tier === 0) {
+                item = simulatorItems.t0.find(i => i.item_id === itemId);
+            } else if (tier === 1) {
+                item = simulatorItems.t1.find(i => i.item_id === itemId);
+            } else {
+                return; // T2 物品不能被拖放到組合區
+            }
+            
+            if (!item) return;
+            
+            // 創建物品元素並添加到槽位
+            const itemElement = createSimItemElement(item, tier);
+            itemElement.draggable = false; // 組合區內的物品不能再拖動
+            this.appendChild(itemElement);
+            
+            // 更新推薦的烹飪方法
+            updateRecommendedCookingMethod();
+        }
+
+        // 設置烹飪方法選擇
+        function setupCookingMethodSelection() {
+            const cookingMethodBtns = document.querySelectorAll('.cooking-method-btn');
+            cookingMethodBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    // 移除其他按鈕的活動狀態
+                    cookingMethodBtns.forEach(b => b.classList.remove('active'));
+                    // 設置當前按鈕為活動狀態
+                    this.classList.add('active');
+                    // 更新選中的烹飪方法
+                    selectedCookingMethod = this.dataset.method;
+                    // 直接執行模擬
+                    executeSimulation();
+                });
+            });
+        }
+
+        // 更新推薦的烹飪方法
+        function updateRecommendedCookingMethod() {
+            // 獲取組合區中的所有物品
+            const craftingItems = Array.from(document.querySelectorAll('.crafting-slot .sim-item'));
+            
+            // 檢查是否有 T1 物品
+            const hasT1Items = craftingItems.some(item => parseInt(item.dataset.tier) === 1);
+            
+            // 移除所有推薦標記
+            document.querySelectorAll('.cooking-method-btn').forEach(btn => {
+                btn.classList.remove('recommended');
+            });
+            
+            // 如果有 T1 物品，推薦「組合」方法
+            if (hasT1Items) {
+                const assemblyBtn = document.querySelector('.cooking-method-btn[data-method="assembly"]');
+                if (assemblyBtn) {
+                    assemblyBtn.classList.add('recommended');
+                }
+            }
+        }
+
+        // 執行模擬
+        async function executeSimulation() {
+            // 獲取組合區中的物品
+            const craftingItems = Array.from(document.querySelectorAll('.crafting-slot .sim-item')).map(item => ({
+                itemId: item.dataset.itemId,
+                tier: parseInt(item.dataset.tier)
+            }));
+            
+            // 檢查是否有物品
+            if (craftingItems.length === 0) {
+                updateSimulationResults('請先將物品拖曳到組合區。', 'error');
+                return;
+            }
+            
+            // 檢查是否選擇了烹飪方法
+            if (!selectedCookingMethod) {
+                updateSimulationResults('請選擇一種烹飪方法。', 'error');
+                return;
+            }
+            
+            // 準備模擬數據
+            const simulationData = {
+                items: craftingItems.map(item => item.itemId),
+                cookingMethod: selectedCookingMethod
+            };
+            
+            // 顯示載入中
+            updateSimulationResults('模擬中...', 'info');
+            
+            try {
+                // 呼叫模擬 API
+                const result = await apiFetch('/v3/simulate', {
+                    method: 'POST',
+                    body: simulationData
+                });
+                
+                // 處理模擬結果
+                handleSimulationResult(result, craftingItems);
+            } catch (error) {
+                updateSimulationResults(`模擬失敗: ${error.message}`, 'error');
+            }
+        }
+
+        // 處理模擬結果
+        function handleSimulationResult(result, inputItems) {
+            if (result.success) {
+                // 顯示成功訊息
+                const outputItem = result.outputItem;
+                const outputTier = outputItem.item_tier;
+                
+                // 添加到對應的物品列表
+                if (outputTier === 1) {
+                    // 檢查是否已存在
+                    if (!simulatorItems.t1.some(item => item.item_id === outputItem.item_id)) {
+                        simulatorItems.t1.push(outputItem);
+                    }
+                } else if (outputTier === 2) {
+                    // 檢查是否已存在
+                    if (!simulatorItems.t2.some(item => item.item_id === outputItem.item_id)) {
+                        simulatorItems.t2.push(outputItem);
+                    }
+                }
+                
+                // 重新渲染物品列表
+                renderSimulatorItems();
+                // 重新為新生成的物品設置拖曳事件
+                setupDraggableItemListeners();
+                
+                // 清空組合區
+                document.querySelectorAll('.crafting-slot .sim-item').forEach(item => item.remove());
+                
+                // 添加到模擬歷史
+                simulationHistory.push({
+                    inputItems: inputItems,
+                    cookingMethod: selectedCookingMethod,
+                    outputItem: outputItem
+                });
+                
+                // 顯示成功訊息
+                const inputItemsText = inputItems.map(item => {
+                    const itemObj = item.tier === 0 ? 
+                        simulatorItems.t0.find(i => i.item_id === item.itemId) : 
+                        simulatorItems.t1.find(i => i.item_id === item.itemId);
+                    return itemObj ? `${itemObj.item_name}(T${item.tier})` : `未知物品(T${item.tier})`;
+                }).join(', ');
+                
+                const cookingMethodMap = {
+                    'grill': '烤製',
+                    'pan_fry': '煎炒',
+                    'deep_fry': '油炸',
+                    'boil': '水煮',
+                    'assembly': '組合'
+                };
+                
+                const methodText = cookingMethodMap[selectedCookingMethod] || selectedCookingMethod;
+                
+                let resultHtml = `
+                    <div class="simulation-info">
+                        > 輸入: [${inputItemsText}]<br>
+                        > 方法: [${methodText}]
+                    </div>
+                    <div class="simulation-success">
+                        ✅ 成功! 獲得: [${outputItem.item_name}] (T${outputItem.item_tier})
+                    </div>
+                `;
+                
+                // 如果是 T1 物品，提示可以繼續使用
+                if (outputTier === 1) {
+                    resultHtml += `
+                        <div class="simulation-info mt-2">
+                            💡 提示: 此半成品已加入左側 T1 區域，可以繼續使用它來製作最終料理。
+                        </div>
+                    `;
+                }
+                
+                // 更新結果區域
+                document.getElementById('simulationResults').innerHTML = resultHtml;
+            } else {
+                // 顯示錯誤訊息
+                let errorMessage = result.error || '模擬失敗，未知錯誤。';
+                
+                // 檢查是否是 V3 規則錯誤
+                if (result.ruleViolation) {
+                    errorMessage = `V3 規則錯誤: ${result.ruleViolation}`;
+                }
+                
+                updateSimulationResults(errorMessage, 'error');
+            }
+        }
+
+        // 更新模擬結果
+        function updateSimulationResults(message, type = 'info') {
+            const resultsElement = document.getElementById('simulationResults');
+            resultsElement.innerHTML = `<div class="simulation-${type}">${message}</div>`;
+        }
+
+        // 新增：為路徑檢視按鈕綁定事件
+        function setupPathButtonListeners() {
+            document.querySelectorAll('.view-path-btn').forEach(btn => {
+                // 為防止重複綁定，先移除舊的監聽器
+                btn.replaceWith(btn.cloneNode(true));
+            });
+            // 重新為複製的節點綁定事件
+            document.querySelectorAll('.view-path-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    showSynthesisPath(this.dataset.itemId);
+                });
+            });
+        }
+
+        // 新增：顯示合成路徑
+        function showSynthesisPath(t2ItemId) {
+            const pathModal = new bootstrap.Modal(document.getElementById('synthesisPathModal'));
+            const t2Item = currentItems.find(item => item.item_id === t2ItemId);
+            
+            if (!t2Item) return;
+
+            document.getElementById('synthesisPathModalLabel').textContent = `🍔 ${t2Item.item_name} (T2) - 合成路徑`;
+            
+            const pathHtml = `<ul>${buildPathTree(t2ItemId)}</ul>`;
+            document.getElementById('synthesisPathContent').innerHTML = pathHtml;
+            
+            pathModal.show();
+        }
+
+        function buildPathTree(itemId) {
+            const item = currentItems.find(i => i.item_id === itemId);
+            if (!item) return `<li>未知物品: ${itemId}</li>`;
+
+            const recipe = simulationHistory.find(h => h.outputItem.item_id === itemId);
+
+            // T0 Item (base case)
+            if (!recipe) {
+                return `<li><span class="badge bg-secondary">T0</span> ${item.ascii_symbol} ${item.item_name}</li>`;
+            }
+
+            // T1 or T2 item (recursive step)
+            const cookingMethodMap = {
+                'grill': '烤製', 'pan_fry': '煎炒', 'deep_fry': '油炸',
+                'boil': '水煮', 'assembly': '組合'
+            };
+            const methodText = cookingMethodMap[recipe.cookingMethod] || recipe.cookingMethod;
+            const tierBadge = item.item_tier === 1 ? 'bg-warning text-dark' : 'bg-success';
+            
+            let childrenHtml = '<ul>';
+            recipe.inputItems.forEach(input => {
+                childrenHtml += buildPathTree(input.itemId);
+            });
+            childrenHtml += '</ul>';
+
+            return `
+                <li>
+                    <span class="badge ${tierBadge}">T${item.item_tier}</span>
+                    ${item.ascii_symbol} ${item.item_name}
+                    <small class="text-muted">(來自: ${methodText})</small>
+                    ${childrenHtml}
+                </li>
+            `;
+        }
     </script>
 </body>
 </html> 

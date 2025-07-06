@@ -13,9 +13,7 @@ function initializeCookGame(pool) {
     // 身份驗證中間件
     const authenticateToken = (req, res, next) => {
         console.log('\n=== 認證請求 ===');
-        console.log('路徑:', req.path);
-        console.log('認證頭:', req.headers.authorization);
-        
+          
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
             console.log('認證失敗: 未提供令牌或格式不正確');
@@ -23,17 +21,13 @@ function initializeCookGame(pool) {
         }
 
         const token = authHeader.split(' ')[1];
-        console.log('解析令牌:', token.substring(0, 10) + '...');
-        console.log('>>> 正在使用的密鑰 (BOX_JWT_SECRET):', process.env.BOX_JWT_SECRET ? process.env.BOX_JWT_SECRET.substring(0, 5) + '...' : '未定義 (UNDEFINED)!');
-        
+          
         jwt.verify(token, process.env.BOX_JWT_SECRET, (err, user) => {
             if (err) {
                 console.error('令牌驗證失敗:', err.message);
                 return res.status(403).json({ error: '令牌無效或已過期' });
             }
-            console.log('>>> 令牌驗證成功，解析出的用戶對象:', user);
-            console.log('>>> 用戶ID的類型:', typeof user.user_id);
-            req.user = user;
+              req.user = user;
             next();
         });
     };
@@ -161,25 +155,47 @@ function initializeCookGame(pool) {
         }
     });
 
-    // 新增或更新 V3 物品
+    // 新增 V3 物品
     cookGameApp.post('/v3/items', authenticateToken, isAdmin, async (req, res) => {
-        const { item_id, item_name, ascii_symbol, item_tier, base_points } = req.body;
+        const { item_id, item_name, ascii_symbol, item_tier, base_points, category } = req.body;
         try {
-            // 使用 UPSERT 語句簡化邏輯
             const result = await pool.query(`
-                INSERT INTO cook_items_v3 (item_id, item_name, ascii_symbol, item_tier, base_points)
-                VALUES ($1, $2, $3, $4, $5)
-                ON CONFLICT (item_id) DO UPDATE SET
-                    item_name = EXCLUDED.item_name,
-                    ascii_symbol = EXCLUDED.ascii_symbol,
-                    item_tier = EXCLUDED.item_tier,
-                    base_points = EXCLUDED.base_points
+                INSERT INTO cook_items_v3 (item_id, item_name, ascii_symbol, item_tier, base_points, category)
+                VALUES ($1, $2, $3, $4, $5, $6)
                 RETURNING *;
-            `, [item_id, item_name, ascii_symbol, item_tier, base_points]);
+            `, [item_id, item_name, ascii_symbol, item_tier, base_points, category]);
             
             res.status(201).json({ success: true, item: result.rows[0] });
         } catch (error) {
-            console.error('[V3] 新增/更新物品時出錯:', error);
+            console.error('[V3] 新增物品時出錯:', error);
+            if (error.code === '23505') { // unique_violation
+                return res.status(409).json({ success: false, message: `物品ID '${item_id}' 已存在。` });
+            }
+            res.status(500).json({ success: false, message: '伺服器錯誤', details: error.message });
+        }
+    });
+
+    // 更新 V3 物品
+    cookGameApp.put('/v3/items/:itemId', authenticateToken, isAdmin, async (req, res) => {
+        const { itemId } = req.params;
+        const { item_name, ascii_symbol, base_points, category } = req.body;
+        try {
+            const result = await pool.query(`
+                UPDATE cook_items_v3 SET
+                    item_name = $1,
+                    ascii_symbol = $2,
+                    base_points = $3,
+                    category = $4
+                WHERE item_id = $5
+                RETURNING *;
+            `, [item_name, ascii_symbol, base_points, category, itemId]);
+            
+            if (result.rows.length === 0) {
+                return res.status(404).json({ success: false, message: '找不到要更新的物品' });
+            }
+            res.json({ success: true, item: result.rows[0] });
+        } catch (error) {
+            console.error(`[V3] 更新物品 ${itemId} 時出錯:`, error);
             res.status(500).json({ success: false, message: '伺服器錯誤', details: error.message });
         }
     });
@@ -188,7 +204,19 @@ function initializeCookGame(pool) {
     cookGameApp.get('/v3/recipes', authenticateToken, isAdmin, async (req, res) => {
         try {
             console.log('\n=== [V3] 獲取食譜列表 ===');
-            const result = await pool.query('SELECT * FROM cook_recipes_v3 ORDER BY recipe_name');
+            const result = await pool.query(`
+                SELECT 
+                    r.id,
+                    r.recipe_id,
+                    r.recipe_name,
+                    i.item_id AS output_item_id,
+                    r.cooking_method,
+                    r.requirements,
+                    r.cook_time_sec
+                FROM cook_recipes_v3 r
+                JOIN cook_items_v3 i ON r.output_item_id = i.id
+                ORDER BY r.recipe_name
+            `);
             res.json(result.rows);
         } catch (error) {
             console.error('[V3] 獲取食譜列表時出錯:', error);
@@ -196,7 +224,7 @@ function initializeCookGame(pool) {
         }
     });
 
-    // 新增或更新 V3 食譜
+    // 新增 V3 食譜
     cookGameApp.post('/v3/recipes', authenticateToken, isAdmin, async (req, res) => {
         const { recipe_id, recipe_name, output_item_id, cooking_method, requirements, cook_time_sec } = req.body;
         const client = await pool.connect();
@@ -204,19 +232,21 @@ function initializeCookGame(pool) {
             await client.query('BEGIN');
 
             // --- V3 規則驗證 ---
-            const outputItemRes = await client.query('SELECT item_tier FROM cook_items_v3 WHERE id = $1', [output_item_id]);
-            if (outputItemRes.rows.length === 0) throw new Error(`產出物品 ID #${output_item_id} 不存在。`);
+            const outputItemRes = await client.query('SELECT id, item_tier FROM cook_items_v3 WHERE item_id = $1', [output_item_id]);
+            if (outputItemRes.rows.length === 0) throw new Error(`產出物品 ID '${output_item_id}' 不存在。`);
+            const outputDbId = outputItemRes.rows[0].id;
             const outputTier = outputItemRes.rows[0].item_tier;
             if (outputTier === 0) throw new Error('T0 基礎食材不能作為食譜的產出。');
 
             if (requirements && requirements.length > 0) {
                 const requirementIds = requirements.map(r => r.item_id);
-                const reqItemsRes = await client.query('SELECT id, item_tier FROM cook_items_v3 WHERE id = ANY($1::int[])', [requirementIds]);
-                const reqItemsMap = new Map(reqItemsRes.rows.map(item => [item.id, item.item_tier]));
+                const reqItemsRes = await client.query('SELECT item_id, item_tier FROM cook_items_v3 WHERE item_id = ANY($1::text[])', [requirementIds]);
+                const reqItemsMap = new Map(reqItemsRes.rows.map(item => [item.item_id, item.item_tier]));
 
                 for (const req of requirements) {
                     const reqTier = reqItemsMap.get(req.item_id);
-                    if (reqTier === undefined) throw new Error(`需求物品 ID #${req.item_id} 不存在。`);
+                    if (reqTier === undefined) throw new Error(`需求物品 ID '${req.item_id}' 不存在。`);
+                    if (outputTier === 1 && reqTier !== 0) throw new Error(`T1 食譜只能使用 T0 材料。`);
                     if (reqTier >= outputTier) throw new Error(`食譜 "${recipe_name}" 不符合層級規則：T${outputTier} 產出的需求物(T${reqTier})層級不能更高或相等。`);
                 }
             }
@@ -227,21 +257,73 @@ function initializeCookGame(pool) {
             const result = await client.query(`
                 INSERT INTO cook_recipes_v3 (recipe_id, recipe_name, output_item_id, cooking_method, requirements, cook_time_sec)
                 VALUES ($1, $2, $3, $4, $5, $6)
-                ON CONFLICT (recipe_id) DO UPDATE SET
-                    recipe_name = EXCLUDED.recipe_name,
-                    output_item_id = EXCLUDED.output_item_id,
-                    cooking_method = EXCLUDED.cooking_method,
-                    requirements = EXCLUDED.requirements,
-                    cook_time_sec = EXCLUDED.cook_time_sec
                 RETURNING *;
-            `, [recipe_id, recipe_name, output_item_id, cooking_method, requirementsJson, cook_time_sec]);
+            `, [recipe_id, recipe_name, outputDbId, cooking_method, requirementsJson, cook_time_sec]);
 
             await client.query('COMMIT');
             res.status(201).json({ success: true, recipe: result.rows[0] });
 
         } catch (error) {
             await client.query('ROLLBACK');
-            console.error('[V3] 新增/更新食譜時出錯:', error);
+            console.error('[V3] 新增食譜時出錯:', error);
+            if (error.code === '23505') { // unique_violation for recipe_id
+                return res.status(409).json({ success: false, message: `食譜ID '${recipe_id}' 已存在。` });
+            }
+            res.status(400).json({ success: false, message: error.message });
+        } finally {
+            client.release();
+        }
+    });
+
+    // 更新 V3 食譜
+    cookGameApp.put('/v3/recipes/:recipeId', authenticateToken, isAdmin, async (req, res) => {
+        const { recipeId } = req.params;
+        const { recipe_name, output_item_id, cooking_method, requirements, cook_time_sec } = req.body;
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+
+            // --- V3 規則驗證 ---
+            const outputItemRes = await client.query('SELECT item_tier FROM cook_items_v3 WHERE item_id = $1', [output_item_id]);
+            if (outputItemRes.rows.length === 0) throw new Error(`產出物品 ID '${output_item_id}' 不存在。`);
+            const outputTier = outputItemRes.rows[0].item_tier;
+
+            if (requirements && requirements.length > 0) {
+                const requirementIds = requirements.map(r => r.item_id);
+                const reqItemsRes = await client.query('SELECT item_id, item_tier FROM cook_items_v3 WHERE item_id = ANY($1::text[])', [requirementIds]);
+                const reqItemsMap = new Map(reqItemsRes.rows.map(item => [item.item_id, item.item_tier]));
+
+                for (const req of requirements) {
+                    const reqTier = reqItemsMap.get(req.item_id);
+                    if (reqTier === undefined) throw new Error(`需求物品 ID '${req.item_id}' 不存在。`);
+                    if (outputTier === 1 && reqTier !== 0) throw new Error(`T1 食譜只能使用 T0 材料。`);
+                    if (reqTier >= outputTier) throw new Error(`食譜 "${recipe_name}" 不符合層級規則：T${outputTier} 產出的需求物(T${reqTier})層級不能更高或相等。`);
+                }
+            }
+            // --- 驗證結束 ---
+
+            const requirementsJson = JSON.stringify(requirements || []);
+
+            const result = await client.query(`
+                UPDATE cook_recipes_v3 SET
+                    recipe_name = $1,
+                    cooking_method = $2,
+                    requirements = $3,
+                    cook_time_sec = $4
+                WHERE recipe_id = $5
+                RETURNING *;
+            `, [recipe_name, cooking_method, requirementsJson, cook_time_sec, recipeId]);
+
+            if (result.rows.length === 0) {
+                await client.query('ROLLBACK');
+                return res.status(404).json({ success: false, message: '找不到要更新的食譜' });
+            }
+
+            await client.query('COMMIT');
+            res.json({ success: true, recipe: result.rows[0] });
+        } catch (error) {
+            await client.query('ROLLBACK');
+            console.error(`[V3] 更新食譜 ${recipeId} 時出錯:`, error);
             res.status(400).json({ success: false, message: error.message });
         } finally {
             client.release();
@@ -1332,6 +1414,118 @@ function initializeCookGame(pool) {
             await client.query('ROLLBACK');
             console.error('刪除食譜時出錯:', error);
             res.status(500).json({ success: false, error: error.message });
+        } finally {
+            client.release();
+        }
+    });
+
+    // V3 烹飪模擬器 API
+    cookGameApp.post('/v3/simulate', authenticateToken, isAdmin, async (req, res) => {
+        const { items, cookingMethod } = req.body;
+
+        if (!items || !Array.isArray(items) || !cookingMethod) {
+            return res.status(400).json({ success: false, error: '請求參數無效' });
+        }
+
+        // 如果組合區是空的，直接返回
+        if (items.length === 0) {
+            return res.json({ success: false, error: '組合區內沒有物品' });
+        }
+
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+
+            const itemDetailsResult = await client.query(
+                'SELECT item_id, item_tier FROM cook_items_v3 WHERE item_id = ANY($1::text[])',
+                [items]
+            );
+            
+            // 修正驗證邏輯：比對唯一物品ID的數量
+            const uniqueInputIds = new Set(items);
+            if (itemDetailsResult.rows.length !== uniqueInputIds.size) {
+                const foundIds = new Set(itemDetailsResult.rows.map(row => row.item_id));
+                const missingIds = [...uniqueInputIds].filter(id => !foundIds.has(id));
+                throw new Error(`一個或多個輸入物品ID無效: ${missingIds.join(', ')}`);
+            }
+
+            const inputItemTiers = items.map(itemId => {
+                return itemDetailsResult.rows.find(row => row.item_id === itemId).item_tier;
+            });
+
+            const hasT1Item = inputItemTiers.some(tier => tier === 1);
+            const allAreT0Items = inputItemTiers.every(tier => tier === 0);
+
+            if (hasT1Item) {
+                if (cookingMethod !== 'assembly') {
+                    return res.json({ 
+                        success: false, 
+                        ruleViolation: '規則錯誤: 包含 T1 半成品的食譜必須使用「組合」方法。' 
+                    });
+                }
+            } else if (allAreT0Items) {
+                if (cookingMethod === 'assembly') {
+                    return res.json({ 
+                        success: false, 
+                        ruleViolation: '規則錯誤: 只包含 T0 基礎食材的食譜不能使用「組合」方法。' 
+                    });
+                }
+            }
+
+            const inputItemsMap = items.reduce((acc, itemId) => {
+                acc[itemId] = (acc[itemId] || 0) + 1;
+                return acc;
+            }, {});
+            
+            const recipesResult = await client.query(`
+                SELECT recipe_id, output_item_id, requirements 
+                FROM cook_recipes_v3 
+                WHERE cooking_method = $1
+            `, [cookingMethod]);
+
+            let matchedRecipe = null;
+
+            for (const recipe of recipesResult.rows) {
+                if (!recipe.requirements) continue;
+
+                const recipeReqsMap = recipe.requirements.reduce((acc, req) => {
+                    acc[req.item_id] = (acc[req.item_id] || 0) + req.quantity;
+                    return acc;
+                }, {});
+
+                const inputKeys = Object.keys(inputItemsMap);
+                const recipeKeys = Object.keys(recipeReqsMap);
+
+                if (inputKeys.length !== recipeKeys.length) continue;
+
+                const isMatch = recipeKeys.every(key => inputItemsMap[key] === recipeReqsMap[key]);
+
+                if (isMatch) {
+                    matchedRecipe = recipe;
+                    break;
+                }
+            }
+
+            if (matchedRecipe) {
+                const outputItemResult = await client.query(
+                    'SELECT * FROM cook_items_v3 WHERE id = $1',
+                    [matchedRecipe.output_item_id]
+                );
+
+                if (outputItemResult.rows.length === 0) {
+                    throw new Error(`食譜 "${matchedRecipe.recipe_id}" 的產出物品 "${matchedRecipe.output_item_id}" 已不存在。`);
+                }
+
+                await client.query('COMMIT');
+                res.json({ success: true, outputItem: outputItemResult.rows[0] });
+            } else {
+                await client.query('COMMIT');
+                res.json({ success: false, error: '找不到匹配的食譜。請檢查食材組合和烹飪方法。' });
+            }
+        } catch (error) {
+            await client.query('ROLLBACK');
+            console.error('[V3] 模擬烹飪時出錯:', error);
+            res.status(500).json({ success: false, error: '伺服器錯誤', details: error.message });
         } finally {
             client.release();
         }

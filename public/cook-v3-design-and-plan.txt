@@ -49,11 +49,13 @@ CREATE TABLE cook_items_v3 (
     ascii_symbol VARCHAR(10),
     -- 核心欄位：定義物品的層級
     item_tier INTEGER NOT NULL, -- 0: raw_ingredient, 1: intermediate_good, 2: final_dish
+    category VARCHAR(50), -- 僅對 T0 物品有效，用於分類
     base_points INTEGER DEFAULT 0, -- 僅對 T2 物品有效，用於計分
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 COMMENT ON COLUMN cook_items_v3.item_tier IS '0: 基礎食材, 1: 半成品, 2: 最終料理';
+COMMENT ON COLUMN cook_items_v3.category IS '物品分類，僅對T0有效。例如：肉類, 蔬菜, 加工品, 調味醬料';
 ```
 
 ### 2.2 食譜表 `cook_recipes_v3`
@@ -96,6 +98,7 @@ CREATE TABLE cook_recipes_v3 (
 - **格狀顯示**：每個物品以卡片形式展示，包含：
   - 物品名稱和 ID
   - ASCII 符號預覽
+  - T0 物品將按分類 (Category) 進行分組展示。
   - 物品層級（T0/T1/T2）
   - 基礎分數（僅 T2）
   - 編輯和刪除按鈕
@@ -106,6 +109,7 @@ CREATE TABLE cook_recipes_v3 (
      - 物品 ID（英文小寫+底線）
      - 物品名稱（中文）
      - ASCII 符號（即時預覽）
+     - 物品分類（僅 T0 物品需要選擇，例如: 肉類, 蔬菜...）
      - 選擇層級（T0/T1/T2）
      - 基礎分數（T2 必填）
 
@@ -113,7 +117,7 @@ CREATE TABLE cook_recipes_v3 (
   - 安全限制：
     - 不可修改物品 ID（避免破壞關聯）
     - 不可修改物品層級
-    - 僅可修改：名稱、符號、基礎分數（T2）
+    - 僅可修改：名稱、符號、分類（T0）、基礎分數（T2）
   - 關聯提示：
     - T0 物品：顯示相關的 T1 和 T2 食譜
     - T1 物品：顯示相關的 T2 食譜

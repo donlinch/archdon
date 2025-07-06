@@ -5,7 +5,11 @@ const { Pool } = require('pg');
 // 創建連接池
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    // 强制啟用 SSL，因為本地開發可能也需要連接到需要 SSL 的遠端資料庫 (例如 Render)
+    // rejectUnauthorized: false 是為了允許自簽名證書，這在很多雲端服務提供商中是必要的
+    ssl: { 
+        rejectUnauthorized: false 
+    }
 });
 
 /**
