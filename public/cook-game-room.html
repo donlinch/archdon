@@ -604,564 +604,588 @@
   </div>
 
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      // 檢查是否有登入令牌，若無則導回登入頁
-      const token = localStorage.getItem('cookGameToken');
-      if (!token) {
-        window.location.href = '/cook-login.html';
-        return;
-      }
-      
-      // 獲取房間ID
-      const roomId = localStorage.getItem('currentRoomId');
-      
-      if (!roomId) {
-        alert('找不到房間ID，將返回遊戲大廳');
-        window.location.href = 'cook-lobby.html';
-        return;
-      }
-      
-      // DOM元素
-      const roomNameDisplay = document.getElementById('roomNameDisplay');
-      const roomHeaderTitle = document.getElementById('roomHeaderTitle');
-      const roomStatusLabel = document.getElementById('roomStatusLabel');
-      const roomDifficultyDisplay = document.getElementById('roomDifficultyDisplay');
-      const playerCountDisplay = document.getElementById('playerCountDisplay');
-      const playerContainer = document.getElementById('playerContainer');
-      const chatMessages = document.getElementById('chatMessages');
-      const chatInput = document.getElementById('chatInput');
-      const sendChatBtn = document.getElementById('sendChatBtn');
-      const readyBtn = document.getElementById('readyBtn');
-      const leaveBtn = document.getElementById('leaveBtn');
-      const startGameBtn = document.getElementById('startGameBtn');
-      const countdown = document.getElementById('countdown');
-      
-      // 狀態變量
-      let roomData = null;
-      let currentUser = null;
-      let isReady = false;
-      let isHost = false;
-      let websocket = null;
-      let reconnectAttempts = 0;
-      const maxReconnectAttempts = 5;
-      const reconnectDelay = 3000;
-      
-      // 首先獲取用戶資料
-      fetch('/cook-api/users/profile', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('無法驗證使用者身份');
-        }
-        return response.json();
-      })
-      .then(data => {
-        currentUser = data.user;
-        // 成功獲取用戶資料後，再連接WebSocket
-        connectWebsocket();
-      })
-      .catch(error => {
-        console.error('獲取用戶資料失敗:', error);
-        alert('獲取用戶資料失敗，將返回大廳。');
-        // 清除可能無效的token並重定向
-        localStorage.removeItem('cookGameToken');
-        window.location.href = 'cook-lobby.html';
-      });
-      
-      // 連接WebSocket
-      function connectWebsocket() {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/cook-ws`;
-        
-        console.log('正在連接到 WebSocket:', wsUrl);
-        websocket = new WebSocket(wsUrl);
-        
-        websocket.onopen = () => {
-          console.log('WebSocket連接已建立');
-          reconnectAttempts = 0;
-          
-          // 發送認證訊息
-          const authMessage = {
-            type: 'authenticate',
-            token: token
-          };
-          console.log('發送認證訊息:', authMessage);
-          websocket.send(JSON.stringify(authMessage));
-          
-          addSystemMessage('已連接到伺服器，正在進行認證...');
-        };
-        
-        websocket.onmessage = (event) => {
-          try {
-            const message = JSON.parse(event.data);
-            handleWebsocketMessage(message);
-          } catch (error) {
-            console.error('解析WebSocket訊息出錯:', error);
-          }
-        };
-        
-        websocket.onclose = (event) => {
-          console.log('WebSocket連接已關閉', event.code, event.reason);
-          addSystemMessage('與伺服器的連接已斷開，嘗試重新連接...');
-          
-          // 嘗試重新連接
-          if (reconnectAttempts < maxReconnectAttempts) {
-            reconnectAttempts++;
-            setTimeout(connectWebsocket, reconnectDelay);
-          } else {
-            addSystemMessage('無法連接到伺服器，請刷新頁面重試');
-          }
-        };
-        
-        websocket.onerror = (error) => {
-          console.error('WebSocket錯誤:', error);
-          addSystemMessage('連接錯誤，請檢查網絡狀態');
-        };
-      }
-      
-      // 處理WebSocket訊息
-      function handleWebsocketMessage(message) {
-        console.log('收到訊息:', message);
-        
-        switch (message.type) {
-          case 'auth_success':
-            addSystemMessage('認證成功，正在加入房間...');
-            // 獲取每日任務
-            fetchDailyQuests();
-            // 發送加入房間訊息
-            if (currentUser) {
-                const rawRoomId = localStorage.getItem('currentRoomId');
-                
-                // 延遲一點發送join_room請求，確保伺服器在 ws 物件上記錄完使用者資訊
-                setTimeout(() => {
-                    if (websocket && websocket.readyState === WebSocket.OPEN) {
-                        const joinMessage = {
-                            type: 'join_room',
-                            roomId: rawRoomId,
-                            userId: currentUser.user_id // ★ 新增：明確傳遞使用者ID
-                        };
-                        console.log('發送加入房間請求:', joinMessage);
-                        websocket.send(JSON.stringify(joinMessage));
-                    }
-                }, 200);
-            } else {
-                addSystemMessage('錯誤：找不到用戶資料，無法加入房間。');
+    document.addEventListener('DOMContentLoaded', function() {
+        // 增強的驗證邏輯，與 cook-lobby.html 同步
+        const checkAuthentication = () => {
+            const cookGameToken = localStorage.getItem('cookGameToken');
+            const boxCurrentUserId = localStorage.getItem('boxCurrentUserId');
+            const boxUserToken = localStorage.getItem(`boxUserToken_${boxCurrentUserId}`);
+            
+            console.log('--- 認證檢查 (cook-game-room.html) ---');
+            console.log('cookGameToken:', cookGameToken ? '存在' : '無');
+            console.log('boxCurrentUserId:', boxCurrentUserId);
+
+            if (!cookGameToken && (!boxCurrentUserId || !boxUserToken)) {
+                console.log('認證失敗: 沒有任何有效的令牌，重定向到 member-login.html');
+                const currentUrl = window.location.href;
+                window.location.href = `/member-login.html?redirect=${encodeURIComponent(currentUrl)}`;
+                return null;
             }
-            break;
-          case 'room_info':
-            updateRoomInfo(message.room);
-            // 收到房間資訊後，可能也需要更新玩家列表
-            if(message.room.players) {
-                updatePlayerList(message.room.players);
+            
+            if (!cookGameToken && boxCurrentUserId && boxUserToken) {
+                console.log('認證失敗: 有主系統令牌但沒有遊戲令牌，重定向到 cook-login.html');
+                window.location.href = 'cook-login.html';
+                return null;
             }
-            break;
             
-          case 'player_list':
-            updatePlayerList(message.players);
-            break;
-            
-          case 'player_joined':
-            addSystemMessage(`${message.playerName} 加入了房間`);
-            break;
-            
-          case 'player_left':
-            addSystemMessage(`${message.playerName} 離開了房間`);
-            break;
-            
-          case 'player_ready':
-            addSystemMessage(`${message.playerName} 已準備就緒`);
-            break;
-            
-          case 'player_unready':
-            addSystemMessage(`${message.playerName} 取消準備`);
-            break;
-            
-          case 'chat_message':
-            addChatMessage(message.sender, message.text, message.avatar);
-            break;
-            
-          case 'game_starting':
-            startCountdown(message.countdown);
-            break;
-            
-          case 'game_started':
-            window.location.href = `/cook-game.html?id=${roomId}`;
-            break;
-            
-          case 'error':
-            console.error('伺服器錯誤:', message.message);
-            addSystemMessage(`錯誤: ${message.message}`);
-            break;
-            
-          case 'titles_unlocked':
-            handleTitlesUnlocked(message.titles);
-            break;
-            
-          case 'daily_quest_completed':
-            showQuestCompletedToast(message);
-            // 重新整理任務列表以顯示最新狀態
-            fetchDailyQuests();
-            break;
-            
-          default:
-            console.log('未處理的訊息類型:', message.type);
+            console.log('認證成功: 找到 cookGameToken，繼續執行。');
+            return cookGameToken;
+        };
+
+        const token = checkAuthentication();
+        if (!token) {
+            return; // 如果驗證失敗，則停止後續操作
         }
-      }
-      
-      // 更新房間信息
-      function updateRoomInfo(room) {
-        roomData = room;
-        roomNameDisplay.textContent = room.name;
-        roomHeaderTitle.textContent = `料理急先鋒 - ${room.name}`;
-        roomStatusLabel.textContent = room.status === 'waiting' ? '等待中' : '遊戲中';
-        
-        let difficultyText = '簡單';
-        if (room.difficulty === 'normal') difficultyText = '普通';
-        if (room.difficulty === 'hard') difficultyText = '困難';
-        
-        roomDifficultyDisplay.textContent = `難度: ${difficultyText}`;
-        
-        // 檢查當前用戶是否為房主
-        isHost = currentUser && room.creatorId === currentUser.user_id;
-        
-        if (isHost) {
-          startGameBtn.classList.remove('hidden');
-        } else {
-          startGameBtn.classList.add('hidden');
+
+        // 獲取房間ID
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomId = urlParams.get('id');
+
+        if (!roomId) {
+            alert('找不到房間ID，將返回遊戲大廳');
+            window.location.href = 'cook-lobby.html';
+            return;
         }
-      }
-      
-      // 更新玩家列表
-      function updatePlayerList(players) {
-        playerContainer.innerHTML = '';
-        playerCountDisplay.textContent = `${players.length}/4`;
         
-        players.forEach(player => {
-          const playerCard = renderPlayerCard(player, currentUser && player.id === currentUser.user_id);
-          playerContainer.appendChild(playerCard);
-          
-          // 如果當前用戶已準備，更新按鈕狀態
-          if (currentUser && player.id === currentUser.user_id && player.ready) {
-            isReady = true;
-            readyBtn.classList.add('active');
-            readyBtn.textContent = '取消準備';
-          }
-        });
-      }
-      
-      // 新增：獲取並渲染每日任務
-      async function fetchDailyQuests() {
-        const questsContainer = document.getElementById('dailyQuestsContainer');
-        try {
-          const response = await fetch('/cook-api/daily-quests', {
+        // DOM元素
+        const roomNameDisplay = document.getElementById('roomNameDisplay');
+        const roomHeaderTitle = document.getElementById('roomHeaderTitle');
+        const roomStatusLabel = document.getElementById('roomStatusLabel');
+        const roomDifficultyDisplay = document.getElementById('roomDifficultyDisplay');
+        const playerCountDisplay = document.getElementById('playerCountDisplay');
+        const playerContainer = document.getElementById('playerContainer');
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const sendChatBtn = document.getElementById('sendChatBtn');
+        const readyBtn = document.getElementById('readyBtn');
+        const leaveBtn = document.getElementById('leaveBtn');
+        const startGameBtn = document.getElementById('startGameBtn');
+        const countdown = document.getElementById('countdown');
+        
+        // 狀態變量
+        let roomData = null;
+        let currentUser = null;
+        let isReady = false;
+        let isHost = false;
+        let websocket = null;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
+        const reconnectDelay = 3000;
+        
+        // 首先獲取用戶資料
+        fetch('/cook-api/player/profile', {
             headers: { 'Authorization': `Bearer ${token}` }
-          });
-          if (!response.ok) {
-            throw new Error('無法獲取每日任務');
-          }
-          const data = await response.json();
-          if (data.success && data.quests) {
-            if (data.quests.length === 0) {
-              questsContainer.innerHTML = '<div class="system-message">今天沒有任務</div>';
-              return;
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('無法驗證使用者身份');
             }
-            renderDailyQuests(data.quests);
-          } else {
-            questsContainer.innerHTML = '<div class="system-message">無法載入任務資料</div>';
-          }
-        } catch (error) {
-          console.error('獲取每日任務時出錯:', error);
-          questsContainer.innerHTML = '<div class="system-message">無法載入任務，請稍後再試</div>';
-        }
-      }
-
-      function renderDailyQuests(quests) {
-        const questsContainer = document.getElementById('dailyQuestsContainer');
-        questsContainer.innerHTML = '';
-        
-        if (quests.length === 0) {
-          questsContainer.innerHTML = '<div class="system-message">今天沒有特別任務！</div>';
-          return;
-        }
-        
-        quests.forEach(quest => {
-          const progress = Math.min(quest.progress, quest.target);
-          const progressPercent = quest.target > 0 ? (progress / quest.target) * 100 : 100;
-          const isCompleted = quest.status === 'completed' || progress >= quest.target;
-          
-          const questElement = document.createElement('div');
-          questElement.className = `quest-item ${isCompleted ? 'completed' : ''}`;
-          
-          let progressHTML = `
-            <div class="quest-progress-container">
-              <span>進度: ${progress} / ${quest.target}</span>
-              <div class="quest-progress-bar-bg">
-                <div class="quest-progress-bar" style="width: ${progressPercent}%"></div>
-              </div>
-            </div>
-          `;
-          
-          if (isCompleted) {
-            progressHTML = `<div class="quest-status-completed">已完成 ✔</div>`;
-          }
-          
-          questElement.innerHTML = `
-            <div class="quest-description">${quest.description}</div>
-            ${progressHTML}
-            <div class="quest-reward">獎勵: ${quest.reward_points} 點</div>
-          `;
-
-          questsContainer.appendChild(questElement);
-        });
-      }
-      
-      // 添加系統消息
-      function addSystemMessage(text) {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = 'system-message';
-        messageDiv.textContent = text;
-        chatMessages.appendChild(messageDiv);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-      }
-      
-      // 添加聊天消息
-      function addChatMessage(sender, text, avatar) {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = 'chat-message';
-        
-        messageDiv.innerHTML = `
-          <div class="chat-avatar">${avatar || sender.charAt(0).toUpperCase()}</div>
-          <div class="message-content">
-            <div class="message-sender">${sender}</div>
-            <div class="message-text">${text}</div>
-          </div>
-        `;
-        
-        chatMessages.appendChild(messageDiv);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-      }
-      
-      // 開始倒計時
-      function startCountdown(seconds) {
-        countdown.textContent = seconds;
-        countdown.classList.add('show');
-        
-        let remainingSeconds = seconds;
-        const interval = setInterval(() => {
-          remainingSeconds--;
-          
-          if (remainingSeconds <= 0) {
-            clearInterval(interval);
-            countdown.classList.remove('show');
-          } else {
-            countdown.textContent = remainingSeconds;
-          }
-        }, 1000);
-      }
-      
-      // 發送聊天訊息
-      function sendChatMessage() {
-        const text = chatInput.value.trim();
-        if (!text) return;
-        
-        if (websocket && websocket.readyState === WebSocket.OPEN) {
-          websocket.send(JSON.stringify({
-            type: 'chat_message',
-            message: text,
-            roomId: roomId
-          }));
-          
-          chatInput.value = '';
-        } else {
-          addSystemMessage('無法發送訊息，連接已斷開');
-        }
-      }
-      
-      // 切換準備狀態
-      function toggleReady() {
-        if (websocket && websocket.readyState === WebSocket.OPEN) {
-          isReady = !isReady;
-          
-          websocket.send(JSON.stringify({
-            type: isReady ? 'player_ready' : 'player_unready',
-            roomId: roomId
-          }));
-          
-          readyBtn.classList.toggle('active', isReady);
-          readyBtn.textContent = isReady ? '取消準備' : '準備就緒';
-        } else {
-          addSystemMessage('無法更改狀態，連接已斷開');
-        }
-      }
-      
-      // 離開房間
-      function leaveRoom() {
-        if (websocket && websocket.readyState === WebSocket.OPEN) {
-          websocket.send(JSON.stringify({
-            type: 'leave_room',
-            roomId: roomId
-          }));
-        }
-        
-        window.location.href = '/cook-lobby.html';
-      }
-      
-      // 開始遊戲
-      function startGame() {
-        if (!isHost) {
-          addSystemMessage('只有房主可以開始遊戲');
-          return;
-        }
-        
-        if (websocket && websocket.readyState === WebSocket.OPEN) {
-          websocket.send(JSON.stringify({
-            type: 'start_game',
-            roomId: roomId
-          }));
-        } else {
-          addSystemMessage('無法開始遊戲，連接已斷開');
-        }
-      }
-      
-      // 處理稱號解鎖通知
-      function handleTitlesUnlocked(titles) {
-        if (!titles || titles.length === 0) return;
-        
-        // 創建通知元素
-        const notification = document.createElement('div');
-        notification.className = 'title-unlock-notification';
-        
-        let titlesHTML = '';
-        titles.forEach(title => {
-          titlesHTML += `
-            <div class="unlocked-title ${title.rarity}">
-              <span class="title-icon">🏆</span>
-              <span class="title-name">${title.title_name}</span>
-            </div>
-          `;
+            return response.json();
+        })
+        .then(data => {
+            currentUser = data.user;
+            // 成功獲取用戶資料後，再連接WebSocket
+            // connectWebsocket(); // WSS disabled for single-player focus
+        })
+        .catch(error => {
+            console.error('獲取用戶資料失敗:', error);
+            alert('獲取用戶資料失敗，將返回大廳。');
+            // 清除可能無效的token並重定向
+            localStorage.removeItem('cookGameToken');
+            window.location.href = 'cook-lobby.html';
         });
         
-        notification.innerHTML = `
-          <div class="notification-header">
-            <h3>新稱號解鎖！</h3>
-            <button class="close-btn">×</button>
-          </div>
-          <div class="notification-content">
-            ${titlesHTML}
-          </div>
-          <div class="notification-footer">
-            <button class="view-titles-btn">查看我的稱號</button>
-          </div>
-        `;
-        
-        // 添加事件監聽器
-        notification.querySelector('.close-btn').addEventListener('click', () => {
-          document.body.removeChild(notification);
-        });
-        
-        notification.querySelector('.view-titles-btn').addEventListener('click', () => {
-          // 跳轉到稱號頁面
-          window.location.href = '/cook-titles.html';
-        });
-        
-        // 添加到頁面
-        document.body.appendChild(notification);
-        
-        // 播放音效
-        playSound('unlock');
-        
-        // 5秒後自動關閉
-        setTimeout(() => {
-          if (document.body.contains(notification)) {
-            document.body.removeChild(notification);
-          }
-        }, 5000);
-      }
-      
-      // 新增：顯示任務完成通知
-      function showQuestCompletedToast(questData) {
-        // 移除舊的通知
-        const existingToast = document.querySelector('.quest-toast');
-        if(existingToast) {
-          document.body.removeChild(existingToast);
+        // 連接WebSocket
+        function connectWebsocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/cook-ws`;
+            
+            console.log('正在連接到 WebSocket:', wsUrl);
+            websocket = new WebSocket(wsUrl);
+            
+            websocket.onopen = () => {
+                console.log('WebSocket連接已建立');
+                reconnectAttempts = 0;
+                
+                // 發送認證訊息
+                const authMessage = {
+                    type: 'authenticate',
+                    token: token
+                };
+                console.log('發送認證訊息:', authMessage);
+                websocket.send(JSON.stringify(authMessage));
+                
+                addSystemMessage('已連接到伺服器，正在進行認證...');
+            };
+            
+            websocket.onmessage = (event) => {
+                try {
+                    const message = JSON.parse(event.data);
+                    handleWebsocketMessage(message);
+                } catch (error) {
+                    console.error('解析WebSocket訊息出錯:', error);
+                }
+            };
+            
+            websocket.onclose = (event) => {
+                console.log('WebSocket連接已關閉', event.code, event.reason);
+                addSystemMessage('與伺服器的連接已斷開，嘗試重新連接...');
+                
+                // 嘗試重新連接
+                if (reconnectAttempts < maxReconnectAttempts) {
+                    reconnectAttempts++;
+                    setTimeout(connectWebsocket, reconnectDelay);
+                } else {
+                    addSystemMessage('無法連接到伺服器，請刷新頁面重試');
+                }
+            };
+            
+            websocket.onerror = (error) => {
+                console.error('WebSocket錯誤:', error);
+                addSystemMessage('連接錯誤，請檢查網絡狀態');
+            };
         }
-
-        // 創建新的通知元素
-        const toast = document.createElement('div');
-        toast.className = 'quest-toast';
-        toast.innerHTML = `
-          <div class="toast-icon">🏅</div>
-          <div class="toast-content">
-            <p class="toast-title">每日任務完成！</p>
-            <p>${questData.description || '一個任務已完成'}</p>
-            <p class="toast-reward">+${questData.rewardPoints || 0} 點獎勵</p>
-          </div>
-        `;
-        document.body.appendChild(toast);
-
-        // 顯示通知
-        setTimeout(() => {
-          toast.classList.add('show');
-        }, 100);
-
-        // 幾秒後自動隱藏
-        setTimeout(() => {
-          toast.classList.remove('show');
-          // 動畫結束後從DOM中移除
-          setTimeout(() => {
-            if (document.body.contains(toast)) {
-              document.body.removeChild(toast);
+        
+        // 處理WebSocket訊息
+        function handleWebsocketMessage(message) {
+            console.log('收到訊息:', message);
+            
+            switch (message.type) {
+                case 'auth_success':
+                    addSystemMessage('認證成功，正在加入房間...');
+                    // 獲取每日任務
+                    fetchDailyQuests();
+                    // 發送加入房間訊息
+                    if (currentUser) {
+                        // 延遲一點發送join_room請求，確保伺服器在 ws 物件上記錄完使用者資訊
+                        setTimeout(() => {
+                            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                                const joinMessage = {
+                                    type: 'join_room',
+                                    roomId: roomId, // 直接使用從URL獲取的roomId
+                                    userId: currentUser.user_id // ★ 新增：明確傳遞使用者ID
+                                };
+                                console.log('發送加入房間請求:', joinMessage);
+                                websocket.send(JSON.stringify(joinMessage));
+                            }
+                        }, 200);
+                    } else {
+                        addSystemMessage('錯誤：找不到用戶資料，無法加入房間。');
+                    }
+                    break;
+                case 'room_info':
+                    updateRoomInfo(message.room);
+                    // 收到房間資訊後，可能也需要更新玩家列表
+                    if(message.room.players) {
+                        updatePlayerList(message.room.players);
+                    }
+                    break;
+                    
+                case 'player_list':
+                    updatePlayerList(message.players);
+                    break;
+                    
+                case 'player_joined':
+                    addSystemMessage(`${message.playerName} 加入了房間`);
+                    break;
+                    
+                case 'player_left':
+                    addSystemMessage(`${message.playerName} 離開了房間`);
+                    break;
+                    
+                case 'player_ready':
+                    addSystemMessage(`${message.playerName} 已準備就緒`);
+                    break;
+                    
+                case 'player_unready':
+                    addSystemMessage(`${message.playerName} 取消準備`);
+                    break;
+                    
+                case 'chat_message':
+                    addChatMessage(message.sender, message.text, message.avatar);
+                    break;
+                    
+                case 'game_starting':
+                    startCountdown(message.countdown);
+                    break;
+                    
+                case 'game_started':
+                    window.location.href = `/cook-game.html?id=${roomId}`;
+                    break;
+                    
+                case 'error':
+                    console.error('伺服器錯誤:', message.message);
+                    addSystemMessage(`錯誤: ${message.message}`);
+                    break;
+                    
+                case 'titles_unlocked':
+                    handleTitlesUnlocked(message.titles);
+                    break;
+                    
+                case 'daily_quest_completed':
+                    showQuestCompletedToast(message);
+                    // 重新整理任務列表以顯示最新狀態
+                    fetchDailyQuests();
+                    break;
+                    
+                default:
+                    console.log('未處理的訊息類型:', message.type);
             }
-          }, 500);
-        }, 4000);
-      }
-      
-      // 註冊事件監聽器
-      sendChatBtn.addEventListener('click', sendChatMessage);
-      
-      chatInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-          sendChatMessage();
         }
-      });
-      
-      readyBtn.addEventListener('click', toggleReady);
-      leaveBtn.addEventListener('click', leaveRoom);
-      startGameBtn.addEventListener('click', startGame);
-      
-      // 頁面離開時關閉WebSocket連接
-      window.addEventListener('beforeunload', () => {
-        if (websocket) {
-          websocket.close();
+        
+        // 更新房間信息
+        function updateRoomInfo(room) {
+            roomData = room;
+            roomNameDisplay.textContent = room.name;
+            roomHeaderTitle.textContent = `料理急先鋒 - ${room.name}`;
+            roomStatusLabel.textContent = room.status === 'waiting' ? '等待中' : '遊戲中';
+            
+            let difficultyText = '簡單';
+            if (room.difficulty === 'normal') difficultyText = '普通';
+            if (room.difficulty === 'hard') difficultyText = '困難';
+            
+            roomDifficultyDisplay.textContent = `難度: ${difficultyText}`;
+            
+            // 檢查當前用戶是否為房主
+            isHost = currentUser && room.creatorId === currentUser.user_id;
+            
+            if (isHost) {
+                startGameBtn.classList.remove('hidden');
+            } else {
+                startGameBtn.classList.add('hidden');
+            }
         }
-      });
+        
+        // 更新玩家列表
+        function updatePlayerList(players) {
+            playerContainer.innerHTML = '';
+            playerCountDisplay.textContent = `${players.length}/4`;
+            
+            players.forEach(player => {
+                const playerCard = renderPlayerCard(player, currentUser && player.id === currentUser.user_id);
+                playerContainer.appendChild(playerCard);
+                
+                // 如果當前用戶已準備，更新按鈕狀態
+                if (currentUser && player.id === currentUser.user_id && player.ready) {
+                    isReady = true;
+                    readyBtn.classList.add('active');
+                    readyBtn.textContent = '取消準備';
+                }
+            });
+        }
+        
+        // 新增：獲取並渲染每日任務
+        async function fetchDailyQuests() {
+            const questsContainer = document.getElementById('dailyQuestsContainer');
+            try {
+                const response = await fetch('/cook-api/daily-quests', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!response.ok) {
+                    throw new Error('無法獲取每日任務');
+                }
+                const data = await response.json();
+                if (data.success && data.quests) {
+                    if (data.quests.length === 0) {
+                        questsContainer.innerHTML = '<div class="system-message">今天沒有任務</div>';
+                        return;
+                    }
+                    renderDailyQuests(data.quests);
+                } else {
+                    questsContainer.innerHTML = '<div class="system-message">無法載入任務資料</div>';
+                }
+            } catch (error) {
+                console.error('獲取每日任務時出錯:', error);
+                questsContainer.innerHTML = '<div class="system-message">無法載入任務，請稍後再試</div>';
+            }
+        }
+
+        function renderDailyQuests(quests) {
+            const questsContainer = document.getElementById('dailyQuestsContainer');
+            questsContainer.innerHTML = '';
+            
+            if (quests.length === 0) {
+                questsContainer.innerHTML = '<div class="system-message">今天沒有特別任務！</div>';
+                return;
+            }
+            
+            quests.forEach(quest => {
+                const progress = Math.min(quest.progress, quest.target);
+                const progressPercent = quest.target > 0 ? (progress / quest.target) * 100 : 100;
+                const isCompleted = quest.status === 'completed' || progress >= quest.target;
+                
+                const questElement = document.createElement('div');
+                questElement.className = `quest-item ${isCompleted ? 'completed' : ''}`;
+                
+                let progressHTML = `
+                    <div class="quest-progress-container">
+                        <span>進度: ${progress} / ${quest.target}</span>
+                        <div class="quest-progress-bar-bg">
+                            <div class="quest-progress-bar" style="width: ${progressPercent}%"></div>
+                        </div>
+                    </div>
+                `;
+                
+                if (isCompleted) {
+                    progressHTML = `<div class="quest-status-completed">已完成 ✔</div>`;
+                }
+                
+                questElement.innerHTML = `
+                    <div class="quest-description">${quest.description}</div>
+                    ${progressHTML}
+                    <div class="quest-reward">獎勵: ${quest.reward_points} 點</div>
+                `;
+
+                questsContainer.appendChild(questElement);
+            });
+        }
+        
+        // 添加系統消息
+        function addSystemMessage(text) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'system-message';
+            messageDiv.textContent = text;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        // 添加聊天消息
+        function addChatMessage(sender, text, avatar) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'chat-message';
+            
+            messageDiv.innerHTML = `
+                <div class="chat-avatar">${avatar || sender.charAt(0).toUpperCase()}</div>
+                <div class="message-content">
+                    <div class="message-sender">${sender}</div>
+                    <div class="message-text">${text}</div>
+                </div>
+            `;
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        // 開始倒計時
+        function startCountdown(seconds) {
+            countdown.textContent = seconds;
+            countdown.classList.add('show');
+            
+            let remainingSeconds = seconds;
+            const interval = setInterval(() => {
+                remainingSeconds--;
+                
+                if (remainingSeconds <= 0) {
+                    clearInterval(interval);
+                    countdown.classList.remove('show');
+                } else {
+                    countdown.textContent = remainingSeconds;
+                }
+            }, 1000);
+        }
+        
+        // 發送聊天訊息
+        function sendChatMessage() {
+            const text = chatInput.value.trim();
+            if (!text) return;
+            
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                websocket.send(JSON.stringify({
+                    type: 'chat_message',
+                    message: text,
+                    roomId: roomId
+                }));
+                
+                chatInput.value = '';
+            } else {
+                addSystemMessage('無法發送訊息，連接已斷開');
+            }
+        }
+        
+        // 切換準備狀態
+        function toggleReady() {
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                isReady = !isReady;
+                
+                websocket.send(JSON.stringify({
+                    type: isReady ? 'player_ready' : 'player_unready',
+                    roomId: roomId
+                }));
+                
+                readyBtn.classList.toggle('active', isReady);
+                readyBtn.textContent = isReady ? '取消準備' : '準備就緒';
+            } else {
+                addSystemMessage('無法更改狀態，連接已斷開');
+            }
+        }
+        
+        // 離開房間
+        function leaveRoom() {
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                websocket.send(JSON.stringify({
+                    type: 'leave_room',
+                    roomId: roomId
+                }));
+            }
+            
+            window.location.href = '/cook-lobby.html';
+        }
+        
+        // 開始遊戲
+        function startGame() {
+            if (!isHost) {
+                addSystemMessage('只有房主可以開始遊戲');
+                return;
+            }
+            
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                websocket.send(JSON.stringify({
+                    type: 'start_game',
+                    roomId: roomId
+                }));
+            } else {
+                addSystemMessage('無法開始遊戲，連接已斷開');
+            }
+        }
+        
+        // 處理稱號解鎖通知
+        function handleTitlesUnlocked(titles) {
+            if (!titles || titles.length === 0) return;
+            
+            // 創建通知元素
+            const notification = document.createElement('div');
+            notification.className = 'title-unlock-notification';
+            
+            let titlesHTML = '';
+            titles.forEach(title => {
+                titlesHTML += `
+                    <div class="unlocked-title ${title.rarity}">
+                        <span class="title-icon">🏆</span>
+                        <span class="title-name">${title.title_name}</span>
+                    </div>
+                `;
+            });
+            
+            notification.innerHTML = `
+                <div class="notification-header">
+                    <h3>新稱號解鎖！</h3>
+                    <button class="close-btn">×</button>
+                </div>
+                <div class="notification-content">
+                    ${titlesHTML}
+                </div>
+                <div class="notification-footer">
+                    <button class="view-titles-btn">查看我的稱號</button>
+                </div>
+            `;
+            
+            // 添加事件監聽器
+            notification.querySelector('.close-btn').addEventListener('click', () => {
+                document.body.removeChild(notification);
+            });
+            
+            notification.querySelector('.view-titles-btn').addEventListener('click', () => {
+                // 跳轉到稱號頁面
+                window.location.href = '/cook-titles.html';
+            });
+            
+            // 添加到頁面
+            document.body.appendChild(notification);
+            
+            // 播放音效
+            playSound('unlock');
+            
+            // 5秒後自動關閉
+            setTimeout(() => {
+                if (document.body.contains(notification)) {
+                    document.body.removeChild(notification);
+                }
+            }, 5000);
+        }
+        
+        // 新增：顯示任務完成通知
+        function showQuestCompletedToast(questData) {
+            // 移除舊的通知
+            const existingToast = document.querySelector('.quest-toast');
+            if(existingToast) {
+                document.body.removeChild(existingToast);
+            }
+
+            // 創建新的通知元素
+            const toast = document.createElement('div');
+            toast.className = 'quest-toast';
+            toast.innerHTML = `
+                <div class="toast-icon">🏅</div>
+                <div class="toast-content">
+                    <p class="toast-title">每日任務完成！</p>
+                    <p>${questData.description || '一個任務已完成'}</p>
+                    <p class="toast-reward">+${questData.rewardPoints || 0} 點獎勵</p>
+                </div>
+            `;
+            document.body.appendChild(toast);
+
+            // 顯示通知
+            setTimeout(() => {
+                toast.classList.add('show');
+            }, 100);
+
+            // 幾秒後自動隱藏
+            setTimeout(() => {
+                toast.classList.remove('show');
+                // 動畫結束後從DOM中移除
+                setTimeout(() => {
+                    if (document.body.contains(toast)) {
+                        document.body.removeChild(toast);
+                    }
+                }, 500);
+            }, 4000);
+        }
+        
+        // 註冊事件監聽器
+        sendChatBtn.addEventListener('click', sendChatMessage);
+        
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendChatMessage();
+            }
+        });
+        
+        readyBtn.addEventListener('click', toggleReady);
+        leaveBtn.addEventListener('click', leaveRoom);
+        startGameBtn.addEventListener('click', startGame);
+        
+        // 頁面離開時關閉WebSocket連接
+        window.addEventListener('beforeunload', () => {
+            if (websocket) {
+                websocket.close();
+            }
+        });
     });
 
     function renderPlayerCard(player, isCurrentUser) {
-      const playerCard = document.createElement('div');
-      playerCard.className = `player-card ${player.ready ? 'ready' : ''} ${isCurrentUser ? 'current-user' : ''}`;
-      
-      let titleHTML = '';
-      if (player.equipped_title) {
-        titleHTML = `<div class="player-title ${player.equipped_title.rarity}" style="color: ${player.equipped_title.color_code || '#ffffff'}">
-          ${player.equipped_title.title_name}
-        </div>`;
-      }
-      
-      playerCard.innerHTML = `
-        <div class="player-avatar">
-          <img src="${player.avatar || '/images/default-avatar.png'}" alt="${player.display_name || player.username}">
-          <span class="player-level">Lv.${player.level || 1}</span>
-        </div>
-        <div class="player-info">
-          <div class="player-name">${player.display_name || player.username}</div>
-          ${titleHTML}
-          <div class="player-status">${player.ready ? '準備完成' : '未準備'}</div>
-        </div>
-      `;
-      
-      return playerCard;
+        const playerCard = document.createElement('div');
+        playerCard.className = `player-card ${player.ready ? 'ready' : ''} ${isCurrentUser ? 'current-user' : ''}`;
+        
+        let titleHTML = '';
+        if (player.equipped_title) {
+            titleHTML = `<div class="player-title ${player.equipped_title.rarity}" style="color: ${player.equipped_title.color_code || '#ffffff'}">
+                ${player.equipped_title.title_name}
+            </div>`;
+        }
+        
+        playerCard.innerHTML = `
+            <div class="player-avatar">
+                <img src="${player.avatar || '/images/default-avatar.png'}" alt="${player.display_name || player.username}">
+                <span class="player-level">Lv.${player.level || 1}</span>
+            </div>
+            <div class="player-info">
+                <div class="player-name">${player.display_name || player.username}</div>
+                ${titleHTML}
+                <div class="player-status">${player.ready ? '準備完成' : '未準備'}</div>
+            </div>
+        `;
+        
+        return playerCard;
     }
   </script>
 </body>

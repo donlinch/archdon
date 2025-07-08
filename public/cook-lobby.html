@@ -82,100 +82,6 @@
       overflow-y: auto;
     }
     
-    .daily-task {
-      background-color: #1e1e1e;
-      border: 1px solid var(--border-color);
-      border-radius: 5px;
-      padding: 15px;
-      margin-bottom: 20px;
-    }
-    
-    .daily-task h2 {
-      color: var(--accent-color);
-      margin-top: 0;
-      text-align: center;
-    }
-    
-    .ascii-art {
-      font-family: monospace;
-      text-align: center;
-      color: var(--accent-color);
-      margin: 10px 0;
-    }
-    
-    .quest-item {
-      background-color: rgba(0, 0, 0, 0.3);
-      border-radius: 5px;
-      padding: 10px;
-      margin-bottom: 10px;
-    }
-    
-    .quest-title {
-      font-weight: bold;
-      margin-bottom: 5px;
-    }
-    
-    .quest-progress-container {
-      display: flex;
-      flex-direction: column;
-      margin-bottom: 5px;
-    }
-    
-    .quest-progress-text {
-      text-align: right;
-      font-size: 0.8em;
-      margin-bottom: 3px;
-    }
-    
-    .quest-progress-bar {
-      height: 8px;
-      background-color: #333;
-      border-radius: 4px;
-      overflow: hidden;
-    }
-    
-    .quest-progress-fill {
-      height: 100%;
-      background-color: var(--accent-color);
-      border-radius: 4px;
-    }
-    
-    .quest-reward {
-      font-size: 0.9em;
-      color: #ffd700;
-      margin-bottom: 5px;
-    }
-    
-    .quest-action {
-      text-align: right;
-    }
-    
-    .claim-btn {
-      background-color: var(--accent-color);
-      color: #fff;
-      border: none;
-      border-radius: 3px;
-      padding: 5px 10px;
-      cursor: pointer;
-    }
-    
-    .claim-btn:hover {
-      background-color: #ff8c00;
-    }
-    
-    .quest-status-text {
-      font-size: 0.9em;
-      color: #aaa;
-    }
-    
-    .quest-completed {
-      opacity: 0.7;
-    }
-    
-    .quest-ready {
-      border-left: 3px solid var(--accent-color);
-    }
-    
     .loading-text {
       text-align: center;
       color: #aaa;
@@ -492,6 +398,31 @@
             display: none;
         }
     }
+
+    /* Toast Notification */
+    .toast-notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background-color: var(--error-color, #F44336);
+        color: white;
+        padding: 15px 20px;
+        border-radius: 5px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        z-index: 2000;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-20px);
+        transition: all 0.5s ease;
+        max-width: 300px;
+        text-align: center;
+    }
+
+    .toast-notification.show {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+    }
   </style>
 </head>
 <body>
@@ -506,19 +437,10 @@
   </div>
 
   <div class="main-content">
-    <div class="daily-task">
-      <h2>每日任務</h2>
-      <div class="ascii-art">
-          ◆◇◆◇◆◇◆◇◆
-      </div>
-      <div id="questList" class="quest-list">
-        <p class="loading-text">正在加載每日任務...</p>
-      </div>
-    </div>
-
     <div class="action-buttons">
       <button id="createRoomBtn" class="action-btn">[+] 創建房間</button>
       <a href="/cook-leaderboard.html" class="action-btn">[⭐] 排行榜</a>
+      <button id="cleanupRoomsBtn" class="action-btn">[🧹] 清理房間</button>
     </div>
     
     <div id="roomList" class="room-list">
@@ -583,6 +505,22 @@
   </div>
 
   <script>
+    // 顯示提示訊息
+    function showToast(message, duration = 5000) {
+        let toast = document.getElementById('toast-notification');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'toast-notification';
+            toast.className = 'toast-notification';
+            document.body.appendChild(toast);
+        }
+        toast.textContent = message;
+        toast.classList.add('show');
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, duration);
+    }
+
     // 全局變量
     let socket;
     let userId;
@@ -608,8 +546,15 @@
             const boxCurrentUserId = localStorage.getItem('boxCurrentUserId');
             const boxUserToken = localStorage.getItem(`boxUserToken_${boxCurrentUserId}`);
             
+            console.log('--- 認證檢查 (checkAuthentication) ---');
+            console.log('cookGameToken:', cookGameToken ? cookGameToken.substring(0, 10) + '...' : '無');
+            console.log('cookGameToken full value:', cookGameToken);
+            console.log('boxCurrentUserId:', boxCurrentUserId);
+            console.log('boxUserToken:', boxUserToken ? boxUserToken.substring(0, 10) + '...' : '無');
+
             // 如果沒有任何token，跳轉到主會員登入
             if (!cookGameToken && (!boxCurrentUserId || !boxUserToken)) {
+                console.log('認證失敗: 沒有任何有效的令牌，重定向到 member-login.html');
                 const currentUrl = window.location.href;
                 window.location.href = `/member-login.html?redirect=${encodeURIComponent(currentUrl)}`;
                 return false;
@@ -617,10 +562,12 @@
             
             // 如果有主系統token但沒有遊戲token，跳轉到遊戲登入頁面進行快速登入
             if (!cookGameToken && boxCurrentUserId && boxUserToken) {
+                console.log('認證失敗: 有主系統令牌但沒有遊戲令牌，重定向到 cook-login.html 進行快速登入');
                 window.location.href = 'cook-login.html';
                 return false;
             }
             
+            console.log('認證成功: 找到 cookGameToken，繼續執行。');
             return cookGameToken;
         };
         
@@ -630,52 +577,61 @@
         }
 
         // 獲取用戶資料
-        fetch('/cook-api/users/profile', {
+        console.log('Lobby: 嘗試獲取用戶資料，使用的令牌:', token ? token.substring(0, 10) + '...' : '無');
+        fetch('/cook-api/player/profile', {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
         })
         .then(response => {
             if (!response.ok) {
-                throw new Error('未授權');
+                // 嘗試從後端獲取更詳細的錯誤訊息
+                return response.json().then(err => {
+                    throw new Error(err.error || `伺服器錯誤: ${response.status}`);
+                }).catch(() => {
+                    // 如果回應不是 JSON 或其他問題
+                    throw new Error(`無法連接伺服器，狀態碼: ${response.status}`);
+                });
             }
             return response.json();
         })
         .then(data => {
             // 顯示用戶資料
-            userId = data.user.user_id;
-            username = data.user.display_name || data.user.username;
+            userId = data.user_id;
+            username = data.display_name || data.username;
             
             // Populate user status indicator
             const userStatus = document.getElementById('userStatus');
             const userStatusAvatar = document.getElementById('userStatusAvatar');
             const userStatusName = document.getElementById('userStatusName');
             
-            userStatusAvatar.src = data.user.user_profile_image_url || '/images/a01girlmove.gif';
-            userStatusName.textContent = data.user.display_name || data.user.username;
+            // The profile API doesn't return an avatar URL, so we use a default.
+            userStatusAvatar.src = '/images/a01girlmove.gif';
+            userStatusName.textContent = username;
             userStatus.style.display = 'flex';
             userStatus.addEventListener('click', () => {
-                window.location.href = `member-editor.html?userId=${data.user.user_id}`;
+                window.location.href = `member-editor.html?userId=${userId}`;
             });
             
             // 獲取房間列表
             fetchGameRooms();
             
-            // 獲取每日任務
-            fetchDailyQuests();
-            
             // 連接WebSocket
-            connectWebSocket();
+            // connectWebSocket(); // WSS disabled for single-player focus
 
             // 檢查管理員權限
             checkAdminAccess();
         })
         .catch(error => {
-            console.error('獲取用戶資料失敗:', error);
-            // 返回登入頁
+            console.error('Lobby: 獲取用戶資料失敗:', error);
+            // 移除可能無效的 token
             localStorage.removeItem('cookGameToken');
-            const currentUrl = window.location.href;
-            window.location.href = `/member-login.html?redirect=${encodeURIComponent(currentUrl)}`;
+            // 顯示錯誤提示，並告知用戶將被重定向
+            showToast(`認證失敗: ${error.message}。將在 3 秒後返回登入頁...`, 3000);
+            // 3秒後跳轉到遊戲登入頁
+            setTimeout(() => {
+                window.location.href = 'cook-login.html';
+            }, 3000);
         });
 
         // 註冊事件處理
@@ -683,6 +639,7 @@
         document.getElementById('refreshRooms').addEventListener('click', fetchGameRooms);
         document.getElementById('closeModalBtn').addEventListener('click', () => hideModal('createRoomModal'));
         document.getElementById('submitRoomBtn').addEventListener('click', createRoom);
+        document.getElementById('cleanupRoomsBtn').addEventListener('click', cleanupRooms);
         
         // 註冊導航欄點擊事件
         document.querySelectorAll('.nav-item').forEach(item => {
@@ -873,7 +830,7 @@ function showSystemBroadcast(text) {
                 // 點擊房間卡片加入房間
                 roomCard.addEventListener('click', () => {
                     if (room.status === 'waiting' && room.players < room.maxPlayers) {
-                        joinRoom(room.id);
+                        joinRoom(room);
                     } else if (room.players >= room.maxPlayers) {
                         alert('此房間已滿');
                     } else {
@@ -892,188 +849,89 @@ function showSystemBroadcast(text) {
     }
 
     // 創建房間
-    function createRoom(event) {
-        event.preventDefault();
-        
-        const roomName = document.getElementById('roomName').value;
-        const difficulty = document.getElementById('roomDifficulty').value;
-        const token = localStorage.getItem('cookGameToken');
-        
+    async function createRoom() {
+        const roomNameInput = document.getElementById('roomName');
+        const difficultySelect = document.getElementById('roomDifficulty');
+
+        const roomName = roomNameInput.value.trim();
+        const difficulty = difficultySelect.value;
+
         if (!roomName) {
-            alert('請輸入房間名稱');
+            alert('請輸入房間名稱！');
+            roomNameInput.focus();
             return;
         }
 
-        fetch('/cook-api/games/rooms', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-                name: roomName,
-                difficulty: difficulty
-            })
-        })
-        .then(response => {
-             if (!response.ok) {
-                return response.json().then(err => { throw new Error(err.message || '創建房間失敗') });
-            }
-            return response.json();
-        })
-        .then(data => {
-            // 關閉模態窗
-            hideModal('createRoomModal');
-            
-            // 加入創建的房間
-            if (data && data.id) {
-                joinRoom(data.id);
+        try {
+            const response = await fetch('/cook-api/games/rooms', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('cookGameToken')}`
+                },
+                body: JSON.stringify({ name: roomName, difficulty: difficulty, game_version: 'v3' })
+            });
+
+            if (response.ok) {
+                const room = await response.json();
+                hideModal('createRoomModal');
+                // V3 遊戲不經過房間頁面，直接進入遊戲
+                window.location.href = `/cook-game-v3.html?id=${room.id}`;
             } else {
-                // 為避免混淆，給出更精確的錯誤訊息
-                console.error('創建房間後，伺服器未返回有效的房間ID。收到的數據:', data);
-                throw new Error('無法從伺服器獲取有效的房間ID');
+                const error = await response.json();
+                throw new Error(error.message || '創建房間失敗');
             }
-        })
-        .catch(error => {
-            console.error('創建房間失敗:', error);
-            alert(`創建房間失敗: ${error.message}`);
-        });
+        } catch (error) {
+            showToast('創建房間時出錯: ' + error.message, 5000);
+        }
     }
 
     // 加入房間
-    function joinRoom(roomId) {
-        // 保存房間ID
-        localStorage.setItem('currentRoomId', roomId);
-        
-        // 轉到房間頁面
-        window.location.href = 'cook-game-room.html';
-    }
-
-    // 獲取每日任務
-    function fetchDailyQuests() {
-        const token = localStorage.getItem('cookGameToken');
-        
-        fetch('/cook-api/daily-quests', {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('獲取每日任務失敗');
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.success && data.quests) {
-                displayDailyQuests(data.quests);
-            } else {
-                throw new Error('沒有找到每日任務數據');
-            }
-        })
-        .catch(error => {
-            console.error('獲取每日任務失敗:', error);
-            document.getElementById('questList').innerHTML = 
-                '<p class="error-message">無法獲取每日任務，請稍後再試</p>';
-        });
-    }
-    
-    // 顯示每日任務
-    function displayDailyQuests(quests) {
-        const container = document.getElementById('questList');
-        container.innerHTML = '';
-        
-        if (quests.length === 0) {
-            container.innerHTML = '<p>今天沒有可用的任務</p>';
+    function joinRoom(room) {
+        if (room.status === 'playing') {
+            alert('此房間正在遊戲中，無法加入！');
             return;
         }
         
-        quests.forEach(quest => {
-            const questElement = document.createElement('div');
-            questElement.className = 'quest-item';
-            
-            // 計算進度百分比
-            const progress = Math.min(100, (quest.progress / quest.target) * 100);
-            
-            // 根據任務狀態設置樣式和按鈕
-            let statusClass = '';
-            let actionButton = '';
-            
-            if (quest.status === 'completed') {
-                statusClass = 'quest-completed';
-                actionButton = '<span class="quest-status-text">已完成</span>';
-            } else if (quest.progress >= quest.target) {
-                statusClass = 'quest-ready';
-                actionButton = `<button class="claim-btn" data-quest-id="${quest.id}">領取獎勵</button>`;
-            } else {
-                statusClass = 'quest-active';
-                actionButton = '<span class="quest-status-text">進行中</span>';
-            }
-            
-            questElement.classList.add(statusClass);
-            
-            questElement.innerHTML = `
-                <div class="quest-title">${quest.title}</div>
-                <div class="quest-progress-container">
-                    <div class="quest-progress-text">${quest.progress}/${quest.target}</div>
-                    <div class="quest-progress-bar">
-                        <div class="quest-progress-fill" style="width: ${progress}%"></div>
-                    </div>
-                </div>
-                <div class="quest-reward">獎勵: ${quest.reward_points} 點</div>
-                <div class="quest-action">${actionButton}</div>
-            `;
-            
-            container.appendChild(questElement);
-        });
-        
-        // 為所有領取按鈕添加事件監聽器
-        document.querySelectorAll('.claim-btn').forEach(button => {
-            button.addEventListener('click', claimQuestReward);
-        });
+        // 根據房間的遊戲版本決定跳轉到哪個頁面
+        if (room.game_version === 'v3') {
+            window.location.href = `/cook-game-v3.html?id=${room.id}`;
+        } else {
+            window.location.href = `/cook-game-room.html?id=${room.id}`;
+        }
     }
-    
-    // 領取任務獎勵
-    function claimQuestReward(event) {
-        const questId = event.target.dataset.questId;
-        const token = localStorage.getItem('cookGameToken');
-        
-        fetch(`/cook-api/daily-quests/${questId}/claim`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`
+
+    // 新增：清理房間函數
+    async function cleanupRooms() {
+        if (!confirm('確定要清理所有遊戲房間嗎？這個操作無法復原。')) {
+            return;
+        }
+
+        try {
+            const response = await fetch('/cook-api/games/rooms/cleanup', {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('cookGameToken')}`
+                }
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                showToast(result.message || '房間清理成功！', 5000);
+                fetchGameRooms(); // 重新整理房間列表
+            } else {
+                throw new Error(result.message || '清理房間失敗');
             }
-        })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(err => { throw new Error(err.error || '領取獎勵失敗') });
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
-                // 更新UI顯示
-                event.target.parentElement.innerHTML = '<span class="quest-status-text">已領取</span>';
-                event.target.closest('.quest-item').classList.remove('quest-ready');
-                event.target.closest('.quest-item').classList.add('quest-completed');
-                
-                // 顯示獎勵通知
-                showSystemBroadcast(`恭喜！你獲得了 ${data.rewardPoints} 點獎勵`);
-                
-                // 重新獲取任務列表以更新狀態
-                setTimeout(fetchDailyQuests, 1000);
-            }
-        })
-        .catch(error => {
-            console.error('領取任務獎勵失敗:', error);
-            alert(`領取獎勵失敗: ${error.message}`);
-        });
+        } catch (error) {
+            showToast('清理房間時出錯: ' + error.message, 5000);
+        }
     }
 
     // 在加載用戶資料後檢查是否為管理員
     async function checkAdminAccess() {
         try {
-            const response = await fetch('/api/user/role', {
+            const response = await fetch('/cook-api/player/role', {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('cookGameToken')}`
                 }

@@ -409,6 +409,48 @@
             text-align: left;
             border-bottom: 1px solid var(--border-color);
         }
+
+        .player-status-section {
+            margin-bottom: 30px;
+            background-color: var(--surface-color);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 20px;
+        }
+        .player-status-section h2 {
+            margin-bottom: 15px;
+            color: var(--primary-color);
+        }
+        .player-status-section #player-info {
+            margin-bottom: 20px;
+            font-size: 16px;
+        }
+        #player-titles-table .status-unlocked {
+            color: var(--success-color);
+            font-weight: bold;
+        }
+        #player-titles-table .status-locked {
+            color: var(--text-muted-color);
+        }
+        #player-titles-table .progress-bar {
+            width: 100%;
+            background-color: var(--background-color);
+            border-radius: 4px;
+            overflow: hidden;
+            height: 18px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        #player-titles-table .progress-bar-inner {
+            background-color: var(--secondary-color);
+            height: 100%;
+            text-align: center;
+            line-height: 18px;
+            color: white;
+            font-size: 12px;
+            white-space: nowrap;
+            transition: width 0.5s ease-in-out;
+        }
     </style>
 </head>
 <body data-theme="dark">
@@ -433,9 +475,8 @@
       <h2>管理後台</h2>
       <nav>
         <a href="/cook-admin.html"><i class="fas fa-chart-line"></i> 總覽</a>
-         <a href="/cook-admin-recipes.html"><i class="fas fa-utensils"></i> 食譜管理</a>
+        <a href="/cook-admin-recipes-v3.html"><i class="fas fa-utensils"></i> 食譜管理</a>
         <a href="/cook-admin-titles.html" class="active"><i class="fas fa-trophy"></i> 稱號管理</a>
-        <a href="/cook-admin-quests.html"><i class="fas fa-tasks"></i> 任務管理</a>
         <a href="/cook-lobby.html"><i class="fas fa-gamepad"></i> 返回遊戲</a>
       </nav>
     </div>
@@ -444,9 +485,32 @@
   <div class="main-content">
     <header>
         <h1>稱號管理</h1>
+        <button id="export-btn" class="primary-btn">匯出資料</button>
     </header>
 
     <main class="page-content">
+      <!-- Player Title Status Section -->
+      <div id="player-title-status-section" class="player-status-section">
+        <h2>玩家稱號預覽 (Player ID: 1)</h2>
+        <div id="player-info" class="loading">載入玩家資訊中...</div>
+        <div class="titles-list">
+          <table id="player-titles-table">
+            <thead>
+              <tr>
+                <th>稱號名稱</th>
+                <th>解鎖條件</th>
+                <th style="width: 25%;">目前進度</th>
+                <th>狀態</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- 由JavaScript動態生成 -->
+              <tr><td colspan="4" class="loading">載入稱號狀態...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
       <div class="info-box">
         <p>此頁面用於管理遊戲中所有可用的稱號。稱號的解鎖是根據玩家的遊戲數據自動觸發的。</p>
         <p>
@@ -676,6 +740,8 @@
   </div>
   
   <script>
+    let allTitlesData = []; // 用於存儲所有稱號數據以供匯出
+
     // 獲取用戶令牌的函數
     function getUserToken() {
       const userId = localStorage.getItem('boxCurrentUserId');
@@ -827,6 +893,7 @@
     
     // 顯示稱號列表
     function displayTitles(titles) {
+      allTitlesData = titles; // 存儲數據供匯出功能使用
       const tbody = document.querySelector('#titles-table tbody');
       tbody.innerHTML = '';
       
@@ -873,6 +940,9 @@
       document.querySelectorAll('.delete-btn').forEach(btn => {
         btn.addEventListener('click', () => deleteTitle(btn.dataset.id));
       });
+
+      // 載入指定玩家的稱號狀態
+      loadPlayerTitleStatus(1);
     }
     
     // 獲取稱號稀有度文字
@@ -900,6 +970,80 @@
       return conditionMap[condition] || condition;
     }
     
+    // 載入指定玩家的稱號狀態
+    async function loadPlayerTitleStatus(playerId) {
+      const playerInfoDiv = document.querySelector('#player-info');
+      const playerTbody = document.querySelector('#player-titles-table tbody');
+      
+      try {
+        const token = getUserToken();
+        if (!token) {
+          playerInfoDiv.textContent = '認證失敗，無法載入玩家資料。';
+          return;
+        }
+
+        const playerRes = await fetch(`/cook-api/admin/player/${playerId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!playerRes.ok) {
+          if (playerRes.status === 404) {
+            throw new Error(`找不到 ID 為 ${playerId} 的玩家`);
+          }
+          throw new Error(`獲取玩家資料失敗 (${playerRes.status})`);
+        }
+        const playerData = await playerRes.json();
+        
+        playerInfoDiv.innerHTML = `
+          <strong>玩家:</strong> ${playerData.display_name || playerData.username} | 
+          <strong>等級:</strong> ${playerData.level} | 
+          <strong>積分:</strong> ${playerData.points} | 
+          <strong>遊戲場次:</strong> ${playerData.games_played || 0} | 
+          <strong>完成訂單:</strong> ${playerData.orders_completed || 0}
+        `;
+        playerInfoDiv.classList.remove('loading');
+
+        if (allTitlesData.length === 0) {
+          playerTbody.innerHTML = '<tr><td colspan="4" class="error">稱號列表尚未載入，無法比對。</td></tr>';
+          return;
+        }
+        
+        playerTbody.innerHTML = ''; // 清空
+        allTitlesData.forEach(title => {
+          const row = document.createElement('tr');
+          const playerStatValue = playerData[title.unlock_condition] || 0;
+          const unlockValue = title.unlock_value;
+          const isUnlocked = playerStatValue >= unlockValue;
+          
+          const progressPercent = Math.min(100, (playerStatValue / unlockValue) * 100);
+
+          row.innerHTML = `
+            <td>
+                <span style="color: ${title.color_code || '#ffffff'}">${title.title_name}</span>
+            </td>
+            <td>${getConditionText(title.unlock_condition)} ${unlockValue}</td>
+            <td>
+              <div class="progress-bar">
+                <div class="progress-bar-inner" style="width: ${progressPercent}%">${Math.round(progressPercent)}%</div>
+              </div>
+              <small>(${playerStatValue} / ${unlockValue})</small>
+            </td>
+            <td>
+              <span class="status-${isUnlocked ? 'unlocked' : 'locked'}">
+                ${isUnlocked ? '✔ 已解鎖' : '❌ 未解鎖'}
+              </span>
+            </td>
+          `;
+          playerTbody.appendChild(row);
+        });
+
+      } catch (error) {
+        console.error(`載入玩家 ${playerId} 稱號狀態失敗:`, error);
+        playerInfoDiv.textContent = `載入玩家資料失敗: ${error.message}`;
+        playerInfoDiv.classList.add('error');
+      }
+    }
+
     // 編輯稱號
     async function editTitle(id) {
       try {
@@ -1000,6 +1144,24 @@
       }
     }
     
+    // 匯出稱號資料
+    async function exportTitles() {
+      if (allTitlesData.length === 0) {
+        showNotification('沒有資料可匯出', 'warning');
+        return;
+      }
+
+      try {
+        const jsonData = JSON.stringify(allTitlesData, null, 2);
+        await navigator.clipboard.writeText(jsonData);
+        showNotification('稱號資料已成功複製到剪貼簿！');
+      } catch (error) {
+        console.error('匯出資料失敗:', error);
+        showNotification('無法複製到剪貼簿，請手動複製控制台中的內容', 'error');
+        console.log(JSON.stringify(allTitlesData, null, 2)); // 在控制台打印，方便手動複製
+      }
+    }
+
     // 頁面載入時獲取稱號列表
     document.addEventListener('DOMContentLoaded', () => {
       // 更新用戶狀態
@@ -1044,33 +1206,62 @@
           modal.style.display = 'none';
         }
       });
+      document.getElementById('export-btn').addEventListener('click', exportTitles);
     });
     
     // 更新用戶狀態顯示
-    function updateUserStatus() {
-      // 檢查是否有已保存的登入信息
-      const savedUserId = localStorage.getItem('boxCurrentUserId');
-      const savedUserAvatarUrl = localStorage.getItem('boxCurrentUserAvatar');
-      const savedUserName = localStorage.getItem('boxCurrentDisplayName') || localStorage.getItem('boxCurrentUsername');
-      
-      const userAvatar = document.getElementById('user-avatar');
-      const userName = document.getElementById('user-username');
-      
-      if (savedUserId && savedUserName) {
-        userAvatar.src = savedUserAvatarUrl || '/images/a01girlmove.gif';
-        userName.textContent = savedUserName;
-      } else {
-        userAvatar.src = '/images/a01girlmove.gif';
-        userName.textContent = '未登入';
+    async function updateUserStatus() {
+        const userAvatarEl = document.getElementById('user-avatar');
+        const userNameEl = document.getElementById('user-username');
+        const userLevelEl = document.getElementById('user-level');
+
+        // 1. 先從 localStorage 快速載入基本資料，避免畫面空白
+        const savedUserName = localStorage.getItem('boxCurrentDisplayName') || localStorage.getItem('boxCurrentUsername');
+        const savedUserAvatarUrl = localStorage.getItem('boxCurrentUserAvatar');
         
-        // 提示用戶登入
-        if (!window.location.pathname.includes('cook-login.html')) {
-            showNotification('請先登入', 'error');
-            setTimeout(() => {
-                window.location.href = '/cook-login.html?redirect=' + window.location.pathname;
-            }, 2000);
+        if (savedUserName) {
+            userNameEl.textContent = savedUserName;
+            userAvatarEl.src = savedUserAvatarUrl || '/images/a01girlmove.gif';
+        } else {
+            userNameEl.textContent = '未登入';
         }
-      }
+        userLevelEl.textContent = '--'; // 預設顯示
+
+        // 2. 獲取令牌，準備從後端 API 獲取最新資料
+        const token = getUserToken();
+        if (!token) {
+            // 如果沒有令牌，後續的權限檢查會處理跳轉，這裡不重複操作
+            return;
+        }
+
+        // 3. 呼叫後端 API
+        try {
+            const response = await fetch('/cook-api/player/profile', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`獲取個人資料失敗: ${response.status}`);
+            }
+
+            const profile = await response.json();
+            
+            // 4. 使用從 API 獲取的最新資料更新介面
+            userNameEl.textContent = profile.display_name || profile.username;
+            userLevelEl.textContent = profile.level;
+            userAvatarEl.src = profile.avatar_url || savedUserAvatarUrl || '/images/a01girlmove.gif';
+
+            // 5. (可選) 將最新資料同步回 localStorage
+            if (profile.display_name) localStorage.setItem('boxCurrentDisplayName', profile.display_name);
+            if (profile.username) localStorage.setItem('boxCurrentUsername', profile.username);
+            if (profile.avatar_url) localStorage.setItem('boxCurrentUserAvatar', profile.avatar_url);
+
+        } catch (error) {
+            console.error('更新用戶狀態時出錯:', error);
+            userLevelEl.textContent = '錯誤'; // 如果出錯，顯示錯誤提示
+        }
     }
     
     // 顏色選擇器同步

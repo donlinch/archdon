@@ -23,7 +23,7 @@
              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
              updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
          );
-         ```
+         ``` 
        
        - **欄位說明**:
          - recipe_id: 食譜唯一標識符

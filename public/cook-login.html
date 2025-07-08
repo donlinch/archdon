@@ -546,7 +546,7 @@
           const titlesList = document.getElementById('titles-list');
           titlesList.innerHTML = '<div class="loading">載入中...</div>';
           
-          const response = await fetch('/api/user/titles', {
+          const response = await fetch('/cook-api/player/titles', {
             headers: {
               'Authorization': `Bearer ${localStorage.getItem('cookGameToken')}`
             }
@@ -600,7 +600,7 @@
       // 裝備稱號
       async function equipTitle(titleId) {
         try {
-          const response = await fetch(`/api/user/titles/${titleId}/equip`, {
+          const response = await fetch(`/cook-api/player/titles/${titleId}/equip`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${localStorage.getItem('cookGameToken')}`
@@ -657,7 +657,7 @@
       
       // 頁面載入時執行
       document.addEventListener('DOMContentLoaded', () => {
-        loadUserTitles();
+        // loadUserTitles(); // 暫時註釋掉，避免干擾登入流程
       });
       </script>
 
@@ -891,7 +891,7 @@
                             
                             // 接著登入料理急先鋒遊戲系統
                             try {
-                                const cookResponse = await fetch('/cook-api/auth/login', {
+                                const cookResponse = await fetch('/cook-api/player/login', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ username, password })

@@ -294,9 +294,8 @@
             <h2>管理後台</h2>
             <nav>
                 <a href="/cook-admin.html"><i class="fas fa-chart-line"></i> 總覽</a>
-                 <a href="/cook-admin-recipes-v3.html" class="active"><i class="fas fa-utensils"></i> 食譜管理 V3</a>
+                <a href="/cook-admin-recipes-v3.html" class="active"><i class="fas fa-drafting-compass"></i> V3 食譜</a>
                 <a href="/cook-admin-titles.html"><i class="fas fa-trophy"></i> 稱號管理</a>
-                <a href="/cook-admin-quests.html"><i class="fas fa-tasks"></i> 任務管理</a>
                 <a href="/cook-lobby.html"><i class="fas fa-gamepad"></i> 返回遊戲</a>
             </nav>
         </div>
@@ -1830,7 +1829,7 @@
                 
                 // 檢查是否是 V3 規則錯誤
                 if (result.ruleViolation) {
-                    errorMessage = `V3 規則錯誤: ${result.ruleViolation}`;
+                    errorMessage = `${result.ruleViolation}`;
                 }
                 
                 updateSimulationResults(errorMessage, 'error');
