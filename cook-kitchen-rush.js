@@ -7,9 +7,61 @@ const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const WebSocket = require('ws');
 const cors = require('cors');
+const { Pool } = require('pg');
+
+// =================================================================
+//  診斷函數：查詢特定食譜的結構 (新增於 2025-07-08)
+// =================================================================
+async function diagnoseRecipeStructure(pool) {
+    console.log('\n\n\n');
+    console.log('##################################################');
+    console.log('###               資料庫結構診斷               ###');
+    console.log('##################################################');
+    
+    try {
+        const client = await pool.connect();
+        const recipeNameToFind = 'make_seafood_pasta';
+        
+        console.log(`[DIAGNOSE] 正在查詢 recipe_id = '${recipeNameToFind}' 的資料...`);
+
+        const query = 'SELECT * FROM cook_recipes_v3 WHERE recipe_id = $1 LIMIT 1';
+        const result = await client.query(query, [recipeNameToFind]);
+
+        if (result.rows.length > 0) {
+            const recipeData = result.rows[0];
+            console.log(`[DIAGNOSE] ✅ 成功找到食譜!`);
+            console.log('[DIAGNOSE] 欄位結構與資料內容如下:');
+            console.log('--------------------------------------------------');
+            for (const key in recipeData) {
+                const value = recipeData[key];
+                const valueType = typeof value;
+                const valueContent = JSON.stringify(value);
+                console.log(`  - 欄位: ${key.padEnd(20)} | 類型: ${valueType.padEnd(10)} | 內容: ${valueContent}`);
+            }
+            console.log('--------------------------------------------------');
+        } else {
+            console.log(`[DIAGNOSE] ⚠️ 警告: 未找到 recipe_id 為 '${recipeNameToFind}' 的食譜。`);
+        }
+        client.release();
+    } catch (error) {
+        console.error(`[DIAGNOSE] ❌ 診斷過程中發生錯誤: ${error.message}`);
+        if (error.code === '42P01') {
+             console.error('[DIAGNOSE] 錯誤提示: "cook_recipes_v3" 資料表不存在。');
+        }
+    } finally {
+        console.log('##################################################');
+        console.log('###               診斷結束                   ###');
+        console.log('##################################################\n\n\n');
+    }
+}
 
 // 創建遊戲的Express應用實例
 function initializeCookGame(pool) {
+    // 在伺服器初始化時，立即執行診斷函數
+    diagnoseRecipeStructure(pool).catch(err => {
+        console.error('[DIAGNOSE] 執行診斷函數時發生未處理的錯誤:', err);
+    });
+
     const cookGameApp = express();
     cookGameApp.use(express.json());
     cookGameApp.use(cors());
@@ -1903,6 +1955,429 @@ function initializeCookGame(pool) {
 
     // 其他路由和中間件...
 
+    // 模擬烹飪過程
+    cookGameApp.post('/v3/simulate', authenticateToken, async (req, res) => {
+        try {
+            const { items, cookingMethod } = req.body;
+            
+            if (!items || !Array.isArray(items) || items.length === 0) {
+                return res.status(400).json({ success: false, error: '請提供有效的物品列表' });
+            }
+            
+            if (!cookingMethod) {
+                return res.status(400).json({ success: false, error: '請提供烹飪方法' });
+            }
+            
+            // 獲取物品詳情
+            const itemIds = items.map(id => `'${id}'`).join(',');
+            const itemsQuery = `SELECT * FROM cook_items_v3 WHERE item_id IN (${itemIds})`;
+            const itemsResult = await pool.query(itemsQuery);
+            
+            if (itemsResult.rows.length !== items.length) {
+                return res.status(400).json({ success: false, error: '提供的物品ID中有無效項目' });
+            }
+            
+            // 檢查是否有符合條件的食譜
+            const inputItems = itemsResult.rows;
+            const outputTier = Math.min(2, Math.max(...inputItems.map(item => item.item_tier)) + 1);
+            
+            // 使用 findMatchingRecipe 函數查找匹配的食譜
+            const recipe = await findMatchingRecipe(pool, items, cookingMethod, outputTier);
+            
+            if (!recipe) {
+                return res.json({ 
+                    success: false, 
+                    error: '無法找到匹配的食譜',
+                    ruleViolation: '這些食材無法用此方式烹飪成功。請嘗試其他組合或烹飪方法。'
+                });
+            }
+            
+            // 獲取輸出物品詳情
+            const outputItemQuery = `SELECT * FROM cook_items_v3 WHERE item_id = $1`;
+            const outputItemResult = await pool.query(outputItemQuery, [recipe.output_item_id]);
+            
+            if (outputItemResult.rows.length === 0) {
+                return res.status(500).json({ success: false, error: '無法獲取輸出物品詳情' });
+            }
+            
+            const outputItem = outputItemResult.rows[0];
+            
+            // 返回模擬結果
+            res.json({
+                success: true,
+                outputItem,
+                recipe: {
+                    id: recipe.id,
+                    output_item_id: recipe.output_item_id,
+                    cooking_method: recipe.cooking_method,
+                    cook_time_sec: recipe.cook_time_sec
+                }
+            });
+            
+        } catch (error) {
+            console.error('模擬烹飪過程時出錯:', error);
+            res.status(500).json({ success: false, error: '伺服器錯誤' });
+        }
+    });
+    
+    // 根據輸出物品獲取單個食譜
+    cookGameApp.post('/v3/recipe-by-output', authenticateToken, async (req, res) => {
+        const { outputItemId } = req.body;
+        if (!outputItemId) {
+            return res.status(400).json({ success: false, error: '缺少 outputItemId' });
+        }
+        
+        console.log(`[DEBUG] recipe-by-output 接收到請求，outputItemId: ${outputItemId}, 類型: ${typeof outputItemId}`);
+
+        let client;
+        try {
+            client = await pool.connect();
+            
+            // 優先使用 item_id 查詢
+            let query = `SELECT * FROM cook_recipes_v3 WHERE output_item_id::text = $1::text LIMIT 1`;
+            let params = [outputItemId];
+            console.log(`[DEBUG] 執行查詢 (by item_id): `, query, ', 參數:', params);
+            let result = await client.query(query, params);
+
+            // 如果用 item_id 查不到，再嘗試用 item_name 查詢
+            if (result.rows.length === 0) {
+                console.log(`[DEBUG] 使用 item_id 未找到食譜，嘗試使用 item_name 查詢...`);
+                // 修正：在 cook_recipes_v3 中查找中文名，或者先在 cook_items_v3 找到 item_id
+                // 這裡我們假設 output_item_id 欄位可能存的是中文名
+                query = `
+                    SELECT r.* 
+                    FROM cook_recipes_v3 r
+                    JOIN cook_items_v3 i ON r.output_item_id = i.item_name
+                    WHERE i.item_id = $1 OR i.item_name = $1
+                    LIMIT 1
+                `;
+                params = [outputItemId];
+                console.log(`[DEBUG] 執行查詢 (by item_name or item_id in items table): `, query, ', 參數:', params);
+                result = await client.query(query, params);
+
+                // 如果還是找不到，最後直接在 recipes 表的 output_item_id 裡 fuzzy search 中文名
+                if (result.rows.length === 0) {
+                   console.log(`[DEBUG] 使用 item_name JOIN 查詢仍未找到食譜，嘗試直接在 recipe 表中模糊搜尋...`);
+                   query = `SELECT * FROM cook_recipes_v3 WHERE output_item_id LIKE $1 LIMIT 1`;
+                   params = [`%${outputItemId}%`];
+                   console.log(`[DEBUG] 執行模糊查詢: `, query, ', 參數:', params);
+                   result = await client.query(query, params);
+                }
+            }
+            
+            console.log(`[DEBUG] 查詢結果: ${result.rows.length} 行`);
+
+            if (result.rows.length > 0) {
+                const recipe = result.rows[0];
+                // 將 JSON 字符串的 requirements 解析為對象
+                if (typeof recipe.requirements === 'string') {
+                    try {
+                        recipe.requirements = JSON.parse(recipe.requirements);
+                    } catch (e) {
+                        console.error('解析食譜需求失敗:', e);
+                        recipe.requirements = [];
+                    }
+                }
+                res.json({ success: true, recipe });
+            } else {
+                console.log(`[DEBUG] 未找到 outputItemId 為 ${outputItemId} 的食譜`);
+                res.status(404).json({ success: false, error: `未找到食譜: ${outputItemId}` });
+            }
+        } catch (error) {
+            console.error('獲取食譜失敗:', error);
+            res.status(500).json({ success: false, error: '內部伺服器錯誤' });
+        } finally {
+            if (client) client.release();
+        }
+    });
+
+    // 根據輸出物品獲取多個可能的食譜
+    cookGameApp.post('/v3/recipes-by-output', authenticateToken, async (req, res) => {
+        try {
+            const { outputItemId } = req.body;
+            
+            console.log(`[DEBUG] /v3/recipes-by-output: 接收到請求，outputItemId: ${outputItemId}`);
+            
+            if (!outputItemId) {
+                return res.status(400).json({ success: false, error: '缺少必要參數: outputItemId' });
+            }
+
+            // 根據物品的 item_id (字串)，JOIN 食譜表，找出能產出此物品的食譜
+            const query = `
+                SELECT r.* 
+                FROM cook_recipes_v3 r
+                JOIN cook_items_v3 i ON r.output_item_id = i.id
+                WHERE i.item_id = $1
+            `;
+
+            console.log(`[DEBUG] 執行 JOIN 查詢: ${query.replace(/\s+/g, ' ')}, 參數: [${outputItemId}]`);
+            const result = await pool.query(query, [outputItemId]);
+            
+            if (result.rows.length === 0) {
+                console.log(`[DEBUG] 未找到產出物為 ${outputItemId} 的食譜`);
+                return res.status(404).json({ success: false, error: '未找到對應的食譜' });
+            }
+            
+            // 查詢成功，直接使用資料庫返回的 requirements 欄位
+            const recipes = result.rows.map(recipe => ({
+                id: recipe.id,
+                output_item_id: recipe.output_item_id,
+                cooking_method: recipe.cooking_method,
+                cook_time_sec: recipe.cook_time_sec || 3,
+                requirements: recipe.requirements || [] // 使用 'requirements' 欄位，如果為 null 則返回空陣列
+            }));
+            
+            console.log(`[DEBUG] JOIN查詢成功，返回 ${recipes.length} 個食譜`);
+            res.json({ success: true, recipes });
+
+        } catch (error) {
+            console.error('[/v3/recipes-by-output] 獲取食譜列表失敗:', error);
+            res.status(500).json({ 
+                success: false, 
+                error: `伺服器內部錯誤: ${error.message}`
+            });
+        }
+    });
+
+    // 從數據庫直接查詢食譜（後備方法）
+    cookGameApp.post('/v3/db-recipes-by-output', authenticateToken, async (req, res) => {
+        try {
+            const { outputItemId, isStringId } = req.body;
+            
+            console.log(`[DEBUG] db-recipes-by-output 接收到請求，outputItemId: ${outputItemId}, 類型: ${typeof outputItemId}, isStringId: ${isStringId}`);
+            
+            if (!outputItemId) {
+                return res.status(400).json({ success: false, error: '缺少必要參數' });
+            }
+            
+            // 簡化：直接查詢 cook_recipes_v3，不再檢查不存在的表
+            console.log(`[DEBUG] 檢查資料庫表結構...`);
+            
+            // 檢查 cook_recipes_v3 表是否存在
+            const tableCheckQuery = `
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_schema = 'public' 
+                    AND table_name = 'cook_recipes_v3'
+                );
+            `;
+            const tableCheckResult = await pool.query(tableCheckQuery);
+            const recipesTableExists = tableCheckResult.rows[0].exists;
+            
+            console.log(`[DEBUG] cook_recipes_v3 表存在: ${recipesTableExists}`);
+            
+            if (!recipesTableExists) {
+                return res.status(500).json({ 
+                    success: false, 
+                    error: '數據庫表結構不完整: cook_recipes_v3 表不存在',
+                    table_status: { cook_recipes_v3: false }
+                });
+            }
+            
+            // 簡化：移除對 cook_recipe_requirements_v3 的檢查
+            
+            // 檢查 cook_items_v3 表是否存在
+            const itemsTableCheckQuery = `
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_schema = 'public' 
+                    AND table_name = 'cook_items_v3'
+                );
+            `;
+            const itemsTableCheckResult = await pool.query(itemsTableCheckQuery);
+            const itemsTableExists = itemsTableCheckResult.rows[0].exists;
+            
+            console.log(`[DEBUG] cook_items_v3 表存在: ${itemsTableExists}`);
+            
+            // 簡化查詢邏輯，不再引用 cook_recipe_requirements_v3
+            let query;
+            let params;
+            
+            if (isStringId === true && itemsTableExists) {
+                // 如果前端明確指出這是字符串ID，則使用JOIN查詢通過item_id查找
+                query = `
+                    SELECT r.id, r.output_item_id, r.cooking_method, r.cook_time_sec
+                    FROM cook_recipes_v3 r
+                    LEFT JOIN cook_items_v3 i ON r.output_item_id = i.id
+                    WHERE i.item_id = $1
+                `;
+                params = [outputItemId];
+                console.log(`[DEBUG] 使用JOIN查詢通過item_id查找: ${outputItemId}`);
+            } else {
+                // 嘗試多種方式查找匹配的食譜
+                query = `
+                    SELECT r.id, r.output_item_id, r.cooking_method, r.cook_time_sec
+                    FROM cook_recipes_v3 r
+                    WHERE r.output_item_id::text = $1::text
+                       OR r.output_item_id = $1::integer
+                `;
+                params = [outputItemId];
+            }
+            
+            console.log(`[DEBUG] 執行查詢: ${query.replace(/\s+/g, ' ')}, 參數: [${params}]`);
+            
+            const result = await pool.query(query, params);
+            
+            console.log(`[DEBUG] 查詢結果: ${result.rowCount} 行`);
+            
+            if (result.rows.length === 0) {
+                console.log(`[DEBUG] 未找到 outputItemId 為 ${outputItemId} 的食譜`);
+                
+                // 簡化備用查詢，不再引用 cook_recipe_requirements_v3
+                if (!isStringId && itemsTableExists) {
+                    const fallbackQuery = `
+                        SELECT r.id, r.output_item_id, r.cooking_method, r.cook_time_sec
+                        FROM cook_recipes_v3 r
+                        LEFT JOIN cook_items_v3 i ON r.output_item_id = i.id
+                        WHERE i.item_id = $1
+                    `;
+                    
+                    console.log(`[DEBUG] 嘗試備用查詢: ${fallbackQuery.replace(/\s+/g, ' ')}, 參數: [${outputItemId}]`);
+                    
+                    const fallbackResult = await pool.query(fallbackQuery, [outputItemId]);
+                    
+                    if (fallbackResult.rows.length > 0) {
+                        console.log(`[DEBUG] 備用查詢成功，找到 ${fallbackResult.rowCount} 行`);
+                        
+                        // 簡化：返回結果，不再查詢需求
+                        const formattedRecipes = fallbackResult.rows.map(recipe => ({
+                            id: recipe.id,
+                            output_item_id: recipe.output_item_id,
+                            cooking_method: recipe.cooking_method,
+                            cook_time_sec: recipe.cook_time_sec || 3,
+                            requirements: []
+                        }));
+                        
+                        return res.json({ success: true, recipes: formattedRecipes });
+                    }
+                } else if (isStringId === true) {
+                    // 如果isStringId為true但第一次查詢失敗，嘗試反向查詢
+                    const reverseQuery = `
+                        SELECT r.id, r.output_item_id, r.cooking_method, r.cook_time_sec
+                        FROM cook_recipes_v3 r
+                        WHERE r.output_item_id::text = $1::text
+                    `;
+                    
+                    console.log(`[DEBUG] isStringId為true但JOIN查詢失敗，嘗試直接比較: ${reverseQuery.replace(/\s+/g, ' ')}, 參數: [${outputItemId}]`);
+                    
+                    const reverseResult = await pool.query(reverseQuery, [outputItemId]);
+                    
+                    if (reverseResult.rows.length > 0) {
+                        console.log(`[DEBUG] 反向查詢成功，找到 ${reverseResult.rowCount} 行`);
+                        
+                        // 簡化：返回結果，不再查詢需求
+                        const formattedRecipes = reverseResult.rows.map(recipe => ({
+                            id: recipe.id,
+                            output_item_id: recipe.output_item_id,
+                            cooking_method: recipe.cooking_method,
+                            cook_time_sec: recipe.cook_time_sec || 3,
+                            requirements: []
+                        }));
+                        
+                        return res.json({ success: true, recipes: formattedRecipes });
+                    }
+                }
+                
+                return res.status(404).json({ 
+                    success: false, 
+                    error: '未找到對應的食譜',
+                    table_status: {
+                        cook_recipes_v3: recipesTableExists,
+                        cook_items_v3: itemsTableExists
+                    }
+                });
+            }
+            
+            // 簡化：返回結果，不再查詢需求
+            const formattedRecipes = result.rows.map(recipe => ({
+                id: recipe.id,
+                output_item_id: recipe.output_item_id,
+                cooking_method: recipe.cooking_method,
+                cook_time_sec: recipe.cook_time_sec || 3,
+                requirements: []
+            }));
+            
+            console.log(`[DEBUG] 返回格式化食譜列表: ${JSON.stringify(formattedRecipes)}`);
+            
+            res.json({ success: true, recipes: formattedRecipes });
+        } catch (error) {
+            console.error('從數據庫查詢食譜失敗:', error);
+            console.error(`[DEBUG] 錯誤詳情: ${JSON.stringify({
+                message: error.message,
+                code: error.code,
+                stack: error.stack
+            })}`);
+            res.status(500).json({ 
+                success: false, 
+                error: `從數據庫查詢食譜失敗: ${error.message}`,
+                details: `錯誤碼: ${error.code}, 位置: ${error.position || 'N/A'}, 例程: ${error.routine || 'N/A'}`
+            });
+        }
+    });
+    
+    // 輔助函數：處理食譜查詢結果
+    function processRecipeResults(rows) {
+        const recipesMap = {};
+        
+        rows.forEach(row => {
+            if (!recipesMap[row.id]) {
+                recipesMap[row.id] = {
+                    id: row.id,
+                    output_item_id: row.output_item_id,
+                    cooking_method: row.cooking_method,
+                    cook_time_sec: row.cook_time_sec || 3,
+                    requirements: []
+                };
+            }
+            
+            if (row.item_id) {
+                recipesMap[row.id].requirements.push({
+                    item_id: row.item_id,
+                    quantity: row.quantity
+                });
+            }
+        });
+        
+        return recipesMap;
+    }
+
+    // 獲取所有食譜數據的新端點
+    cookGameApp.get('/v3/all-recipes', authenticateToken, async (req, res) => {
+        try {
+            console.log(`[DEBUG] /v3/all-recipes: 接收到獲取所有食譜的請求`);
+            
+            // 直接查詢所有食譜，並包含 'requirements' 欄位
+            const query = `
+                SELECT id, recipe_name, output_item_id, cooking_method, cook_time_sec, requirements
+                FROM cook_recipes_v3
+                ORDER BY id
+            `;
+            
+            console.log(`[DEBUG] 執行查詢所有食譜: ${query.replace(/\s+/g, ' ')}`);
+            const result = await pool.query(query);
+            
+            console.log(`[DEBUG] 查詢結果: ${result.rowCount} 行`);
+            
+            // 將查詢結果直接映射，包含完整的 requirements
+            const recipes = result.rows.map(row => ({
+                id: row.id,
+                recipe_name: row.recipe_name,
+                output_item_id: row.output_item_id,
+                cooking_method: row.cooking_method,
+                cook_time_sec: row.cook_time_sec || 3,
+                requirements: row.requirements || []
+            }));
+            
+            console.log(`[DEBUG] 返回所有食譜 (包含需求資訊): ${recipes.length} 個`);
+            res.json({ success: true, recipes });
+
+        } catch (error) {
+            console.error('[/v3/all-recipes] 獲取所有食譜失敗:', error);
+            res.status(500).json({ success: false, error: `伺服器內部錯誤: ${error.message}` });
+        }
+    });
+
+    // 返回Express應用實例
     return cookGameApp;
 }
 
