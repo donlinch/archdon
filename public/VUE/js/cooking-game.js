@@ -8,183 +8,6 @@ const { ElMessage, ElNotification } = ElementPlus;
 
 // 創建 Vue 應用
 const app = createApp({
-    template: `
-        <div class="game-container" @mousemove="onGameAreaMouseMove" @click="onGameAreaClick">
-            <!-- 跟隨滑鼠的物品圖示 -->
-            <div v-if="heldItem" class="item-follower" :style="followerStyle">
-                <div class="item-card" :class="'tier-' + heldItem.tier">
-                    <div class="item-image">{{ heldItem.symbol }}</div>
-                    <div class="item-name">{{ heldItem.name }}</div>
-                </div>
-            </div>
-
-            <!-- 遊戲結束遮罩 -->
-            <div v-if="isGameOver" class="game-over-overlay">
-                <div class="game-over-modal">
-                    <h2>遊戲結束</h2>
-                    <p>時間到！</p>
-                    <el-button type="primary" size="large" @click="resetGame">重新開始</el-button>
-                </div>
-            </div>
-            
-            <!-- 烹飪動畫 -->
-            <div v-if="showCookingAnimation" class="cooking-animation-overlay">
-                <div class="cooking-animation">
-                    <span v-if="cookingAnimationMethod === 'grill'" class="grill-animation">🔥</span>
-                    <span v-if="cookingAnimationMethod === 'pan-fry'" class="pan-fry-animation">🍳</span>
-                    <span v-if="cookingAnimationMethod === 'boil'" class="boil-animation">🍲</span>
-                    <span v-if="cookingAnimationMethod === 'deep-fry'" class="deep-fry-animation">🍤</span>
-                    <span v-if="cookingAnimationMethod === 'assembly'" class="assembly-animation">👨‍🍳</span>
-                </div>
-                <div class="cooking-text">正在{{ getMethodDisplayName(cookingAnimationMethod) }}...</div>
-            </div>
-            
-            <!-- 成功訊息 -->
-            <div v-if="showSuccessMessage" class="success-message">
-                <div class="success-title">製作成功！</div>
-                <div class="success-symbol">{{ successItem.symbol }}</div>
-                <div>{{ successItem.name }}</div>
-            </div>
-
-            <!-- 食譜提示 -->
-            <div v-if="showRecipeTooltip" class="recipe-tooltip" :style="{ top: recipeTooltipPosition.y + 'px', left: recipeTooltipPosition.x + 'px' }" ref="recipeTooltipRef">
-                <div v-if="recipeTooltipContent">
-                    <div class="recipe-title">
-                        合成【{{ recipeTooltipContent.output.name }}】需要:
-                    </div>
-                    <div v-for="req in recipeTooltipContent.requirements" :key="req.itemId" class="recipe-ingredient">
-                        <span class="recipe-symbol">{{ findItemById(req.itemId)?.symbol }}</span>
-                        <span>{{ findItemById(req.itemId)?.name }} x {{ req.quantity }}</span>
-                    </div>
-                    <div class="recipe-method">
-                        方法: {{ getMethodDisplayName(recipeTooltipContent.method) }}
-                    </div>
-                </div>
-            </div>
-
-            <!-- 頂部資訊欄 -->
-            <div class="game-header">
-                <div class="game-title">料理急先鋒</div>
-                <div class="game-timer">遊戲時間: {{ formatTime(gameTimeRemaining) }}</div>
-            </div>
-            
-            <!-- 主要遊戲區域 -->
-            <div class="game-main">
-                <!-- 目標料理區域 -->
-                <div class="target-dish-section">
-                    <!-- 目標 1 -->
-                    <div class="target-container" ref="targetDish1Ref">
-                         <div v-if="targetDish1" class="target-dish" @mouseover="showRecipeInfo($event, targetDish1)" @mouseleave="hideRecipeInfo">
-                            <div class="item-card large-item" :class="'tier-' + targetDish1.tier">
-                                <div class="item-image">{{ targetDish1.symbol }}</div>
-                                <div class="item-name">{{ targetDish1.name }}</div>
-                            </div>
-                            <div class="timer-bar-container" :data-percentage="timerStatus1">
-                                <div class="timer-bar" :style="{ width: timerPercentage1 + '%' }"></div>
-                                <div class="timer-text">{{ formatTime(timeRemaining1) }}</div>
-                            </div>
-                        </div>
-                        <div class="target-slots">
-                            <div v-for="(_, index) in targetSlots1" :key="'ts1-'+index" class="target-slot" @click="handleTargetClick('targetSlot1', index)">
-                                <div v-if="targetSlots1[index]" class="item-card" :class="'tier-' + targetSlots1[index].tier" @click.stop="handleItemClick(targetSlots1[index], { from: 'targetSlot1', index })" @mouseover="showRecipeInfo($event, targetSlots1[index])" @mouseleave="hideRecipeInfo">
-                                    <div class="item-image">{{ targetSlots1[index].symbol }}</div>
-                                    <div class="item-name">{{ targetSlots1[index].name }}</div>
-                                </div>
-                                <div v-else class="empty-slot">
-                                    <div class="slot-number">{{ index + 1 }}</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="assembly-btn-container">
-                            <button class="assembly-btn" @click="assembleTargetSlots1">
-                                <span class="method-icon">🍽️</span>
-                            </button>
-                        </div>
-                    </div>
-                    <!-- 目標 2 -->
-                    <div class="target-container" ref="targetDish2Ref">
-                         <div v-if="targetDish2" class="target-dish" @mouseover="showRecipeInfo($event, targetDish2)" @mouseleave="hideRecipeInfo">
-                            <div class="item-card large-item" :class="'tier-' + targetDish2.tier">
-                                <div class="item-image">{{ targetDish2.symbol }}</div>
-                                <div class="item-name">{{ targetDish2.name }}</div>
-                            </div>
-                            <div class="timer-bar-container" :data-percentage="timerStatus2">
-                                <div class="timer-bar" :style="{ width: timerPercentage2 + '%' }"></div>
-                                <div class="timer-text">{{ formatTime(timeRemaining2) }}</div>
-                            </div>
-                        </div>
-                        <div class="target-slots">
-                            <div v-for="(_, index) in targetSlots2" :key="'ts2-'+index" class="target-slot" @click="handleTargetClick('targetSlot2', index)">
-                                <div v-if="targetSlots2[index]" class="item-card" :class="'tier-' + targetSlots2[index].tier" @click.stop="handleItemClick(targetSlots2[index], { from: 'targetSlot2', index })" @mouseover="showRecipeInfo($event, targetSlots2[index])" @mouseleave="hideRecipeInfo">
-                                    <div class="item-image">{{ targetSlots2[index].symbol }}</div>
-                                    <div class="item-name">{{ targetSlots2[index].name }}</div>
-                                </div>
-                                <div v-else class="empty-slot">
-                                    <div class="slot-number">{{ index + 1 }}</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="assembly-btn-container">
-                            <button class="assembly-btn" @click="assembleTargetSlots2">
-                                <span class="method-icon">🍽️</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 下半部分 -->
-                <div class="row">
-                    <!-- 烹飪區 -->
-                    <div class="cooking-section">
-                        <!-- 烹飪方法 -->
-                        <div class="cooking-methods-container">
-                             <div class="methods-title">烹飪方法</div>
-                             <div class="cooking-methods-slider">
-                                <div v-for="method in ['grill', 'pan-fry', 'boil', 'deep-fry']" :key="method" 
-                                     class="method-item" :class="{ active: selectedMethod === method }" @click="selectMethod(method)">
-                                    <div class="method-icon">{{ getMethodEmoji(method) }}</div>
-                                    <div class="method-name">{{ getMethodDisplayName(method) }}</div>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- 烹飪站 -->
-                        <div class="cooking-area">
-                            <div class="cooking-title">
-                                <span>烹飪站</span>
-                                <el-button v-if="canCook" type="primary" size="small" @click="cook" class="cook-button">
-                                    <span class="cook-button-icon">🍳</span> 開始烹飪
-                                </el-button>
-                            </div>
-                            <div class="cooking-station" @click="handleTargetClick('cookingStation')">
-                                <div v-if="!cookingStation.length" class="station-placeholder">點擊下方食材拿取</div>
-                                <div v-for="(item, index) in cookingStation" :key="item.id" class="item-card" :class="'tier-' + item.tier" @click.stop="handleItemClick(item, { from: 'cookingStation', index })" @mouseover="showRecipeInfo($event, item)" @mouseleave="hideRecipeInfo">
-                                    <div class="item-image">{{ item.symbol }}</div>
-                                    <div class="item-name">{{ item.name }}</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                 <!-- 食材區 -->
-                <div class="ingredients-section">
-                    <div class="ingredients-area">
-                        <div class="category-filters">
-                            <button v-for="cat in categories" :key="cat.name" class="category-button" :class="{ active: activeCategory === cat.name }" @click="activeCategory = cat.name">
-                                <span class="category-emoji">{{ cat.emoji }}</span>
-                                {{ cat.name }}
-                            </button>
-                        </div>
-                        <div class="ingredients-grid">
-                            <div v-for="item in filteredRawIngredients" :key="item.id" class="item-card" :class="'tier-' + item.tier" @click.stop="handleItemClick(item, { from: 'ingredientsGrid' })" @mouseover="showRecipeInfo($event, item)" @mouseleave="hideRecipeInfo">
-                                <div class="item-image">{{ item.symbol }}</div>
-                                <div class="item-name">{{ item.name }}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `,
     setup() {
         // 遊戲數據
         const gameData = reactive({
@@ -319,50 +142,147 @@ const app = createApp({
             return false;
         };
 
-        // 拖拽處理函數 (現在已無用，可以刪除)
-        /*
-        const onDragStart = (event, item) => { ... };
-        const onDragEnd = (event) => { ... };
-        const onDragOver = (event) => { ... };
-        const onDragLeave = (event) => { ... };
-        const onDrop = (event, targetArea, slotIndex) => { ... };
-        */
+        // 拖拽處理函數
+        const onDragStart = (event, item) => {
+            event.dataTransfer.setData('application/json', JSON.stringify(item));
+            event.target.classList.add('dragging');
+        };
 
-        // 從烹飪區移除物品 (現在由 handleItemClick 處理)
-        /*
+        const onDragEnd = (event) => {
+            event.target.classList.remove('dragging');
+        };
+
+        const onDragOver = (event) => {
+            event.preventDefault();
+            event.currentTarget.classList.add('dragover');
+        };
+
+        const onDragLeave = (event) => {
+            event.currentTarget.classList.remove('dragover');
+        };
+
+        const onDrop = (event, targetArea, slotIndex) => {
+            event.preventDefault();
+            event.currentTarget.classList.remove('dragover');
+            
+            try {
+                const itemData = JSON.parse(event.dataTransfer.getData('application/json'));
+                
+                if (targetArea === 'cookingStation') {
+                    // 檢查烹飪站是否已滿
+                    if (cookingStation.value.length >= 4) {
+                        ElMessage.warning('烹飪站已滿，無法放入更多食材');
+                        return;
+                    }
+
+                    // 檢查是否已有相同物品
+                    if (cookingStation.value.some(item => item.id === itemData.id)) {
+                        ElMessage.warning('已經放入相同的食材了');
+                        return;
+                    }
+                    
+                    // 如果是從目標空格1拖過來的，從目標空格移除
+                    const targetIndex1 = targetSlots1.value.findIndex(item => item && item.id === itemData.id);
+                    if (targetIndex1 !== -1) {
+                        targetSlots1.value[targetIndex1] = null;
+                    }
+
+                    // 如果是從目標空格2拖過來的，從目標空格移除
+                    const targetIndex2 = targetSlots2.value.findIndex(item => item && item.id === itemData.id);
+                    if (targetIndex2 !== -1) {
+                        targetSlots2.value[targetIndex2] = null;
+                    }
+
+                    cookingStation.value.push(itemData);
+                } else if (targetArea === 'targetSlot1') {
+                    // 檢查目標空格是否已有物品
+                    if (targetSlots1.value[slotIndex]) {
+                        ElMessage.warning('此空格已有物品');
+                        return;
+                    }
+                    
+                    // 如果是從烹飪站拖過來的，從烹飪站移除
+                    const stationIndex = cookingStation.value.findIndex(item => item.id === itemData.id);
+                    if (stationIndex !== -1) {
+                        cookingStation.value.splice(stationIndex, 1);
+                    }
+                    
+                    // 放入目標空格
+                    targetSlots1.value[slotIndex] = itemData;
+                } else if (targetArea === 'targetSlot2') {
+                    // 檢查目標空格是否已有物品
+                    if (targetSlots2.value[slotIndex]) {
+                        ElMessage.warning('此空格已有物品');
+                        return;
+                    }
+                    
+                    // 如果是從烹飪站拖過來的，從烹飪站移除
+                    const stationIndex = cookingStation.value.findIndex(item => item.id === itemData.id);
+                    if (stationIndex !== -1) {
+                        cookingStation.value.splice(stationIndex, 1);
+                    }
+                    
+                    // 放入目標空格
+                    targetSlots2.value[slotIndex] = itemData;
+                } else if (targetArea === 'trashBin') {
+                    // 如果是從烹飪站拖過來的，從烹飪站移除
+                    const stationIndex = cookingStation.value.findIndex(item => item.id === itemData.id);
+                    if (stationIndex !== -1) {
+                        cookingStation.value.splice(stationIndex, 1);
+                        ElMessage.info('食材已丟棄');
+                    }
+                    
+                    // 如果是從目標空格1拖過來的，從目標空格移除
+                    const targetIndex1 = targetSlots1.value.findIndex(item => item && item.id === itemData.id);
+                    if (targetIndex1 !== -1) {
+                        targetSlots1.value[targetIndex1] = null;
+                        ElMessage.info('食材已丟棄');
+                    }
+                    
+                    // 如果是從目標空格2拖過來的，從目標空格移除
+                    const targetIndex2 = targetSlots2.value.findIndex(item => item && item.id === itemData.id);
+                    if (targetIndex2 !== -1) {
+                        targetSlots2.value[targetIndex2] = null;
+                        ElMessage.info('食材已丟棄');
+                    }
+                }
+            } catch (error) {
+                console.error('拖放處理錯誤:', error);
+            }
+        };
+        
+        // 從烹飪區移除物品
         const removeFromStation = (index) => {
             cookingStation.value.splice(index, 1);
         };
-        */
 
-        // 從目標空格移除物品 (現在由 handleItemClick 處理)
-        /*
-        const removeFromTargetSlot1 = (index) => { ... };
-        const removeFromTargetSlot2 = (index) => { ... };
-        */
-        
-        const getMethodDisplayName = (method) => {
-            const names = {
-                'grill': '烤',
-                'pan-fry': '煎',
-                'boil': '煮',
-                'deep-fry': '炸',
-                'assembly': '組合'
-            };
-            return names[method] || method;
+        // 從目標空格移除物品 1
+        const removeFromTargetSlot1 = (index) => {
+            if (targetSlots1.value[index]) {
+                // 將物品移到烹飪站
+                if (cookingStation.value.length < 4) {
+                    cookingStation.value.push(targetSlots1.value[index]);
+                    targetSlots1.value[index] = null;
+                } else {
+                    ElMessage.warning('烹飪站已滿');
+                }
+            }
         };
 
-        const getMethodEmoji = (method) => {
-            const emojis = {
-                'grill': '🔥',
-                'pan-fry': '🍳',
-                'boil': '🍲',
-                'deep-fry': '🍤'
-            };
-            return emojis[method] || '🍴';
+        // 從目標空格移除物品 2
+        const removeFromTargetSlot2 = (index) => {
+            if (targetSlots2.value[index]) {
+                // 將物品移到烹飪站
+                if (cookingStation.value.length < 4) {
+                    cookingStation.value.push(targetSlots2.value[index]);
+                    targetSlots2.value[index] = null;
+                } else {
+                    ElMessage.warning('烹飪站已滿');
+                }
+            }
         };
 
-
+        // 選擇烹飪方法
         const selectMethod = (method) => {
             selectedMethod.value = method;
             
@@ -885,112 +805,7 @@ const app = createApp({
             }
         };
         
-        // 新增的狀態
-        const heldItem = ref(null); // 當前手持的物品
-        const heldItemSource = ref(null); // 手持物品的來源資訊
-        const followerStyle = ref({ top: '-999px', left: '-999px' });
-
-        const onGameAreaMouseMove = (event) => {
-            if (heldItem.value) {
-                followerStyle.value = {
-                    transform: `translate(${event.clientX + 10}px, ${event.clientY}px)`
-                };
-            }
-        };
-
-        const handleItemClick = (item, source) => {
-            if (heldItem.value) { // 如果手上有物品
-                if (heldItem.value.id === item.id) { // 點擊的是同一個物品，則放下
-                    heldItem.value = null;
-                    heldItemSource.value = null;
-                } else { // 點擊不同物品，則交換
-                    // 為了簡化，目前不支持交換，先放下當前的
-                    ElMessage.info('請先將手中的 ' + heldItem.value.name + ' 放置好');
-                }
-            } else { // 如果手上沒有物品，則拿起
-                heldItem.value = item;
-                heldItemSource.value = source;
-
-                // 從源頭暫時移除 (視覺上)
-                if (source.from === 'cookingStation') {
-                    cookingStation.value.splice(source.index, 1);
-                } else if (source.from === 'targetSlot1') {
-                    targetSlots1.value[source.index] = null;
-                } else if (source.from === 'targetSlot2') {
-                    targetSlots2.value[source.index] = null;
-                }
-                // 食材區的物品不移除，因為它們是無限的
-            }
-        };
-
-        const handleTargetClick = (targetArea, slotIndex = -1) => {
-            if (!heldItem.value) return; // 手上沒東西，不處理
-
-            // 放置邏輯
-            if (targetArea === 'cookingStation') {
-                if (cookingStation.value.length >= 4) {
-                    ElMessage.warning('烹飪站已滿');
-                    return;
-                }
-                if (cookingStation.value.some(i => i.id === heldItem.value.id)) {
-                    ElMessage.warning('烹飪站已有相同物品');
-                    return;
-                }
-                cookingStation.value.push(heldItem.value);
-            } else if (targetArea === 'targetSlot1') {
-                if (targetSlots1.value[slotIndex]) {
-                    ElMessage.warning('該位置已有物品');
-                    return;
-                }
-                targetSlots1.value[slotIndex] = heldItem.value;
-            } else if (targetArea === 'targetSlot2') {
-                 if (targetSlots2.value[slotIndex]) {
-                    ElMessage.warning('該位置已有物品');
-                    return;
-                }
-                targetSlots2.value[slotIndex] = heldItem.value;
-            } else {
-                // 無效放置區域
-                return;
-            }
-
-            // 放置成功，清空手持物品
-            heldItem.value = null;
-            heldItemSource.value = null;
-        };
-
-        const onGameAreaClick = () => {
-            if (heldItem.value) {
-                 // 如果點擊背景，將物品放回原位
-                if (heldItemSource.value) {
-                    const { from, index } = heldItemSource.value;
-                    if (from === 'cookingStation') {
-                        cookingStation.value.splice(index, 0, heldItem.value);
-                    } else if (from === 'targetSlot1') {
-                        targetSlots1.value[index] = heldItem.value;
-                    } else if (from === 'targetSlot2') {
-                        targetSlots2.value[index] = heldItem.value;
-                    }
-                }
-                heldItem.value = null;
-                heldItemSource.value = null;
-            }
-        };
-
         return {
-            // 返回所有需要在模板中使用的數據和方法
-            // ...原有的返回...
-            heldItem,
-            followerStyle,
-            onGameAreaMouseMove,
-            handleItemClick,
-            handleTargetClick,
-            onGameAreaClick,
-            getMethodDisplayName,
-            getMethodEmoji,
-
-            // 以下為原有需要返回的內容
-            gameData,
             activeCategory,
             cookingStation,
             selectedMethod,
@@ -1005,33 +820,384 @@ const app = createApp({
             recipeTooltipRef,
             targetDish1Ref,
             targetDish2Ref,
-            gameTimeTotal,
-            gameTimeRemaining,
-            isGameOver,
-            targetDish1,
-            targetSlots1,
-            targetDish2,
-            targetSlots2,
-            timeRemaining1,
-            timerPercentage1,
-            timerStatus1,
-            timeRemaining2,
-            timerPercentage2,
-            timerStatus2,
             filteredRawIngredients,
             categories,
             canCook,
+            gameData,
             findItemById,
+            onDragStart,
+            onDragEnd,
+            onDragOver,
+            onDragLeave,
+            onDrop,
+            removeFromStation,
+            removeFromTargetSlot1,
+            removeFromTargetSlot2,
             selectMethod,
+            selectAssemblyMethod1,
+            assembleTargetSlots1,
+            assembleTargetSlots2, // Added this
             cook,
             showRecipeInfo,
             hideRecipeInfo,
             resetGame,
-            assembleTargetSlots1,
-            assembleTargetSlots2,
-            formatTime
+            // Target 1 properties
+            targetDish1,
+            targetSlots1,
+            timeRemaining1,
+            timerPercentage1,
+            timerStatus1,
+            // Target 2 properties
+            targetDish2,
+            targetSlots2,
+            timeRemaining2,
+            timerPercentage2,
+            timerStatus2,
+            selectAssemblyMethod2,
+            // Common
+            formatTime,
+            // Game Over
+            isGameOver,
+            gameTimeRemaining
         };
+    },
+    template: `
+        <div class="game-container">
+            <!-- 頂部導航 -->
+            <header class="game-header">
+                <div class="game-timer">遊戲時間: {{ formatTime(gameTimeRemaining) }}</div>
+            </header>
+            
+            <!-- 遊戲主區域 -->
+            <div class="game-main">
+                <!-- 目標料理區域 - 移到最上方 -->
+                <div class="row">
+                    <div class="target-dish-section">
+                       
+                        <div class="target-container">
+                            
+                            <div class="target-dish" v-if="targetDish1" ref="targetDish1Ref">
+                                <div class="item-card tier-2 large-item" @mouseover="showRecipeInfo($event, targetDish1)" @mouseleave="hideRecipeInfo">
+                                   <div class="item-image">{{ targetDish1.symbol }}</div>
+                                    <div class="item-name">{{ targetDish1.name }}</div>
+                                    <span class="tier-badge">T2</span>
+                                </div>
+                                
+                                <!-- 計時條 -->
+                                <div class="timer-bar-container" 
+                                     :class="{ 'critical': timerStatus1 === 'critical' }"
+                                     :data-percentage="timerStatus1">
+                                    <div class="timer-bar" :style="{ width: timerPercentage1 + '%' }"></div>
+                                    <div class="timer-text">{{ formatTime(timeRemaining1) }}</div>
+                                </div>
+                            </div>
+                            
+                            <!-- 4個空格排成一排 -->
+                            <div class="target-slots">
+                          
+                                <div 
+                                    v-for="(slot, index) in targetSlots1" 
+                                    :key="'t1-'+index"
+                                    class="target-slot"
+                                    @dragover="onDragOver"
+                                    @dragleave="onDragLeave"
+                                    @drop="(event) => onDrop(event, 'targetSlot1', index)"
+                                >
+                                    <div v-if="slot" 
+                                        class="item-card" 
+                                        :class="'tier-' + slot.tier"
+                                        draggable="true"
+                                        @dragstart="onDragStart($event, slot)"
+                                        @dragend="onDragEnd"
+                                        @mouseover="showRecipeInfo($event, slot)"
+                                        @mouseleave="hideRecipeInfo"
+                                    >
+                                        <div class="item-image">{{ slot.symbol }}</div>
+                                        <div class="item-name">{{ slot.name }}</div>
+                                        <span class="tier-badge">T{{ slot.tier }}</span>
+                                    </div>
+                                    <div v-else class="empty-slot">
+                                        <div class="slot-number">{{ index + 1 }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 右側出餐按鈕 -->
+                            <div class="assembly-btn-container">
+                                <div 
+                                    class="method-item assembly-btn" 
+                                    @click="selectAssemblyMethod1"
+                                >
+                                    <div class="method-icon">🍽️</div>
+                                    <div class="method-name">出餐</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="target-container">
+                            
+                            <div class="target-dish" v-if="targetDish2" ref="targetDish2Ref">
+                                <div class="item-card tier-2 large-item" @mouseover="showRecipeInfo($event, targetDish2)" @mouseleave="hideRecipeInfo">
+                                   <div class="item-image">{{ targetDish2.symbol }}</div>
+                                    <div class="item-name">{{ targetDish2.name }}</div>
+                                    <span class="tier-badge">T2</span>
+                                </div>
+                                
+                                <!-- 計時條 -->
+                                <div class="timer-bar-container" 
+                                     :class="{ 'critical': timerStatus2 === 'critical' }"
+                                     :data-percentage="timerStatus2">
+                                    <div class="timer-bar" :style="{ width: timerPercentage2 + '%' }"></div>
+                                    <div class="timer-text">{{ formatTime(timeRemaining2) }}</div>
+                                </div>
+                            </div>
+                            
+                            <!-- 4個空格排成一排 -->
+                            <div class="target-slots">
+                          
+                                <div 
+                                    v-for="(slot, index) in targetSlots2" 
+                                    :key="'t2-'+index"
+                                    class="target-slot"
+                                    @dragover="onDragOver"
+                                    @dragleave="onDragLeave"
+                                    @drop="(event) => onDrop(event, 'targetSlot2', index)"
+                                >
+                                    <div v-if="slot" 
+                                        class="item-card" 
+                                        :class="'tier-' + slot.tier"
+                                        draggable="true"
+                                        @dragstart="onDragStart($event, slot)"
+                                        @dragend="onDragEnd"
+                                        @mouseover="showRecipeInfo($event, slot)"
+                                        @mouseleave="hideRecipeInfo"
+                                    >
+                                        <div class="item-image">{{ slot.symbol }}</div>
+                                        <div class="item-name">{{ slot.name }}</div>
+                                        <span class="tier-badge">T{{ slot.tier }}</span>
+                                    </div>
+                                    <div v-else class="empty-slot">
+                                        <div class="slot-number">{{ index + 1 }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 右側出餐按鈕 -->
+                            <div class="assembly-btn-container">
+                                <div 
+                                    class="method-item assembly-btn"
+                                    @click="selectAssemblyMethod2"
+                                >
+                                    <div class="method-icon">🍽️</div>
+                                    <div class="method-name">出餐</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <!-- 烹飪區域 -->
+                    <div class="cooking-section">
+                        <!-- 烹飪方法選擇 -->
+                        <div class="cooking-methods-container">
+                             <div class="cooking-methods-slider">
+                                <div 
+                                    class="method-item" 
+                                    :class="{ active: selectedMethod === 'grill' }"
+                                    @click="selectMethod('grill')"
+                                >
+                                    <div class="method-icon">🔥</div>
+                                    <div class="method-name">烤製</div>
+                                </div>
+                                <div 
+                                    class="method-item" 
+                                    :class="{ active: selectedMethod === 'pan_fry' }"
+                                    @click="selectMethod('pan_fry')"
+                                >
+                                    <div class="method-icon">🍳</div>
+                                    <div class="method-name">煎炒</div>
+                                </div>
+                                <div 
+                                    class="method-item" 
+                                    :class="{ active: selectedMethod === 'deep_fry' }"
+                                    @click="selectMethod('deep_fry')"
+                                >
+                                    <div class="method-icon">🍤</div>
+                                    <div class="method-name">油炸</div>
+                                </div>
+                                <div 
+                                    class="method-item" 
+                                    :class="{ active: selectedMethod === 'boil' }"
+                                    @click="selectMethod('boil')"
+                                >
+                                    <div class="method-icon">🥣</div>
+                                    <div class="method-name">水煮</div>
+                                </div>
+                                <!-- 移除組合方法 -->
+                            </div>
+                        </div>
+                        
+                        <!-- 烹飪站 -->
+                        <div class="cooking-area">
+                            <h2 class="cooking-title">烹飪站</h2>
+                            <div class="cooking-station-container">
+                                <div 
+                                    class="cooking-station"
+                                    :class="{ active: cookingStation.length > 0, cooking: isCooking }"
+                                    @dragover="onDragOver"
+                                    @dragleave="onDragLeave"
+                                    @drop="onDrop($event, 'cookingStation')"
+                                >
+                                    <div v-if="cookingStation.length === 0" class="station-placeholder">
+                                        拖拽食材到這裡
+                                    </div>
+                                    <div 
+                                        v-for="(item, index) in cookingStation" 
+                                        :key="index"
+                                        class="item-card"
+                                        :class="'tier-' + item.tier"
+                                        draggable="true"
+                                        @dragstart="onDragStart($event, item)"
+                                        @dragend="onDragEnd"
+                                        @mouseover="showRecipeInfo($event, item)"
+                                        @mouseleave="hideRecipeInfo"
+                                    >
+                                        <div class="item-image">{{ item.symbol }}</div>
+                                        <div class="item-name">{{ item.name }}</div>
+                                        <span class="tier-badge">T{{ item.tier }}</span>
+                                    </div>
+                                </div>
+                                <!-- 垃圾桶 -->
+                                <div 
+                                    class="trash-bin"
+                                    @dragover="onDragOver"
+                                    @dragleave="onDragLeave"
+                                    @drop="onDrop($event, 'trashBin')"
+                                >
+                                    <div class="trash-icon">🗑️</div>
+                                    <div class="trash-text">丟棄</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <!-- 食材區域 -->
+                    <div class="ingredients-section">
+                        <!-- 分類過濾按鈕 -->
+                        <div class="category-filters">
+                            <button 
+                                v-for="category in categories" 
+                                :key="category.name"
+                                class="category-button"
+                                :class="{ active: activeCategory === category.name }"
+                                @click="activeCategory = category.name"
+                            >
+                                <span class="category-emoji">{{ category.emoji }}</span>
+                                {{ category.name }}
+                            </button>
+                        </div>
+                        
+                        <!-- T0 基礎食材區 -->
+                        <div class="ingredients-area">
+                            <h2 class="area-title">基礎食材 (T0)</h2>
+                            <div class="ingredients-grid">
+                                <div 
+                                    v-for="item in filteredRawIngredients" 
+                                    :key="item.id"
+                                    class="item-card tier-0"
+                                    draggable="true"
+                                    @dragstart="onDragStart($event, item)"
+                                    @dragend="onDragEnd"
+                                    @mouseover="showRecipeInfo($event, item)"
+                                    @mouseleave="hideRecipeInfo"
+                                >
+                                    <div class="item-image">{{ item.symbol }}</div>
+                                    <div class="item-name">{{ item.name }}</div>
+                                    <span class="tier-badge">T0</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 移除 T1 半成品區 -->
+                        
+                        <!-- 移除 T2 最終料理區 -->
+                    </div>
+                    
+                    <!-- 移除食譜參考部分 -->
+                </div>
+            </div>
+            
+            <!-- 烹飪動畫覆蓋層 -->
+            <div v-if="showCookingAnimation" class="cooking-animation-overlay">
+                <div class="cooking-animation">
+                    <div v-if="cookingAnimationMethod === 'grill'" class="grill-animation">🔥</div>
+                    <div v-else-if="cookingAnimationMethod === 'pan_fry'" class="pan-fry-animation">🍳</div>
+                    <div v-else-if="cookingAnimationMethod === 'deep_fry'" class="deep-fry-animation">🍤</div>
+                    <div v-else-if="cookingAnimationMethod === 'boil'" class="boil-animation">🥣</div>
+                    <div v-else-if="cookingAnimationMethod === 'assembly'" class="assembly-animation">🔧</div>
+                </div>
+                <div class="cooking-text">
+                    {{ cookingAnimationMethod === 'grill' ? '🔥 烤製中...' : 
+                       cookingAnimationMethod === 'pan_fry' ? '🍳 煎炒中...' : 
+                       cookingAnimationMethod === 'deep_fry' ? '🍤 油炸中...' : 
+                       cookingAnimationMethod === 'boil' ? '🥣 水煮中...' : '🔧 組合中...' }}
+                </div>
+            </div>
+            
+            <!-- 成功訊息 -->
+            <div v-if="showSuccessMessage && successItem" class="success-message">
+                <div class="success-title">烹飪成功！</div>
+                <div class="success-symbol">{{ successItem.symbol }}</div>
+                <div>{{ successItem.name }}</div>
+            </div>
+            
+            <!-- 食譜提示 -->
+            <div 
+                v-if="showRecipeTooltip"
+                ref="recipeTooltipRef"
+                class="recipe-tooltip"
+                :style="{ left: recipeTooltipPosition.x + 'px', top: recipeTooltipPosition.y + 'px' }"
+            >
+                <h4>{{ recipeTooltipContent.item.name }}</h4>
+                <h5>相關食譜:</h5>
+                <ul>
+                    <li v-for="recipe in recipeTooltipContent.recipes" :key="recipe.outputId">
+                        <span v-if="recipe.outputId === recipeTooltipContent.item.id">
+                           <strong></strong> {{ recipe.requirements.map(r => findItemById(r.itemId).name).join(' + ') }} ({{ recipe.method }})
+                        </span>
+                        <span v-else>
+                            <strong></strong> {{ findItemById(recipe.outputId).name }}
+                        </span>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- 遊戲結束 Modal -->
+            <div v-if="isGameOver" class="game-over-overlay">
+                <div class="game-over-modal">
+                    <h2>遊戲結束</h2>
+                    <p>時間到！</p>
+                    <el-button type="primary" size="large" @click="resetGame">重新開始</el-button>
+                </div>
+            </div>
+        </div>
+    `,
+    methods: {
+        findItemById(itemId) {
+            if (!itemId) return null;
+            const allItems = [
+                ...this.gameData.rawIngredients,
+                ...this.gameData.intermediateGoods,
+                ...this.gameData.finalDishes
+            ];
+            return allItems.find(item => item.id === itemId);
+        }
     }
 });
 
+// 掛載應用
+app.use(ElementPlus);
 app.mount('#cooking-game');

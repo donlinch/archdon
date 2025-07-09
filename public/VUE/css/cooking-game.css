@@ -175,6 +175,12 @@ html, body {
     align-items: center;
 }
 
+/* 烹飪站容器 */
+.cooking-station-container {
+    display: flex;
+    gap: 10px;
+}
+
 .cooking-station {
     background-color: #ffedd9;
     border: 2px dashed #ff9966;
@@ -187,6 +193,77 @@ html, body {
     justify-content: center;
     align-items: center;
     transition: all 0.3s;
+    flex: 1;
+}
+
+/* 垃圾桶樣式 */
+.trash-bin {
+    width: 20%;
+    min-width: 60px;
+    height: 120px;
+    background-color: #f8f8f8;
+    border: 2px dashed #ff6b6b;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.trash-bin.dragover {
+    background-color: #ffe0e0;
+    border-color: #ff0000;
+    transform: scale(1.05);
+}
+
+.trash-icon {
+    font-size: 32px;
+    margin-bottom: 5px;
+}
+
+.trash-text {
+    font-size: 14px;
+    color: #666;
+}
+
+/* 修改項目卡片樣式，移除點擊效果 */
+.item-card {
+    width: 70px;
+    height: 90px;
+    background-color: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    cursor: grab;
+    transition: all 0.2s;
+    position: relative;
+    touch-action: none; /* 防止觸控設備的默認行為 */
+}
+
+/* 移動端拖曳優化 */
+@media (max-width: 768px) {
+    .item-card {
+        touch-action: none; /* 防止觸控設備的默認行為 */
+    }
+    
+    .cooking-station-container {
+        flex-direction: column;
+    }
+    
+    .trash-bin {
+        width: 100%;
+        height: 60px;
+        flex-direction: row;
+        gap: 10px;
+    }
+    
+    .trash-icon {
+        margin-bottom: 0;
+    }
 }
 
 .cooking-station.active {
@@ -429,23 +506,6 @@ html, body {
     opacity: 0.7;
     transform: scale(1.05);
 }
-
-/* 跟隨滑鼠的物品樣式 */
-.item-follower {
-    position: fixed;
-    z-index: 9999;
-    pointer-events: none; /* 讓滑鼠事件可以穿透此元素 */
-    top: 0;
-    left: 0;
-    transform: translate(-999px, -999px); /* 初始位置移出畫面 */
-}
-
-.item-follower .item-card {
-    cursor: grabbing;
-    transform: scale(1.1);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-}
-
 
 /* 分類過濾按鈕 */
 .category-filters {

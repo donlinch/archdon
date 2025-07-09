@@ -11,10 +11,25 @@
     <script src="https://unpkg.com/element-plus"></script>
     <!-- 引入動畫效果庫 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-    <!-- 引入拖拽庫 (已被移除) -->
-    
+    <!-- 引入拖拽庫 -->
+    <script src="https://cdn.jsdelivr.net/npm/vue3-draggable-next@1.0.12/dist/vue3-draggable-next.global.js"></script>
     <!-- 自定義樣式 -->
     <link rel="stylesheet" href="./css/cooking-game.css">
+    <!-- 修改拖曳庫的默認設置 -->
+    <script>
+        // 在頁面加載完成後執行
+        document.addEventListener('DOMContentLoaded', function() {
+            // 覆蓋默認的拖曳設置，移除延遲
+            if (typeof window.VueDraggableNext !== 'undefined') {
+                // 移除移動端的延遲
+                if (window.VueDraggableNext.default && window.VueDraggableNext.default.options) {
+                    window.VueDraggableNext.default.options.touchStartThreshold = 0;
+                    window.VueDraggableNext.default.options.delay = 0;
+                    console.log('已修改拖曳設置，移除延遲');
+                }
+            }
+        });
+    </script>
 </head>
 <body>
     <!-- User Status Indicator -->
