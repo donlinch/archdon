@@ -13,33 +13,25 @@ const { Pool } = require('pg');
 //  診斷函數：查詢特定食譜的結構 (新增於 2025-07-08)
 // =================================================================
 async function diagnoseRecipeStructure(pool) {
-    console.log('\n\n\n');
-    console.log('##################################################');
-    console.log('###               資料庫結構診斷               ###');
-    console.log('##################################################');
+    
     
     try {
         const client = await pool.connect();
         const recipeNameToFind = 'make_seafood_pasta';
         
-        console.log(`[DIAGNOSE] 正在查詢 recipe_id = '${recipeNameToFind}' 的資料...`);
-
+ 
         const query = 'SELECT * FROM cook_recipes_v3 WHERE recipe_id = $1 LIMIT 1';
         const result = await client.query(query, [recipeNameToFind]);
 
         if (result.rows.length > 0) {
             const recipeData = result.rows[0];
-            console.log(`[DIAGNOSE] ✅ 成功找到食譜!`);
-            console.log('[DIAGNOSE] 欄位結構與資料內容如下:');
-            console.log('--------------------------------------------------');
+            
             for (const key in recipeData) {
                 const value = recipeData[key];
                 const valueType = typeof value;
                 const valueContent = JSON.stringify(value);
-                console.log(`  - 欄位: ${key.padEnd(20)} | 類型: ${valueType.padEnd(10)} | 內容: ${valueContent}`);
-            }
-            console.log('--------------------------------------------------');
-        } else {
+             }
+         } else {
             console.log(`[DIAGNOSE] ⚠️ 警告: 未找到 recipe_id 為 '${recipeNameToFind}' 的食譜。`);
         }
         client.release();
@@ -49,9 +41,7 @@ async function diagnoseRecipeStructure(pool) {
              console.error('[DIAGNOSE] 錯誤提示: "cook_recipes_v3" 資料表不存在。');
         }
     } finally {
-        console.log('##################################################');
-        console.log('###               診斷結束                   ###');
-        console.log('##################################################\n\n\n');
+       
     }
 }
 
