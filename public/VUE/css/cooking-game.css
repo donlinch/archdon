@@ -430,6 +430,23 @@ html, body {
     transform: scale(1.05);
 }
 
+/* 跟隨滑鼠的物品樣式 */
+.item-follower {
+    position: fixed;
+    z-index: 9999;
+    pointer-events: none; /* 讓滑鼠事件可以穿透此元素 */
+    top: 0;
+    left: 0;
+    transform: translate(-999px, -999px); /* 初始位置移出畫面 */
+}
+
+.item-follower .item-card {
+    cursor: grabbing;
+    transform: scale(1.1);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+
 /* 分類過濾按鈕 */
 .category-filters {
     display: flex;
