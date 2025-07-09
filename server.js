@@ -25,6 +25,17 @@ const jwt = require('jsonwebtoken');
 
 const adminRouter = express.Router();
 const app = express();
+// --- CORS (Cross-Origin Resource Sharing) Setup ---
+ const cors = require('cors');
+
+if (process.env.NODE_ENV !== 'production') {
+    console.log('[CORS] 開發模式下，啟用 CORS 並允許 http://localhost:5173');
+    app.use(cors({
+        origin: 'http://localhost:5173', // 允許來自 Vite 開發伺服器的請求
+        credentials: true // 允許傳遞 cookie 等憑證
+    }));
+}
+// --- End of CORS Setup ---
 const PORT = process.env.PORT || 3000;
 const unboxingAiRouter = express.Router();
 const boxRoutes = require('./boxRoutes');
