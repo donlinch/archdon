@@ -28,6 +28,119 @@
                     console.log('已修改拖曳設置，移除延遲');
                 }
             }
+            
+            // 更強力的解決方案：直接攔截所有卡片的觸控事件
+            setTimeout(() => {
+                const allCards = document.querySelectorAll('.item-card');
+                allCards.forEach(card => {
+                    // 防止觸控事件冒泡，避免觸發頁面滑動
+                    card.addEventListener('touchstart', function(e) {
+                        e.preventDefault(); // 阻止默認行為
+                        e.stopPropagation(); // 阻止冒泡
+                        
+                        // 模擬拖曳開始
+                        const dragEvent = new DragEvent('dragstart', {
+                            bubbles: true,
+                            cancelable: true,
+                            dataTransfer: new DataTransfer()
+                        });
+                        
+                        // 將物品數據存儲到拖曳事件中
+                        const itemData = card.__vue__?.item || {};
+                        dragEvent.dataTransfer.setData('application/json', JSON.stringify(itemData));
+                        
+                        // 觸發拖曳事件
+                        card.dispatchEvent(dragEvent);
+                        card.classList.add('dragging');
+                    }, { passive: false });
+                    
+                    // 處理觸控移動
+                    card.addEventListener('touchmove', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        
+                        // 獲取觸控位置
+                        const touch = e.touches[0];
+                        const x = touch.clientX;
+                        const y = touch.clientY;
+                        
+                        // 將卡片移動到觸控位置
+                        card.style.position = 'fixed';
+                        card.style.left = (x - card.offsetWidth / 2) + 'px';
+                        card.style.top = (y - card.offsetHeight / 2) + 'px';
+                        card.style.zIndex = '1000';
+                        card.style.pointerEvents = 'none';
+                        
+                        // 檢測是否在有效的放置區域上方
+                        const elementsAtPoint = document.elementsFromPoint(x, y);
+                        const dropTarget = elementsAtPoint.find(el => 
+                            el.classList.contains('cooking-station') || 
+                            el.classList.contains('target-slot') ||
+                            el.classList.contains('trash-bin')
+                        );
+                        
+                        // 移除所有區域的dragover狀態
+                        document.querySelectorAll('.dragover').forEach(el => {
+                            el.classList.remove('dragover');
+                        });
+                        
+                        // 如果找到目標，添加dragover狀態
+                        if (dropTarget) {
+                            dropTarget.classList.add('dragover');
+                        }
+                    }, { passive: false });
+                    
+                    // 處理觸控結束
+                    card.addEventListener('touchend', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        
+                        // 獲取最後的觸控位置
+                        const touch = e.changedTouches[0];
+                        const x = touch.clientX;
+                        const y = touch.clientY;
+                        
+                        // 重置卡片樣式
+                        card.style.position = '';
+                        card.style.left = '';
+                        card.style.top = '';
+                        card.style.zIndex = '';
+                        card.style.pointerEvents = '';
+                        card.classList.remove('dragging');
+                        
+                        // 檢測是否在有效的放置區域上方
+                        const elementsAtPoint = document.elementsFromPoint(x, y);
+                        const dropTarget = elementsAtPoint.find(el => 
+                            el.classList.contains('cooking-station') || 
+                            el.classList.contains('target-slot') ||
+                            el.classList.contains('trash-bin')
+                        );
+                        
+                        // 如果找到目標，觸發drop事件
+                        if (dropTarget) {
+                            const dropEvent = new DragEvent('drop', {
+                                bubbles: true,
+                                cancelable: true,
+                                dataTransfer: new DataTransfer()
+                            });
+                            
+                            // 將物品數據存儲到拖曳事件中
+                            const itemData = card.__vue__?.item || {};
+                            dropEvent.dataTransfer.setData('application/json', JSON.stringify(itemData));
+                            
+                            dropTarget.dispatchEvent(dropEvent);
+                            dropTarget.classList.remove('dragover');
+                        }
+                        
+                        // 移除所有區域的dragover狀態
+                        document.querySelectorAll('.dragover').forEach(el => {
+                            el.classList.remove('dragover');
+                        });
+                    }, { passive: false });
+                });
+                
+                console.log('已設置強力觸控拖曳，共處理 ' + allCards.length + ' 個卡片');
+            }, 1000); // 延遲1秒，確保Vue已經渲染完成
         });
     </script>
 </head>
