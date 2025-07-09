@@ -17,11 +17,50 @@
     <link rel="stylesheet" href="./css/cooking-game.css">
 </head>
 <body>
+    <!-- User Status Indicator -->
+    <div id="userStatus" class="user-status">
+        <img id="userStatusAvatar" src="/images/a01girlmove.gif" alt="User">
+        <span id="userStatusName" class="username">未登入</span>
+    </div>
+
     <div id="cooking-game">
         <!-- Vue 應用將在此掛載 -->
     </div>
     
     <!-- 確保使用 type="module" 屬性 -->
     <script type="module" src="./js/cooking-game.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // User status elements
+            const userStatusAvatar = document.getElementById('userStatusAvatar');
+            const userStatusName = document.getElementById('userStatusName');
+            const userStatus = document.getElementById('userStatus');
+
+            // 檢查是否有已保存的登入信息
+            const savedUserId = localStorage.getItem('boxCurrentUserId');
+            const savedUserToken = localStorage.getItem(`boxUserToken_${savedUserId}`);
+            const savedUserAvatarUrl = localStorage.getItem('boxCurrentUserAvatar');
+            const savedUserName = localStorage.getItem('boxCurrentUsername');
+            const savedDisplayName = localStorage.getItem('boxCurrentDisplayName') || savedUserName;
+
+            // Update the user status indicator
+            if (savedUserId && savedUserToken && savedUserName) {
+                userStatusAvatar.src = savedUserAvatarUrl || '/images/a01girlmove.gif';
+                userStatusName.textContent = savedDisplayName;
+                
+                // Add click event to navigate to user editor page
+                userStatus.addEventListener('click', () => {
+                    window.location.href = `/member-editor.html?userId=${savedUserId}`;
+                });
+            } else {
+                userStatusAvatar.src = '/images/a01girlmove.gif';
+                userStatusName.textContent = '未登入';
+                userStatus.addEventListener('click', () => {
+                    // 變更為導向會員登入頁
+                    window.location.href = `/member-login.html?redirect=${encodeURIComponent(window.location.href)}`;
+                });
+            }
+        });
+    </script>
 </body>
 </html>

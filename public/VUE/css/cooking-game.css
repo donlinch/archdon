@@ -6,6 +6,57 @@
     font-family: 'Microsoft JhengHei', 'PingFang TC', 'Heiti TC', sans-serif;
 }
 
+/* --- User Status Indicator --- */
+.user-status {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 1001;
+    display: flex;
+    align-items: center;
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 5px 10px;
+    border-radius: 20px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.user-status:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.user-status img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid #FF9800;
+    object-fit: cover;
+}
+
+.user-status .username {
+    margin-left: 8px;
+    font-weight: 600;
+    color: #2c3e50;
+    max-width: 120px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 在手機畫面隱藏用戶名稱 */
+@media (max-width: 767px) {
+    .user-status {
+        padding: 3px;
+    }
+    
+    .user-status .username {
+        display: none;
+    }
+}
+
+
 html, body {
     height: 100%;
     width: 100%;
@@ -350,6 +401,7 @@ html, body {
 }
 
 .tier-badge {
+    display: none; /* 根據要求移除所有等級標籤 */
     position: absolute;
     top: 5px;
     right: 5px;
@@ -713,11 +765,11 @@ html, body {
 
 .target-container {
     display: flex;
-    gap: 15px;
+    gap: 10px;
     align-items: center;
     position: relative;
-    justify-content: space-between;
-    flex-wrap: nowrap;
+    justify-content: center; /* 從 space-between 改為 center */
+    flex-wrap: wrap; /* 從 nowrap 改為 wrap 以允許換行 */
     padding: 0 5px;
 }
 
@@ -739,11 +791,11 @@ html, body {
 
 /* 組合按鈕樣式 */
 .assembly-btn {
-    width: 55px;
-    height: 60px;
+    width: 48px; /* 縮小 */
+    height: 52px; /* 縮小 */
     background-color: #7EB6FF; /* 粉藍色 */
     color: #fff;
-    font-size: 40px;
+    font-size: 32px; /* 縮小 */
     border: 0.5px solid rgba(0, 0, 0, 0.1);
     padding-bottom: 6px;
     border-radius: 15px 15px 12px 12px;
@@ -801,7 +853,7 @@ html, body {
 .assembly-btn:active {
     will-change: transform;
     transform: perspective(80px) rotateX(5deg) rotateY(1deg) translateY(3px) scale(0.96);
-    height: 64px;
+    height: 56px; /* 縮小 */
     border: 0.25px solid rgba(0, 0, 0, 0.2);
     box-shadow: inset -4px -8px 0px rgba(255, 255, 255, 0.3),
         inset -4px -6px 0px rgba(90, 154, 230, 0.8),
@@ -860,25 +912,25 @@ html, body {
 }
 
 .large-item {
-    width: 90px !important;
-    height: 110px !important;
+    width: 80px !important; /* 縮小 */
+    height: 98px !important; /* 縮小 */
 }
 
 .large-item .item-image {
-    font-size: 42px !important;
+    font-size: 38px !important; /* 縮小 */
 }
 
 .target-slots {
     flex: 0 0 auto;
     display: flex;
-    gap: 6px;
+    gap: 4px;
     flex-wrap: nowrap;
     justify-content: center;
 }
 
 .target-slot {
-    width: 55px;
-    height: 70px;
+    width: 48px; /* 縮小 */
+    height: 62px; /* 縮小 */
     border: 2px dashed #ccc;
     border-radius: 8px;
     display: flex;
@@ -886,7 +938,7 @@ html, body {
     align-items: center;
     transition: all 0.3s ease;
     background-color: rgba(255, 255, 255, 0.5);
-    margin: 0 1px;
+    margin: 0;
 }
 
 .target-slot:hover {
@@ -908,7 +960,7 @@ html, body {
     justify-content: center;
     align-items: center;
     color: #999;
-    font-size: 18px; /* 縮小字體 */
+    font-size: 16px; /* 縮小 */
     font-weight: bold;
 }
 
@@ -921,17 +973,17 @@ html, body {
     justify-content: center;
     align-items: center;
     color: #666;
-    font-size: 12px; /* 縮小字體 */
+    font-size: 11px; /* 縮小 */
 }
 
 /* 目標空格中的卡片樣式 */
 .target-slot .item-card {
-    width: 51px;
-    height: 66px;
+    width: 44px; /* 縮小 */
+    height: 58px; /* 縮小 */
 }
 
 .target-slot .item-card .item-image {
-    font-size: 22px;
+    font-size: 20px; /* 縮小 */
 }
 
 .target-slot .item-card .item-name {
