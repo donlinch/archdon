@@ -5,8 +5,13 @@
 let currentOrder = null; // 當前訂單的料理ID
 let playerScore = 0;     // 玩家得分
 let orderTimer = null;   // 訂單計時器
-const ORDER_TIME = 180;  // 訂單完成時間（秒）
+const ORDER_TIME = 120;  // 訂單完成時間（秒）
 let remainingTime = ORDER_TIME; // 剩餘時間
+
+// 訂單2系統全局變量
+let currentOrder2 = null; // 訂單2的料理ID
+let orderTimer2 = null;   // 訂單2計時器
+let remainingTime2 = ORDER_TIME; // 訂單2剩餘時間
 
 // 獲取用戶令牌
 function getUserToken() {
@@ -122,7 +127,6 @@ document.addEventListener('DOMContentLoaded', async function() {
 // 模擬器全局變數
 let simulatorItems = {
     t0: [], // 基礎食材
-    t1: [], // 半成品
     t2: []  // 最終料理
 };
 let selectedCookingMethod = '';
@@ -151,8 +155,7 @@ function initializeSimulator() {
 
     renderSimulatorItems();
     
-    // 清空 T1 和 T2 區域
-    simulatorItems.t1 = [];
+    // 清空 T2 區域
     simulatorItems.t2 = [];
     
     // 清空組合區
@@ -178,8 +181,11 @@ function initializeSimulator() {
     // 設置烹飪方法選擇
     setupCookingMethodSelection();
     
-    // 新增: 顯示隨機T2料理
+    // 新增: 顯示隨機T2料理 (訂單1)
     displayRandomT2Item();
+    
+    // 新增: 顯示隨機T2料理 (訂單2)
+    displayRandomT2Item2();
 }
 
 function setupT0CategoryFilters() {
@@ -229,14 +235,6 @@ function renderSimulatorItems() {
         t0Container.appendChild(itemElement);
     });
     
-    // 渲染 T1 物品
-    const t1Container = document.getElementById('t1ItemsContainer');
-    t1Container.innerHTML = '';
-    simulatorItems.t1.forEach(item => {
-        const itemElement = createSimItemElement(item, 1);
-        t1Container.appendChild(itemElement);
-    });
-    
     // 渲染 T2 物品
     const t2Container = document.getElementById('t2ItemsContainer');
     t2Container.innerHTML = '';
@@ -269,33 +267,36 @@ function createSimItemElement(item, tier) {
     nameElement.textContent = item.item_name;
     itemElement.appendChild(nameElement);
     
-    if (tier === 2) {
-        const pathButton = document.createElement('button');
-        pathButton.className = 'btn btn-sm btn-outline-info view-path-btn';
-        pathButton.innerHTML = '🌳';
-        pathButton.title = '檢視合成路徑';
-        pathButton.dataset.itemId = item.item_id;
-        itemElement.appendChild(pathButton);
-    }
+    // 移除檢視合成路徑按鈕，但保留為訂單項目以外的 T2 物品添加按鈕的功能
+  //  if (tier === 2 && !itemElement.closest('#randomT2Item')) {
+  //     const pathButton = document.createElement('button');
+   //     pathButton.className = 'btn btn-sm btn-outline-info view-path-btn';
+    //    pathButton.innerHTML = '🌳';
+     //   pathButton.title = '檢視合成路徑';
+      //  pathButton.dataset.itemId = item.item_id;
+      //  itemElement.appendChild(pathButton);
+   // }
 
     return itemElement;
 }
 
 // 設置可拖曳物品的事件
 function setupDraggableItemListeners() {
-    const draggableItems = document.querySelectorAll('#t0ItemsContainer .sim-item, #t1ItemsContainer .sim-item');
+    // 修改：同時選擇 T0 物品和工作區的物品
+    const draggableItems = document.querySelectorAll('#t0ItemsContainer .sim-item, #craftingArea .sim-item');
     draggableItems.forEach(item => {
         item.addEventListener('dragstart', handleDragStart);
     });
 }
 
-// 設置組合區的拖放目標事件 (此函數只應被呼叫一次)
+// 設置組合區域的監聽器
 function setupCraftingSlotListeners() {
-    const craftingSlots = document.querySelectorAll('.crafting-slot');
+    // 主要工作區的拖曳監聽
+    const craftingSlots = document.querySelectorAll('#craftingArea .crafting-slot');
     craftingSlots.forEach(slot => {
         // 防止重複綁定監聽器
         if (slot.dataset.listenersAttached) return;
-
+        
         slot.addEventListener('dragover', handleDragOver);
         slot.addEventListener('dragleave', handleDragLeave);
         slot.addEventListener('drop', handleDrop);
@@ -307,16 +308,73 @@ function setupCraftingSlotListeners() {
                 updateRecommendedCookingMethod();
             }
         });
+        
+        slot.dataset.listenersAttached = 'true';
+    });
+    
+    // 訂單1區域的拖曳監聽
+    const orderSlots = document.querySelectorAll('.crafting-slot:not(.order2-slot)');
+    orderSlots.forEach(slot => {
+        if (!slot.closest('#craftingArea')) {  // 確保不重複添加監聽器給主要工作區
+            // 防止重複綁定監聽器
+            if (slot.dataset.listenersAttached) return;
+            
+            slot.addEventListener('dragover', handleDragOver);
+            slot.addEventListener('dragleave', handleDragLeave);
+            slot.addEventListener('drop', handleDrop);
+            
+            // 雙擊移除物品
+            slot.addEventListener('dblclick', function(e) {
+                const simItem = this.querySelector('.sim-item');
+                if (simItem) {
+                    simItem.remove();
+                    updateSimulationResults('已移除物品', 'info');
+                }
+            });
+            
+            slot.dataset.listenersAttached = 'true';
+        }
+    });
+    
+    // 訂單2區域的拖曳監聽
+    const order2Slots = document.querySelectorAll('.order2-slot');
+    order2Slots.forEach(slot => {
+        // 防止重複綁定監聽器
+        if (slot.dataset.listenersAttached) return;
+        
+        slot.addEventListener('dragover', handleDragOver);
+        slot.addEventListener('dragleave', handleDragLeave);
+        slot.addEventListener('drop', handleDrop);
+        
+        // 雙擊移除物品
+        slot.addEventListener('dblclick', function(e) {
+            const simItem = this.querySelector('.sim-item');
+            if (simItem) {
+                simItem.remove();
+                updateSimulationResults('已移除物品', 'info');
+            }
+        });
+        
         slot.dataset.listenersAttached = 'true';
     });
 }
 
 // 拖放事件處理函數
 function handleDragStart(e) {
+    // 檢查是否是從工作區拖曳的物品
+    const isFromCraftingArea = this.closest('#craftingArea') !== null;
+    
+    // 將物品信息和來源信息一起存儲
     e.dataTransfer.setData('text/plain', JSON.stringify({
         itemId: this.dataset.itemId,
-        tier: this.dataset.tier
+        tier: this.dataset.tier,
+        fromCraftingArea: isFromCraftingArea
     }));
+    
+    // 如果是從工作區拖曳，添加一個標記，以便在拖放完成後可以識別
+    if (isFromCraftingArea) {
+        this.dataset.beingDragged = 'true';
+    }
 }
 
 function handleDragOver(e) {
@@ -337,30 +395,63 @@ function handleDrop(e) {
         return; // 槽位已被佔用
     }
     
-    // 獲取拖放的物品數據
-    const data = JSON.parse(e.dataTransfer.getData('text/plain'));
-    const itemId = data.itemId;
-    const tier = parseInt(data.tier);
-    
-    // 找到對應的物品
-    let item;
-    if (tier === 0) {
-        item = simulatorItems.t0.find(i => i.item_id === itemId);
-    } else if (tier === 1) {
-        item = simulatorItems.t1.find(i => i.item_id === itemId);
-    } else {
-        return; // T2 物品不能被拖放到組合區
+    try {
+        // 獲取拖放的物品數據
+        const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+        const itemId = data.itemId;
+        const tier = parseInt(data.tier);
+        const fromCraftingArea = data.fromCraftingArea || false;
+        
+        // 找到對應的物品
+        let item;
+        
+        // 如果是從工作區拖來的物品，直接從 currentItems 中查找
+        if (fromCraftingArea) {
+            item = currentItems.find(i => i.item_id === itemId);
+        } else {
+            // 否則從對應的 tier 列表中查找
+            if (tier === 0) {
+                item = simulatorItems.t0.find(i => i.item_id === itemId);
+            } else if (tier === 2) {
+                item = simulatorItems.t2.find(i => i.item_id === itemId);
+            }
+        }
+        
+        if (!item) {
+            console.error('找不到物品:', itemId, 'tier:', tier);
+            return;
+        }
+        
+        // 創建物品元素並添加到槽位
+        const itemElement = createSimItemElement(item, tier);
+        
+        // 如果不是工作區，則禁用拖曳
+        if (!this.closest('#craftingArea')) {
+            itemElement.draggable = false;
+        }
+        
+        this.appendChild(itemElement);
+        
+        // 如果是從工作區拖來的物品，清空原來的格子
+        if (fromCraftingArea) {
+            const originalItem = document.querySelector('#craftingArea .sim-item[data-being-dragged="true"]');
+            if (originalItem) {
+                originalItem.remove();
+            }
+        }
+        
+        // 更新推薦的烹飪方法，僅當操作在主工作區時
+        if (this.closest('#craftingArea')) {
+            updateRecommendedCookingMethod();
+        }
+        
+        // 為新添加的物品設置拖曳事件（如果在工作區）
+        if (this.closest('#craftingArea')) {
+            setupDraggableItemListeners();
+        }
+    } catch (error) {
+        console.error('處理拖放時發生錯誤:', error);
     }
-    
-    if (!item) return;
-    
-    // 創建物品元素並添加到槽位
-    const itemElement = createSimItemElement(item, tier);
-    itemElement.draggable = false; // 組合區內的物品不能再拖動
-    this.appendChild(itemElement);
-    
-    // 更新推薦的烹飪方法
-    updateRecommendedCookingMethod();
 }
 
 // 設置烹飪方法選擇
@@ -368,8 +459,15 @@ function setupCookingMethodSelection() {
     const cookingMethodBtns = document.querySelectorAll('.cooking-method-btn');
     cookingMethodBtns.forEach(btn => {
         btn.addEventListener('click', function() {
+            // 跳過出餐按鈕
+            if (this.classList.contains('btn-serve-order')) return;
+            
             // 移除其他按鈕的活動狀態
-            cookingMethodBtns.forEach(b => b.classList.remove('active'));
+            cookingMethodBtns.forEach(b => {
+                if (!b.classList.contains('btn-serve-order')) {
+                    b.classList.remove('active');
+                }
+            });
             // 設置當前按鈕為活動狀態
             this.classList.add('active');
             // 更新選中的烹飪方法
@@ -378,23 +476,56 @@ function setupCookingMethodSelection() {
             executeSimulation();
         });
     });
+
+    // 為訂單區域的出餐按鈕添加特殊處理
+    const serveOrderBtns = document.querySelectorAll('.btn-serve-order');
+    serveOrderBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            // 設置烹飪方法為"組合"
+            selectedCookingMethod = 'assembly';
+            
+            // 獲取訂單區域的格子中的物品
+            const orderSlots = Array.from(this.closest('.d-flex.flex-column').querySelectorAll('.crafting-slot .sim-item')).map(item => ({
+                itemId: item.dataset.itemId,
+                tier: parseInt(item.dataset.tier)
+            }));
+            
+            // 檢查是否有物品
+            if (orderSlots.length === 0) {
+                updateSimulationResults('請先將物品拖曳到訂單區域的格子中。', 'error');
+                return;
+            }
+            
+            // 準備模擬數據
+            const simulationData = {
+                items: orderSlots.map(item => item.itemId),
+                cookingMethod: selectedCookingMethod
+            };
+            
+            // 判斷是訂單1還是訂單2
+            const isOrder2 = this.dataset.order === '2';
+            
+            // 執行模擬
+            executeOrderSimulation(simulationData, orderSlots, isOrder2);
+        });
+    });
 }
 
 // 更新推薦的烹飪方法
 function updateRecommendedCookingMethod() {
     // 獲取組合區中的所有物品
-    const craftingItems = Array.from(document.querySelectorAll('.crafting-slot .sim-item'));
+    const craftingItems = Array.from(document.querySelectorAll('#craftingArea .crafting-slot .sim-item'));
     
-    // 檢查是否有 T1 物品
-    const hasT1Items = craftingItems.some(item => parseInt(item.dataset.tier) === 1);
+    // 檢查是否有 T2 物品
+    const hasT2Items = craftingItems.some(item => parseInt(item.dataset.tier) === 2);
     
     // 移除所有推薦標記
     document.querySelectorAll('.cooking-method-btn').forEach(btn => {
         btn.classList.remove('recommended');
     });
     
-    // 如果有 T1 物品，推薦「組合」方法
-    if (hasT1Items) {
+    // 如果有 T2 物品，推薦「組合」方法
+    if (hasT2Items) {
         const assemblyBtn = document.querySelector('.cooking-method-btn[data-method="assembly"]');
         if (assemblyBtn) {
             assemblyBtn.classList.add('recommended');
@@ -404,42 +535,80 @@ function updateRecommendedCookingMethod() {
 
 // 執行模擬
 async function executeSimulation() {
-    // 獲取組合區中的物品
-    const craftingItems = Array.from(document.querySelectorAll('.crafting-slot .sim-item')).map(item => ({
-        itemId: item.dataset.itemId,
-        tier: parseInt(item.dataset.tier)
-    }));
-    
-    // 檢查是否有物品
-    if (craftingItems.length === 0) {
-        updateSimulationResults('請先將物品拖曳到組合區。', 'error');
-        return;
-    }
-    
-    // 檢查是否選擇了烹飪方法
-    if (!selectedCookingMethod) {
-        updateSimulationResults('請選擇一種烹飪方法。', 'error');
-        return;
-    }
-    
-    // 準備模擬數據
-    const simulationData = {
-        items: craftingItems.map(item => item.itemId),
-        cookingMethod: selectedCookingMethod
-    };
-    
-    // 根據烹飪方法顯示不同的模擬訊息
-    const cookingMethodMap = {
-        'grill': '烤製',
-        'pan_fry': '煎炒',
-        'deep_fry': '油炸',
-        'boil': '水煮',
-        'assembly': '組合'
-    };
-    
-    const methodText = cookingMethodMap[selectedCookingMethod] || selectedCookingMethod;
-    
+    // --- DEBUGGING LOGS START ---
+    console.log("--- [DEBUG] executeSimulation triggered ---");
     try {
+        const mainCraftingArea = document.getElementById('craftingArea');
+        console.log("[DEBUG] Cooking Method:", selectedCookingMethod);
+        
+        const craftingItemElements = mainCraftingArea.querySelectorAll('.crafting-slot .sim-item');
+        const craftingItems = Array.from(craftingItemElements).map(item => ({
+            itemId: item.dataset.itemId,
+            tier: parseInt(item.dataset.tier),
+            name: item.querySelector('.item-name').textContent
+        }));
+        
+        console.log(`[DEBUG] Found ${craftingItems.length} items in #craftingArea:`, JSON.stringify(craftingItems, null, 2));
+
+        // 檢查是否有物品
+        if (craftingItems.length === 0) {
+            updateSimulationResults('請先將物品拖曳到組合區。', 'error');
+            console.log("[DEBUG] Aborting: No items in crafting area.");
+            return;
+        }
+        
+        // 檢查是否選擇了烹飪方法
+        if (!selectedCookingMethod) {
+            updateSimulationResults('請選擇一種烹飪方法。', 'error');
+            console.log("[DEBUG] Aborting: No cooking method selected.");
+            return;
+        }
+        
+        // 準備模擬數據
+        const simulationData = {
+            items: craftingItems.map(item => item.itemId),
+            cookingMethod: selectedCookingMethod
+        };
+        console.log("[DEBUG] Sending data to API /v3/simulate:", JSON.stringify(simulationData, null, 2));
+        
+        const cookingMethodMap = {
+            'grill': '烤製',
+            'pan_fry': '煎炒',
+            'deep_fry': '油炸',
+            'boil': '水煮',
+            'assembly': '組合'
+        };
+        const methodText = cookingMethodMap[selectedCookingMethod] || selectedCookingMethod;
+        
+        const result = await apiFetch('/v3/simulate', {
+            method: 'POST',
+            body: simulationData
+        });
+        
+        let cookTime = 3;
+        if (result.success && result.recipe && result.recipe.cook_time_sec) {
+            cookTime = result.recipe.cook_time_sec;
+        }
+        
+        updateSimulationResults(`${methodText}中...`, 'info', cookTime);
+        
+        setTimeout(() => {
+            handleSimulationResult(result, craftingItems);
+        }, cookTime * 1000);
+        
+    } catch (error) {
+        console.error("[DEBUG] A critical error occurred in executeSimulation:", error);
+        updateSimulationResults(`模擬失敗: ${error.message}`, 'error');
+    }
+    // --- DEBUGGING LOGS END ---
+}
+
+// 新增: 訂單區域的模擬執行函數
+async function executeOrderSimulation(simulationData, inputItems, isOrder2 = false) {
+    try {
+        // 顯示模擬訊息
+        updateSimulationResults('組合中...', 'info', 3);
+        
         // 呼叫模擬 API
         const result = await apiFetch('/v3/simulate', {
             method: 'POST',
@@ -452,12 +621,12 @@ async function executeSimulation() {
             cookTime = result.recipe.cook_time_sec;
         }
         
-        // 顯示帶有倒數計時的模擬訊息
-        updateSimulationResults(`${methodText}中...`, 'info', cookTime);
-        
         // 延遲處理結果，模擬烹飪時間
         setTimeout(() => {
-        handleSimulationResult(result, craftingItems);
+            // 傳入 'orderArea' 作為來源標識，並傳入是否為訂單2的標記
+            handleSimulationResult(result, inputItems, isOrder2 ? 'orderArea2' : 'orderArea');
+            
+            // 清空訂單區域的格子 - 這個邏輯移到 handleSimulationResult 中
         }, cookTime * 1000);
         
     } catch (error) {
@@ -466,7 +635,14 @@ async function executeSimulation() {
 }
 
 // 處理模擬結果
-function handleSimulationResult(result, inputItems) {
+function handleSimulationResult(result, inputItems, source = 'craftingArea') {
+    // --- DEBUGGING LOGS START ---
+    console.log("--- [DEBUG] handleSimulationResult triggered ---");
+    console.log("[DEBUG] Source of simulation:", source);
+    console.log("[DEBUG] Raw result from server:", JSON.stringify(result, null, 2));
+    console.log("[DEBUG] Input items for this simulation:", JSON.stringify(inputItems, null, 2));
+    // --- DEBUGGING LOGS END ---
+
     // 移除任何可能存在的覆蓋層
     const existingBoilOverlay = document.getElementById('boilOverlay');
     if (existingBoilOverlay) {
@@ -500,21 +676,40 @@ function handleSimulationResult(result, inputItems) {
         const outputItem = result.outputItem;
         const outputTier = outputItem.item_tier;
         
-        // 添加到對應的物品列表
-        if (outputTier === 1) {
-            // 檢查是否已存在
-            if (!simulatorItems.t1.some(item => item.item_id === outputItem.item_id)) {
-                simulatorItems.t1.push(outputItem);
-            }
-        } else if (outputTier === 2) {
-            // 檢查是否已存在
-            if (!simulatorItems.t2.some(item => item.item_id === outputItem.item_id)) {
-                simulatorItems.t2.push(outputItem);
-            }
+        // 根據來源執行不同操作
+        if (source === 'craftingArea') {
+            // 來自主要工作區的烹飪，將成品放回工作區
+            console.log("[DEBUG] Handling result for 'craftingArea'. Placing item in crafting area.");
+            // 清空工作區的所有格子
+            document.querySelectorAll('#craftingArea .crafting-slot .sim-item').forEach(item => item.remove());
             
-            // 檢查是否完成訂單
+            // 創建成品元素
+            const craftingSlots = document.querySelectorAll('#craftingArea .crafting-slot');
+            if (craftingSlots.length > 0) {
+                const firstSlot = craftingSlots[0];
+                const outputItemElement = createSimItemElement(outputItem, outputTier);
+                
+                // 添加到第一個格子
+                firstSlot.appendChild(outputItemElement);
+                
+                // 重新為新生成的物品設置拖曳事件
+                setupDraggableItemListeners();
+            }
+        } else if (source === 'orderArea') {
+            // 來自訂單1區的組合，視為出餐，清空訂單區格子
+            console.log("[DEBUG] Handling result for 'orderArea'. Clearing order slots.");
+            document.querySelectorAll('.btn-serve-order:not([data-order="2"])').forEach(btn => {
+                const slots = btn.closest('.d-flex.flex-column').querySelectorAll('.crafting-slot');
+                slots.forEach(slot => {
+                    while (slot.firstChild) {
+                        slot.removeChild(slot.firstChild);
+                    }
+                });
+            });
+            
+            // 檢查是否完成訂單1
             if (outputItem.item_id === currentOrder) {
-                // 訂單完成!
+                // 訂單1完成!
                 const points = outputItem.base_points || 100; // 默認100分
                 playerScore += points;
                 
@@ -528,20 +723,45 @@ function handleSimulationResult(result, inputItems) {
                 }
                 
                 // 顯示訂單完成訊息
-                updateSimulationResults(`訂單完成! 獲得 ${points} 分`, "success");
+                updateSimulationResults(`訂單1完成! 獲得 ${points} 分`, "success");
                 
-                // 生成新訂單
+                // 生成新訂單1
                 setTimeout(() => displayRandomT2Item(), 1500);
             }
+        } else if (source === 'orderArea2') {
+            // 來自訂單2區的組合，視為出餐，清空訂單2區格子
+            console.log("[DEBUG] Handling result for 'orderArea2'. Clearing order2 slots.");
+            document.querySelectorAll('.btn-serve-order[data-order="2"]').forEach(btn => {
+                const slots = btn.closest('.d-flex.flex-column').querySelectorAll('.crafting-slot');
+                slots.forEach(slot => {
+                    while (slot.firstChild) {
+                        slot.removeChild(slot.firstChild);
+                    }
+                });
+            });
+            
+            // 檢查是否完成訂單2
+            if (outputItem.item_id === currentOrder2) {
+                // 訂單2完成!
+                const points = outputItem.base_points || 100; // 默認100分
+                playerScore += points;
+                
+                // 更新分數顯示
+                updateScoreDisplay();
+                
+                // 清除訂單2計時器
+                if (orderTimer2) {
+                    clearInterval(orderTimer2);
+                    orderTimer2 = null;
+                }
+                
+                // 顯示訂單完成訊息
+                updateSimulationResults(`訂單2完成! 獲得 ${points} 分`, "success");
+                
+                // 生成新訂單2
+                setTimeout(() => displayRandomT2Item2(), 1500);
+            }
         }
-        
-        // 重新渲染物品列表
-        renderSimulatorItems();
-        // 重新為新生成的物品設置拖曳事件
-        setupDraggableItemListeners();
-        
-        // 清空組合區
-        document.querySelectorAll('.crafting-slot .sim-item').forEach(item => item.remove());
         
         // 不再使用simulationHistory存儲模擬結果
         // 而是直接將配方信息存儲到API或本地緩存中
@@ -552,10 +772,7 @@ function handleSimulationResult(result, inputItems) {
         
         // 顯示成功訊息
         const inputItemsText = inputItems.map(item => {
-            const itemObj = item.tier === 0 ? 
-                simulatorItems.t0.find(i => i.item_id === item.itemId) : 
-                simulatorItems.t1.find(i => i.item_id === item.itemId);
-            return itemObj ? `${itemObj.item_name}(T${item.tier})` : `未知物品(T${item.tier})`;
+            return `${item.name}(T${item.tier})`;
         }).join(', ');
         
         const cookingMethodMap = {
@@ -575,13 +792,6 @@ function handleSimulationResult(result, inputItems) {
                 ✅ 成功! 獲得: [${outputItem.item_name}]  
             </div>
         `;
-        
-        // 如果是 T1 物品，提示可以繼續使用
-        if (outputTier === 1) {
-            resultHtml += `
-                 
-            `;
-        }
         
         // 更新結果區域
         document.getElementById('simulationResults').innerHTML = resultHtml;
@@ -620,6 +830,8 @@ function handleSimulationResult(result, inputItems) {
         }
         
         updateSimulationResults(errorMessage, 'error');
+        
+        // 烹飪失敗時，食材保持原位，不做任何清理
     }
 }
 
@@ -941,17 +1153,41 @@ async function buildPathTreeAsync(itemId) {
     
         // 獲取原料信息
         const requirements = recipe.requirements || [];
-        const inputItems = await Promise.all(requirements.map(async req => {
-            const inputItem = currentItems.find(i => i.item_id === req.item_id);
-            return inputItem || { item_id: req.item_id, item_name: req.item_id, ascii_symbol: '?', item_tier: 0 };
-        }));
         
-        // 遞歸構建子節點
-    let childrenHtml = '<ul>';
-        for (const inputItem of inputItems) {
-            childrenHtml += await buildPathTreeAsync(inputItem.item_id);
+        // 處理食材數量 - 合併相同食材並計算數量
+        const ingredientCounts = {};
+        requirements.forEach(req => {
+            const reqItemId = req.item_id;
+            if (!ingredientCounts[reqItemId]) {
+                ingredientCounts[reqItemId] = {
+                    count: 0,
+                    itemId: reqItemId
+                };
+            }
+            ingredientCounts[reqItemId].count += req.quantity || 1; // 如果沒有指定數量，默認為1
+        });
+        
+        // 獲取每種食材的詳細信息並構建子節點
+        let childrenHtml = '<ul>';
+        for (const [reqItemId, countInfo] of Object.entries(ingredientCounts)) {
+            const inputItem = currentItems.find(i => i.item_id === reqItemId) || 
+                             { item_id: reqItemId, item_name: reqItemId, ascii_symbol: '?', item_tier: 0 };
+            
+            // 遞歸構建子節點
+            const childHtml = await buildPathTreeAsync(reqItemId);
+            
+            // 如果數量大於1，添加數量標記
+            const quantityText = countInfo.count > 1 ? ` × ${countInfo.count}` : '';
+            
+            // 替換子節點中的第一個<li>標籤，添加數量信息
+            const updatedChildHtml = childHtml.replace(/<li>/, `<li data-quantity="${countInfo.count}">`).replace(
+                /<\/span> ([^<]+)<\/li>/, 
+                `</span> $1${quantityText}</li>`
+            );
+            
+            childrenHtml += updatedChildHtml;
         }
-    childrenHtml += '</ul>';
+        childrenHtml += '</ul>';
 
     return `
         <li>
@@ -1003,8 +1239,7 @@ async function displayRandomT2Item() {
         
         // 創建物品元素
         const itemElement = createSimItemElement(randomItem, 2);
-        itemElement.style.width = '100px';
-        itemElement.style.height = '100px';
+        itemElement.classList.add('order-item-display'); // 添加專用 class
         itemElement.draggable = false;
         
         // 添加訂單標識
@@ -1017,15 +1252,8 @@ async function displayRandomT2Item() {
         // 添加訂單標題
         const orderTitle = document.createElement('div');
         orderTitle.className = 'order-title';
-        orderTitle.textContent = '當前訂單';
+        orderTitle.textContent = '';
         randomT2Display.insertBefore(orderTitle, randomT2Display.firstChild);
-        
-        // 添加訂單計時器
-        const timerElement = document.createElement('div');
-        timerElement.id = 'orderTimer';
-        timerElement.className = 'order-timer-text';
-        timerElement.textContent = formatTime(ORDER_TIME);
-        randomT2Display.appendChild(timerElement);
         
         // 設置提示框
         setupRecipeTooltip(itemElement, randomItem);
@@ -1038,6 +1266,83 @@ async function displayRandomT2Item() {
         
     } catch (error) {
         console.error('顯示隨機T2物品失敗:', error);
+        randomT2Display.innerHTML = `
+            <div class="text-danger">
+                <i class="fas fa-exclamation-circle"></i>
+                載入失敗
+            </div>
+        `;
+    }
+}
+
+// 新增: 顯示隨機T2料理 (訂單2)
+async function displayRandomT2Item2() {
+    const randomT2Display = document.getElementById('randomT2Item2');
+    if (!randomT2Display) return;
+    
+    // 清空現有內容
+    randomT2Display.innerHTML = '';
+    
+    try {
+        // 顯示載入中動畫
+        randomT2Display.innerHTML = `
+            <div class="d-flex justify-content-center align-items-center" style="width: 100%; height: 100%;">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">載入中...</span>
+                </div>
+            </div>
+        `;
+        
+        // 獲取所有T2物品
+        const t2Items = currentItems.filter(item => item.item_tier === 2);
+        
+        // 如果沒有T2物品，顯示提示
+        if (t2Items.length === 0) {
+            randomT2Display.innerHTML = '<p class="text-muted">無可用的T2料理</p>';
+            return;
+        }
+        
+        // 隨機選擇一個T2物品 (與訂單1不同)
+        let randomIndex;
+        let randomItem;
+        do {
+            randomIndex = Math.floor(Math.random() * t2Items.length);
+            randomItem = t2Items[randomIndex];
+        } while (randomItem.item_id === currentOrder); // 確保與訂單1不同
+        
+        // 設置當前訂單2
+        currentOrder2 = randomItem.item_id;
+        
+        // 創建物品元素
+        const itemElement = createSimItemElement(randomItem, 2);
+        itemElement.classList.add('order-item-display'); // 添加專用 class
+        itemElement.draggable = false;
+        
+        // 添加訂單標識
+        itemElement.classList.add('order-highlight');
+        itemElement.classList.add('order-highlight2'); // 添加訂單2專用標識
+        
+        // 清空並添加到顯示區域
+        randomT2Display.innerHTML = '';
+        randomT2Display.appendChild(itemElement);
+        
+        // 添加訂單標題
+        const orderTitle = document.createElement('div');
+        orderTitle.className = 'order-title';
+        orderTitle.textContent = '';
+        randomT2Display.insertBefore(orderTitle, randomT2Display.firstChild);
+        
+        // 設置提示框
+        setupRecipeTooltip(itemElement, randomItem);
+        
+        // 啟動訂單2計時器
+        startOrderTimer2();
+        
+        // 顯示新訂單訊息
+        updateSimulationResults(`收到新訂單2：${randomItem.item_name}!`, 'info');
+        
+    } catch (error) {
+        console.error('顯示隨機T2物品失敗 (訂單2):', error);
         randomT2Display.innerHTML = `
             <div class="text-danger">
                 <i class="fas fa-exclamation-circle"></i>
@@ -1080,79 +1385,125 @@ function startOrderTimer() {
     }, 1000);
 }
 
+// 啟動訂單2計時器
+function startOrderTimer2() {
+    // 清除現有計時器
+    if (orderTimer2) {
+        clearInterval(orderTimer2);
+    }
+    
+    // 重置時間
+    remainingTime2 = ORDER_TIME;
+    updateOrderTimerDisplay2();
+    
+    // 設置新計時器
+    orderTimer2 = setInterval(() => {
+        remainingTime2--;
+        updateOrderTimerDisplay2();
+        
+        if (remainingTime2 <= 0) {
+            // 訂單過期
+            clearInterval(orderTimer2);
+            updateSimulationResults("訂單2過期!", "error");
+            // 生成新訂單2
+            setTimeout(() => displayRandomT2Item2(), 1500);
+        }
+    }, 1000);
+}
+
 // 更新訂單計時器顯示
 function updateOrderTimerDisplay() {
-    const timerDisplay = document.getElementById('orderTimer');
-    if (timerDisplay) {
-        timerDisplay.textContent = formatTime(remainingTime);
-        
-        // 時間少於30秒時添加警示樣式
-        if (remainingTime < 30) {
-            timerDisplay.classList.add('timer-warning');
+    const timerBar = document.getElementById('orderTimerBar');
+
+    // 計算剩餘時間百分比
+    const timePercentage = (remainingTime / ORDER_TIME) * 100;
+    
+    // 更新進度條寬度
+    if(timerBar) {
+        timerBar.style.width = `${timePercentage}%`;
+        // 更新進度條顏色
+        timerBar.classList.remove('warning', 'urgent');
+        if (timePercentage < 20) {
+            timerBar.classList.add('urgent');
+        } else if (timePercentage < 50) {
+            timerBar.classList.add('warning');
+        }
+    }
+    
+    // 獲取訂單卡片元素
+    const orderItem = document.querySelector('.order-highlight');
+    
+    if (orderItem) {
+        // 時間少於30%時添加警示樣式
+        if (timePercentage < 30) {
+            orderItem.classList.add('order-urgent');
         } else {
-            timerDisplay.classList.remove('timer-warning');
+            orderItem.classList.remove('order-urgent');
+        }
+    }
+}
+
+// 更新訂單2計時器顯示
+function updateOrderTimerDisplay2() {
+    const timerBar = document.getElementById('orderTimerBar2');
+
+    // 計算剩餘時間百分比
+    const timePercentage = (remainingTime2 / ORDER_TIME) * 100;
+    
+    // 更新進度條寬度
+    if(timerBar) {
+        timerBar.style.width = `${timePercentage}%`;
+        // 更新進度條顏色
+        timerBar.classList.remove('warning', 'urgent');
+        if (timePercentage < 20) {
+            timerBar.classList.add('urgent');
+        } else if (timePercentage < 50) {
+            timerBar.classList.add('warning');
+        }
+    }
+    
+    // 獲取訂單2卡片元素
+    const orderItem2 = document.querySelector('.order-highlight2');
+    
+    if (orderItem2) {
+        // 時間少於30%時添加警示樣式
+        if (timePercentage < 30) {
+            orderItem2.classList.add('order-urgent');
+        } else {
+            orderItem2.classList.remove('order-urgent');
         }
     }
 }
 
 // 新增: 設置組合提示功能
 function setupRecipeTooltip(element, item) {
-    const tooltip = document.getElementById('recipeTooltip');
+    // 將元素包裝在 recipe-container 中
+    const container = document.createElement('div');
+    container.className = 'recipe-container';
     
-    // 滑鼠懸停顯示提示
-    element.addEventListener('mouseenter', function(e) {
-        showRecipeTooltip(item, tooltip, e);
-    });
+    // 創建新的提示框元素
+    const newTooltip = document.createElement('div');
+    newTooltip.className = 'recipe-tooltip-new';
+    newTooltip.innerHTML = '<div class="recipe-tooltip-content">載入中...</div>';
     
-    // 觸摸開始顯示提示
-    element.addEventListener('touchstart', function(e) {
-        const touch = e.touches[0];
-        showRecipeTooltip(item, tooltip, touch);
-        e.preventDefault();
-    });
+    // 將元素移到父元素前
+    element.parentNode.insertBefore(container, element);
     
-    // 滑鼠離開或觸摸結束時隱藏提示
-    element.addEventListener('mouseleave', function() {
-        hideRecipeTooltip(tooltip);
-    });
+    // 將元素移動到容器中
+    container.appendChild(element);
     
-    element.addEventListener('touchend', function() {
-        hideRecipeTooltip(tooltip);
-    });
+    // 將提示框添加到容器中
+    container.appendChild(newTooltip);
     
-    element.addEventListener('touchcancel', function() {
-        hideRecipeTooltip(tooltip);
-    });
+    // 預加載配方數據
+    loadRecipeData(item, newTooltip);
 }
- 
-// 顯示食譜提示框
-async function showRecipeTooltip(item, tooltip, event) {
+
+// 新增: 預加載配方數據
+async function loadRecipeData(item, tooltip) {
     try {
-        // 獲取容器的位置信息
-        const container = event.currentTarget;
-        const containerRect = container.getBoundingClientRect();
-        
-        // 顯示提示框並設置初始位置
-        tooltip.style.opacity = '1';
-        tooltip.style.left = `${containerRect.right + 10}px`;
-        tooltip.style.top = `${containerRect.top}px`;
-        
-        // 顯示載入中訊息
-        tooltip.innerHTML = `
-            <div class="recipe-tooltip-title">載入中...</div>
-            <div class="d-flex justify-content-center my-2">
-                <div class="spinner-border spinner-border-sm text-primary" role="status">
-                    <span class="visually-hidden">載入中...</span>
-                </div>
-            </div>
-        `;
-        
-        // 檢查是否有足夠的資料來顯示提示
         if (!item || !item.item_id) {
-            tooltip.innerHTML = `
-                <div class="recipe-tooltip-title text-danger">錯誤</div>
-                <div>無法顯示食譜：物品資料不完整</div>
-            `;
+            tooltip.querySelector('.recipe-tooltip-content').innerHTML = '無法顯示食譜：物品資料不完整';
             return;
         }
         
@@ -1162,8 +1513,6 @@ async function showRecipeTooltip(item, tooltip, event) {
         
         // 如果緩存中沒有，嘗試從全局 allRecipes 中查找
         if (!recipeInfo && allRecipes.length > 0) {
-            console.log(`嘗試從全局 allRecipes 中查找 ${item.item_id} 的食譜`);
-            // 確保比較的是字符串類型
             const foundRecipe = allRecipes.find(r => {
                 const recipeOutputId = r.output_item_id ? r.output_item_id.toString() : '';
                 const itemId = item.item_id ? item.item_id.toString() : '';
@@ -1171,44 +1520,28 @@ async function showRecipeTooltip(item, tooltip, event) {
             });
             
             if (foundRecipe) {
-                console.log(`在全局 allRecipes 中找到 ${item.item_id} 的食譜`);
                 recipeInfo = foundRecipe;
                 cacheRecipe(recipeInfo);
-            } else {
-                console.log(`在全局 allRecipes 中未找到 ${item.item_id} 的食譜`);
             }
         }
         
         // 如果仍然沒有找到，嘗試從API獲取
         if (!recipeInfo) {
-            console.log(`嘗試從API獲取 ${item.item_id} 的食譜`);
-            tooltip.innerHTML = `
-                <div class="recipe-tooltip-title">載入中...</div>
-                <div class="d-flex justify-content-center my-2">
-                    <div class="spinner-border spinner-border-sm text-primary" role="status">
-                        <span class="visually-hidden">載入中...</span>
-                    </div>
-                </div>
-                <div class="small text-muted">正在查詢食譜資料...</div>
-            `;
-            
             try {
                 const recipes = await findPossibleRecipes(item);
                 if (recipes && recipes.length > 0) {
                     recipeInfo = recipes[0];
-                    console.log(`成功獲取 ${item.item_id} 的食譜:`, recipeInfo);
                 } else {
-                    console.log(`未找到 ${item.item_id} 的食譜`);
-                    tooltip.innerHTML = `
-                        <div class="recipe-tooltip-title text-warning">未找到食譜</div>
+                    tooltip.querySelector('.recipe-tooltip-content').innerHTML = `
+                        <div class="text-warning">未找到食譜</div>
                         <div>無法獲取 ${item.item_name} 的配方資訊</div>
                     `;
                     return;
                 }
             } catch (error) {
                 console.error(`獲取 ${item.item_id} 的食譜失敗:`, error);
-                tooltip.innerHTML = `
-                    <div class="recipe-tooltip-title text-danger">載入失敗</div>
+                tooltip.querySelector('.recipe-tooltip-content').innerHTML = `
+                    <div class="text-danger">載入失敗</div>
                     <div>無法獲取食譜: ${error.message}</div>
                 `;
                 return;
@@ -1217,11 +1550,31 @@ async function showRecipeTooltip(item, tooltip, event) {
         
         // 從食譜中獲取原料信息
         const requirements = recipeInfo.requirements || [];
-        console.log('配方需求:', requirements);
-        const inputItems = await Promise.all(requirements.map(async req => {
-            const inputItem = currentItems.find(i => i.item_id === req.item_id);
-            return inputItem || { item_name: req.item_id, ascii_symbol: '?', item_tier: 0 };
-        }));
+        
+        // 處理食材數量 - 合併相同食材並計算數量
+        const ingredientCounts = {};
+        requirements.forEach(req => {
+            const itemId = req.item_id;
+            if (!ingredientCounts[itemId]) {
+                ingredientCounts[itemId] = {
+                    count: 0,
+                    item: null
+                };
+            }
+            ingredientCounts[itemId].count += req.quantity || 1; // 如果沒有指定數量，默認為1
+        });
+        
+        // 獲取每種食材的詳細信息
+        const inputItemsPromises = Object.keys(ingredientCounts).map(async itemId => {
+            const inputItem = currentItems.find(i => i.item_id === itemId);
+            const item = inputItem || { item_name: itemId, ascii_symbol: '?', item_tier: 0 };
+            return {
+                ...item,
+                quantity: ingredientCounts[itemId].count
+            };
+        });
+        
+        const inputItems = await Promise.all(inputItemsPromises);
         
         // 烹飪方法映射
         const cookingMethodMap = {
@@ -1232,12 +1585,30 @@ async function showRecipeTooltip(item, tooltip, event) {
         
         // 生成提示內容
         let tooltipContent = `
-            <div class="recipe-tooltip-title">${item.item_name} 的配方</div>
+            <h5>${item.item_name}</h5>
+            <div class="recipe-method">
+                烹飪方法: <span class="recipe-method-tag">${methodText}</span>
+            </div>
+            <div class="recipe-ingredients">
         `;
+        
+        // 添加原料列表，顯示數量
+        inputItems.forEach(inputItem => {
+            const quantityText = inputItem.quantity > 1 ? ` × ${inputItem.quantity}` : '';
+            tooltipContent += `
+                <div class="recipe-ingredient">
+                    <span class="recipe-ingredient-icon">${inputItem.ascii_symbol}</span>
+                    <span>${inputItem.item_name}${quantityText}</span>
+                </div>
+            `;
+        });
+        
+        tooltipContent += '</div>';
         
         // 如果是T2料理，嘗試查找T1原料的合成路徑
         if (item.item_tier === 2) {
-            // 查找T1原料的合成路徑
+            let t1Info = '';
+            
             for (const inputItem of inputItems) {
                 if (inputItem.item_tier === 1) {
                     // 首先檢查緩存
@@ -1273,52 +1644,80 @@ async function showRecipeTooltip(item, tooltip, event) {
                     if (t1Recipe) {
                         const t1Requirements = t1Recipe.requirements || [];
                         
-                        const t1Inputs = await Promise.all(t1Requirements.map(async req => {
-                            const t1InputItem = currentItems.find(i => i.item_id === req.item_id);
-                            return t1InputItem || { item_name: req.item_id, ascii_symbol: '?', item_tier: 0 };
-                        }));
+                        // 處理T1食材的數量
+                        const t1IngredientCounts = {};
+                        t1Requirements.forEach(req => {
+                            const itemId = req.item_id;
+                            if (!t1IngredientCounts[itemId]) {
+                                t1IngredientCounts[itemId] = {
+                                    count: 0,
+                                    item: null
+                                };
+                            }
+                            t1IngredientCounts[itemId].count += req.quantity || 1;
+                        });
+                        
+                        // 獲取T1食材的詳細信息
+                        const t1InputsPromises = Object.keys(t1IngredientCounts).map(async itemId => {
+                            const t1InputItem = currentItems.find(i => i.item_id === itemId);
+                            const item = t1InputItem || { item_name: itemId, ascii_symbol: '?', item_tier: 0 };
+                            return {
+                                ...item,
+                                quantity: t1IngredientCounts[itemId].count
+                            };
+                        });
+                        
+                        const t1Inputs = await Promise.all(t1InputsPromises);
 
                         const t1MethodText = cookingMethodMap[t1Recipe.cooking_method] || t1Recipe.cooking_method;
                         
-                        tooltipContent += `
-                            <div class="recipe-tooltip-item">
-                                <span class="recipe-tooltip-symbol">${inputItem.ascii_symbol}</span>
-                                <span>T1 = </span>
-                                ${t1Inputs.map(i => `<span>${i.ascii_symbol}</span>`).join(' + ')}
-                                <small class="text-muted ms-1">(${t1MethodText})</small>
-                            </div>
+                        // 顯示T1食材的數量
+                        const quantityText = inputItem.quantity > 1 ? ` × ${inputItem.quantity}` : '';
+                        
+                        t1Info += `
+                            <div class="recipe-t1-info">
+                                <div class="recipe-ingredient">
+                                    <span class="recipe-ingredient-icon">${inputItem.ascii_symbol}</span>
+                                    <span>${inputItem.item_name}${quantityText}</span>
+                                    <span class="recipe-method-tag">${t1MethodText}</span>
+                                </div>
+                                <div class="recipe-t1-ingredients">
                         `;
+                        
+                        t1Inputs.forEach(t1Input => {
+                            const t1QuantityText = t1Input.quantity > 1 ? ` × ${t1Input.quantity}` : '';
+                            t1Info += `
+                                <div class="recipe-ingredient" style="margin-left: 20px;">
+                                    <span class="recipe-ingredient-icon">${t1Input.ascii_symbol}</span>
+                                    <span>${t1Input.item_name}${t1QuantityText}</span>
+                                </div>
+                            `;
+                        });
+                        
+                        t1Info += '</div></div>';
                     }
                 }
             }
+            
+            if (t1Info) {
+                tooltipContent += `
+                    <hr style="margin: 10px 0;">
+                    <div class="recipe-t1-section">
+                        <h6>半成品製作方法:</h6>
+                        ${t1Info}
+                    </div>
+                `;
+            }
         }
         
-        // 顯示當前料理的合成方法
-        tooltipContent += `
-            <div class="recipe-tooltip-item">
-                <span class="recipe-tooltip-symbol">${item.ascii_symbol}</span>
-                <span>= </span>
-                ${inputItems.map(i => `<span>${i.ascii_symbol}</span>`).join(' + ')}
-            </div>
-            <div class="recipe-tooltip-method">烹飪方法: ${methodText}</div>
-        `;
-        
-        tooltip.innerHTML = tooltipContent;
-        
-        // 重新調整提示框位置，因為內容可能變更尺寸
-        const newTooltipRect = tooltip.getBoundingClientRect();
-        if (newTooltipRect.right > window.innerWidth) {
-            tooltip.style.left = `${containerRect.left - newTooltipRect.width - 10}px`;
-        }
-        
-        console.log('提示框已顯示');
+        // 更新提示框內容
+        tooltip.querySelector('.recipe-tooltip-content').innerHTML = tooltipContent;
         
     } catch (error) {
-        console.error('顯示組合提示失敗:', error);
-        tooltip.innerHTML = `
-            <div class="recipe-tooltip-title text-danger">錯誤</div>
+        console.error('載入配方數據失敗:', error);
+        tooltip.querySelector('.recipe-tooltip-content').innerHTML = `
+            <div class="text-danger">錯誤</div>
             <div>載入失敗: ${error.message}</div>
-            <div class="small text-muted">請稍後再試</div>
         `;
     }
 }
@@ -1365,7 +1764,9 @@ async function findPossibleRecipes(item) {
  
 // 新增: 隱藏組合提示
 function hideRecipeTooltip(tooltip) {
-    tooltip.style.opacity = '0';
+    // 這個函數現在不再需要，我們使用CSS懸停效果
+    // 保留此函數是為了避免代碼中的引用出錯
+    console.log('使用新的提示框樣式，此函數已不再使用');
 }
 
 // 新增: 緩存配方信息
