@@ -621,22 +621,78 @@
                     drawCanvas();
                 };
 
+
+
+  
+    // 建立代理 URL
+    const proxyUrl = `/proxy-image?url=${encodeURIComponent(newFrame.imageUrl)}`;
+    console.log(`正在透過代理載入圖片: ${proxyUrl}`);
+    
+    const img = new Image();
+    // 我們不需要再設定 crossOrigin，因為現在是同源請求
+    img.src = proxyUrl; // 使用代理 URL
+   
+
+
                 const loadImage = () => {
                     if (!newFrame.imageUrl) {
                         originalImage.value = null;
                         drawCanvas(); // Clear canvas
                         return;
                     }
+                    
+
+
+
+                    
+                    // 處理 URL - 如果是完整 URL，嘗試轉換為相對路徑
+                    let imageUrl = newFrame.imageUrl;
+                    
+                    // 檢查是否為 sunnyyummy.onrender.com 的 URL
+                    if (imageUrl.includes('sunnyyummy.onrender.com/uploads/')) {
+                        // 從 URL 中提取檔案名稱部分
+                        const urlParts = imageUrl.split('/uploads/');
+                        if (urlParts.length > 1) {
+                            const fileName = urlParts[1];
+                            imageUrl = `/uploads/${fileName}`;
+                            console.log('已將 URL 轉換為相對路徑:', imageUrl);
+                        }
+                    }
+                    
                     const img = new Image();
                     img.crossOrigin = "Anonymous"; // Handle CORS
-                    img.src = newFrame.imageUrl;
+                    img.src = imageUrl;
+                    
                     img.onload = () => {
                         originalImage.value = img;
                         drawCanvas();
                     };
+                    
                     img.onerror = () => {
+                        console.error('圖片載入失敗:', imageUrl);
+                        
+                        // 如果原始 URL 是完整 URL，但轉換後的不是，則嘗試使用原始 URL
+                        if (imageUrl !== newFrame.imageUrl && imageUrl.startsWith('/')) {
+                            console.log('嘗試使用原始 URL:', newFrame.imageUrl);
+                            const retryImg = new Image();
+                            retryImg.crossOrigin = "Anonymous";
+                            retryImg.src = newFrame.imageUrl;
+                            
+                            retryImg.onload = () => {
+                                originalImage.value = retryImg;
+                                drawCanvas();
+                            };
+                            
+                            retryImg.onerror = () => {
+                                originalImage.value = null;
+                                alert('圖片載入失敗。\n\n請嘗試使用相對路徑，例如：\n/uploads/檔案名稱.jpg\n\n而不是完整 URL。');
+                                drawCanvas();
+                            };
+                            return;
+                        }
+                        
                         originalImage.value = null;
-                        alert('圖片加載失敗，請檢查URL是否正確或是否存在CORS問題。');
+                        alert('圖片載入失敗，請檢查 URL 是否正確或是否存在 CORS 問題。\n\n提示：如果您使用的是 sunnyyummy.onrender.com 的圖片，請改用相對路徑，例如：\n/uploads/檔案名稱.jpg');
                         drawCanvas();
                     };
                 };

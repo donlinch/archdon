@@ -77,6 +77,50 @@ pool.query('SELECT NOW()', (err, res) => {
  
 
 
+
+// --- 圖片代理 API ---
+app.get('/proxy-image', (req, res) => {
+    const imageUrl = req.query.url;
+    if (!imageUrl) {
+        return res.status(400).send('Missing image URL');
+    }
+
+    try {
+        const url = new URL(imageUrl);
+        const protocol = url.protocol === 'https:' ? https : http;
+
+        const proxyReq = protocol.get(url, (proxyRes) => {
+            if (proxyRes.statusCode !== 200) {
+                console.error(`[Proxy] Error fetching image: Status code ${proxyRes.statusCode} for ${imageUrl}`);
+                res.status(proxyRes.statusCode).send(`Error fetching image: ${proxyRes.statusMessage}`);
+                return;
+            }
+            
+            // 將遠端圖片的回應標頭複製過來，特別是 Content-Type
+            res.writeHead(proxyRes.statusCode, {
+                'Content-Type': proxyRes.headers['content-type'],
+                'Content-Length': proxyRes.headers['content-length']
+            });
+
+            // 將圖片數據流直接傳給客戶端
+            proxyRes.pipe(res);
+        });
+
+        proxyReq.on('error', (err) => {
+            console.error(`[Proxy] Request error: ${err.message}`);
+            res.status(502).send('Bad Gateway'); // 502 Bad Gateway 表示代理出錯
+        });
+
+    } catch (error) {
+        console.error(`[Proxy] Invalid URL: ${imageUrl}`, error);
+        res.status(400).send('Invalid image URL');
+    }
+});
+// --- 結束圖片代理 API ---
+
+
+
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
