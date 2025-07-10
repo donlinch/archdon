@@ -20,5 +20,11 @@ export default defineConfig({
       }
     }
   },
-  base: '/vue-game/'  // 使用相同的路徑名稱
+  server: {
+    hmr: {
+      host: 'localhost',
+      port: 5173,
+    }
+  },
+  base: '/'  // 使用根路徑
 })

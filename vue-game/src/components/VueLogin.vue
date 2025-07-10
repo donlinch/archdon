@@ -125,8 +125,7 @@ const goToRegister = () => {
         <el-button type="primary" @click="handleLogin" :loading="isLoading" :disabled="isLoading">
           登入
         </el-button>
-        
-        <el-button type="text" @click="goToRegister" :disabled="isLoading">
+        <el-button type="primary" link @click="goToRegister" :disabled="isLoading">
           還沒有帳號？立即註冊
         </el-button>
       </div>

@@ -2,6 +2,9 @@
 import { ref, reactive, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
 import VueLogin from './components/VueLogin.vue';
+import AnimationDemo from './components/AnimationDemo.vue';
+
+const phaserContainer = ref();
 
 // 用戶狀態
 const user = reactive({
@@ -80,7 +83,10 @@ const goToUserEditor = () => {
 
     <!-- 主要內容 -->
     <main>
-      <VueLogin v-if="!user.isLoggedIn" @login="handleLogin" />
+      <div v-if="!user.isLoggedIn" class="login-container">
+        <AnimationDemo />
+        <VueLogin @login-success="handleLogin" />
+      </div>
       <div v-else class="welcome-container">
         <h1>歡迎回來，{{ user.displayName }}！</h1>
         <div class="game-options">
@@ -213,6 +219,16 @@ footer {
   padding: 10px;
   text-align: center;
   margin-top: 40px;
+}
+
+.login-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 2rem;
+  padding: 2rem;
 }
 
 @media (prefers-color-scheme: light) {
