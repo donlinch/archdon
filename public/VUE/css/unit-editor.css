@@ -46,7 +46,7 @@ h1, h2, h3, h4 {
     background-color: var(--bg-primary);
     height: 100vh;
     box-sizing: border-box;
-    /* Prevent shrinking below a certain size */
+    overflow-y: auto;
     min-width: 300px;
 }
 
@@ -62,14 +62,13 @@ h1, h2, h3, h4 {
 }
 
 .inspector-pane {
-    /* width is now controlled by JS */
+    width: 400px; /* Initial width */
     background-color: var(--bg-secondary);
     border-left: 1px solid var(--border-color);
     padding: 20px;
     overflow-y: auto;
     height: 100vh;
     box-sizing: border-box;
-    /* Prevent shrinking below a certain size */
     min-width: 300px;
 }
 
@@ -196,10 +195,9 @@ input[type="text"], select {
     border: 1px solid var(--border-color);
     gap: 1px;
     background-color: #111;
-    width: 162px; /* 5 * 32px + 2 * 1px(border) */
-    height: 162px;
+    /* width & height are now controlled by JS */
     padding: 0;
-    margin: auto; /* Center the grid */
+    margin: 0 auto; /* Center the grid horizontally, align top */
     position: relative;
     overflow: visible;
 }
@@ -286,6 +284,15 @@ input[type="text"], select {
     z-index: 10;
 }
 
+.added-frame-box {
+    position: absolute;
+    border: 2px solid #00ff00; /* Bright green to indicate it's been added */
+    background-color: rgba(0, 255, 0, 0.2);
+    pointer-events: none;
+    z-index: 9;
+}
+
+
 .selection-info {
     margin-top: 10px;
     font-size: 14px;
@@ -330,7 +337,81 @@ input[type="text"], select {
     gap: 10px;
 }
 
+/* === Animation Creator Panel === */
+.animation-creator .panel-content {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+.frame-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+    gap: 10px;
+    background-color: var(--bg-primary);
+    padding: 10px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    min-height: 72px; /* 50px item + 10px padding + 2px border */
+    align-items: center;
+}
+.frame-item {
+    position: relative;
+    aspect-ratio: 1/1;
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+}
+.frame-item img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    image-rendering: pixelated;
+}
+.frame-item .frame-index {
+    position: absolute;
+    bottom: -1px;
+    right: 2px;
+    font-size: 10px;
+    font-weight: bold;
+    color: var(--text-primary);
+    -webkit-text-stroke: 1px var(--bg-primary);
+}
+.animation-controls {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+.animation-controls .control-item {
+    flex-grow: 1;
+}
+.animation-controls label {
+    margin-right: 5px;
+    font-size: 14px;
+}
+.animation-controls input[type="number"] {
+    width: 60px;
+}
+.animation-controls input[type="checkbox"] {
+    margin-left: 5px;
+}
+
+
 /* Component Library */
+.category-filter-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--border-color);
+}
+.filter-btn {
+    flex: 1;
+}
+
 .components-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
@@ -382,33 +463,36 @@ input[type="text"], select {
     border: 2px solid transparent;
     border-radius: 4px;
     padding: 5px;
-    cursor: pointer;
     background-color: var(--bg-tertiary);
+    cursor: pointer;
     transition: all 0.2s ease;
     aspect-ratio: 1/1;
     display: flex;
     align-items: center;
     justify-content: center;
 }
+
 .component-item:hover {
     border-color: var(--accent-secondary);
 }
 .component-item.selected {
     border-color: var(--accent-primary);
-    background-color: #00568f;
 }
 .component-item.dragging {
     opacity: 0.5;
-    transform: scale(1.05);
 }
-.component-item img {
+
+.component-item img,
+.component-item canvas {
     display: block;
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
-    cursor: grab;
     image-rendering: pixelated;
+    user-select: none;
+    -webkit-user-drag: none;
 }
+
 .component-item img:active {
     cursor: grabbing;
 }
@@ -436,6 +520,49 @@ input[type="text"], select {
     transform: scale(1);
 }
 
+.edit-btn {
+    position: absolute;
+    bottom: -8px;
+    right: -8px;
+    background-color: var(--accent-primary);
+    color: white;
+    border: 1px solid var(--bg-primary);
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+    line-height: 18px;
+    text-align: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.2s;
+    transform: translateY(5px);
+    z-index: 2;
+}
+.component-item:hover .edit-btn {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.copy-btn {
+    position: absolute;
+    bottom: 5px;
+    left: 5px;
+    background-color: rgba(40, 40, 40, 0.8);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 3px 6px;
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.2s ease;
+    font-size: 12px;
+}
+
+.component-item:hover .copy-btn {
+    opacity: 1;
+}
+
 /* Data Output Panel */
 .data-output {
     width: 100%;
@@ -456,5 +583,63 @@ input[type="text"], select {
     margin-top: 10px;
     display: flex;
     justify-content: space-between;
+    gap: 10px;
+}
+
+/* === Modal Styles === */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background-color: var(--bg-secondary);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 18px;
+    font-weight: 500;
+}
+
+.modal-body {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.modal-body .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.modal-body label {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.modal-footer {
+    padding: 15px 20px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
     gap: 10px;
 }

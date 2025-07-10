@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>元件預覽器</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/unit-viewer.css">
+</head>
+<body>
+    <div id="app">
+        <div class="viewer-container">
+            <!-- Left Pane: Grid -->
+            <div class="editor-pane">
+                 
+                 <div class="grid-container" ref="gridContainer" 
+                      :style="gridContainerStyle"
+                      @dragover.prevent="onDragOver"
+                      @drop.prevent="onDrop">
+                    <div
+                        class="grid-cell"
+                        v-for="i in gridCellCount"
+                        :key="'cell-' + i"
+                        :class="{ 'hover-preview': hoverCellIndex === (i - 1) }"
+                        @dragenter.prevent="onDragEnter(i - 1)"
+                        @dragleave.prevent="onDragLeave(i - 1)">
+                    </div>
+                    
+                    <!-- Render placed components -->
+                    <template v-for="component in placedComponents">
+                        <!-- Static Placed Component -->
+                        <div v-if="getOriginalComponent(component.componentId).type !== 'animation'"
+                             :key="component.id"
+                             class="placed-component"
+                             :style="getPlacedComponentStyle(component)"
+                             :class="{ 'is-dragging': component.isDragging }"
+                             draggable="true"
+                             @dragstart="onDragStart($event, component.id, 'grid')">
+                        </div>
+                        <!-- Animated Placed Component -->
+                        <canvas v-else
+                                :key="component.id"
+                                class="placed-component"
+                                :style="{ left: component.positionX + 'px', top: component.positionY + 'px', zIndex: component.zIndex }"
+                                :class="{ 'is-dragging': component.isDragging }"
+                                :ref="'anim-canvas-grid-' + component.id"
+                                :width="component.width"
+                                :height="component.height"
+                                draggable="true"
+                                @dragstart="onDragStart($event, component.id, 'grid')">
+                        </canvas>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Resizer Handle -->
+            <div class="resizer" @mousedown="startResize"></div>
+
+            <!-- Right Pane: Component Library -->
+            <div class="inspector-pane" ref="inspectorPane">
+                <h1 class="main-title">
+                    元件庫
+                    <span style="font-size: 14px; font-weight: normal;">
+                        (<a href="unit-editor.html" style="color: var(--accent-primary-hover);">切換至編輯器</a>)
+                    </span>
+                </h1>
+                <!-- Component Library Panel -->
+                <div class="panel" v-if="savedComponents.length > 0">
+                    <div class="panel-content">
+                        <!-- Category Filter Buttons -->
+                        <div class="category-filter-bar">
+                            <button 
+                                class="btn filter-btn" 
+                                :class="{ 'active': activeCategoryFilter === 'all' }"
+                                @click="activeCategoryFilter = 'all'">
+                                全部
+                            </button>
+                            <button 
+                                v-for="cat in categories" 
+                                :key="cat" 
+                                class="btn filter-btn"
+                                :class="{ 'active': activeCategoryFilter === cat }"
+                                @click="activeCategoryFilter = cat">
+                                {{ cat }}
+                            </button>
+                        </div>
+
+                        <!-- Categories -->
+                        <div v-for="category in categories" :key="category" class="category-group" v-if="activeCategoryFilter === 'all' || activeCategoryFilter === category">
+                            <h4 class="category-title">{{ category }}</h4>
+                            <div class="components-list" v-if="categorizedComponents[category] && categorizedComponents[category].length > 0">
+                                <!-- Component Item -->
+                                <div
+                                    v-for="component in categorizedComponents[category]"
+                                    :key="component.originalIndex"
+                                    class="component-item"
+                                    :class="{ 'dragging': draggingComponentIndex === component.originalIndex }">
+                                    
+                                    <img v-if="component.type !== 'animation'"
+                                         :src="component.imageData"
+                                         :alt="'元件 ' + (component.originalIndex + 1)"
+                                         draggable="true"
+                                         @dragstart="onDragStart($event, component.originalIndex, 'library')"
+                                         @dragend="onDragEnd">
+                                    
+                                    <canvas v-if="component.type === 'animation'"
+                                            :ref="'anim-canvas-library-' + component.originalIndex"
+                                            :width="component.width"
+                                            :height="component.height"
+                                            draggable="true"
+                                            @dragstart="onDragStart($event, component.originalIndex, 'library')"
+                                            @dragend="onDragEnd">
+                                    </canvas>
+                                </div>
+                            </div>
+                            <div class="empty-category-placeholder" v-else>
+                                (此分類暫無元件)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Placeholder for when no components exist -->
+                <div class="panel" v-else>
+                     <div class="panel-content" style="text-align: center;">
+                        元件庫是空的。請先在編輯器中建立一些元件。
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/unit-viewer.js"></script>
+</body>
+</html> 
