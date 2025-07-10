@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>遊戲元件創作器</title>
+    <!-- 引入 Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        :root {
+            --primary-color: #4c84ff;
+            --secondary-color: #f0f2f5;
+            --text-color: #333;
+            --border-color: #ddd;
+            --success-color: #42b983;
+            --warning-color: #e6a23c;
+            --danger-color: #f56c6c;
+        }
+        
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'PingFang TC', 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f5f7fa;
+            color: var(--text-color);
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        header h1 {
+            margin: 0;
+            font-size: 24px;
+            color: var(--primary-color);
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .two-column {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+        }
+        
+        .left-column, .right-column {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+        
+        .left-column {
+            height: calc(100vh - 140px);
+            overflow-y: auto;
+        }
+        
+        .right-column {
+            height: calc(100vh - 140px);
+            overflow-y: auto;
+        }
+        
+        .asset-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .asset-list-item {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            border: 1px solid var(--border-color);
+        }
+        
+        .asset-list-item:hover {
+            background-color: #f0f7ff;
+            border-color: var(--primary-color);
+        }
+        
+        .asset-list-item.active {
+            background-color: #e6f0ff;
+            border-color: var(--primary-color);
+        }
+        
+        .add-asset-btn {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        
+        .add-asset-btn:hover {
+            background-color: #3a70e2;
+        }
+        
+        .welcome-message {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            text-align: center;
+            color: #888;
+        }
+        
+        .welcome-message h2 {
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+        
+        .welcome-message p {
+            margin-bottom: 20px;
+            font-size: 16px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 8px;
+            font-size: 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(76, 132, 255, 0.2);
+        }
+        
+        .btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #3a70e2;
+        }
+        
+        .btn-success {
+            background-color: var(--success-color);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background-color: #36a571;
+        }
+        
+        .btn-danger {
+            background-color: var(--danger-color);
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background-color: #e64c4c;
+        }
+        
+        .animation-list {
+            margin: 20px 0;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 10px;
+        }
+        
+        .animation-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .animation-item:last-child {
+            border-bottom: none;
+        }
+        
+        .animation-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .frame-editor {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: var(--secondary-color);
+            border-radius: 4px;
+        }
+        
+        .frame-list {
+            margin: 20px 0;
+        }
+        
+        .frame-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: white;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .frame-preview {
+            width: 50px;
+            height: 50px;
+            background-color: #eee;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .frame-info {
+            flex-grow: 1;
+            margin-left: 10px;
+        }
+        
+        .frame-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .frame-form {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: white;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .coord-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .image-preview-container {
+            position: relative;
+            max-width: 100%;
+            overflow: auto;
+            border: 1px solid var(--border-color);
+            min-height: 100px;
+            background-color: #f8f8f8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .selection-box {
+            position: absolute;
+            border: 2px dashed var(--danger-color);
+            box-sizing: border-box;
+            pointer-events: none;
+        }
+
+        .canvas-editor {
+            margin-bottom: 20px;
+        }
+        .canvas-controls {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .canvas-controls .btn.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        .canvas-area {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 20px;
+            align-items: start;
+        }
+        #mainCanvas {
+            border: 1px solid var(--border-color);
+            cursor: crosshair;
+            background-color: #f8f8f8;
+            max-width: 100%;
+        }
+        .preview-area {
+            text-align: center;
+        }
+        .preview-area label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        #previewCanvas {
+            border: 1px solid var(--border-color);
+            background-color: #f8f8f8;
+            width: 128px;
+            height: 128px;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="container">
+        <header>
+            <h1>遊戲元件創作器</h1>
+            <div class="header-actions">
+                <button class="btn btn-primary" @click="exportJson">匯出 JSON</button>
+                <input type="file" id="importJsonInput" accept=".json" style="display:none" @change="importJson">
+                <button class="btn btn-success" @click="triggerImportFile">匯入 JSON</button>
+            </div>
+        </header>
+        
+        <div class="two-column">
+            <!-- 左欄：元件列表 -->
+            <div class="left-column">
+                <button class="add-asset-btn" @click="showAddAssetForm">+ 新增元件</button>
+                
+                <ul class="asset-list">
+                    <li v-for="asset in assets" :key="asset.id" 
+                        class="asset-list-item" 
+                        :class="{ active: selectedAssetId === asset.id }"
+                        @click="selectAsset(asset.id)">
+                        {{ asset.name }}
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- 右欄：編輯器 -->
+            <div class="right-column">
+                <!-- 歡迎訊息 (當未選中元件時) -->
+                <div v-if="!selectedAssetId && !isAddingAsset" class="welcome-message">
+                    <h2>歡迎使用遊戲元件創作器</h2>
+                    <p>請從左側選擇一個元件進行編輯，或者點擊「新增元件」按鈕創建新元件。</p>
+                </div>
+                
+                <!-- 新增元件表單 -->
+                <div v-if="isAddingAsset">
+                    <h2>新增元件</h2>
+                    <div class="form-group">
+                        <label for="newAssetName">元件名稱</label>
+                        <input type="text" id="newAssetName" v-model="newAsset.name" class="form-control" placeholder="請輸入元件名稱">
+                    </div>
+                    <div class="form-group">
+                        <label for="defaultAnimation">預設動畫</label>
+                        <input type="text" id="defaultAnimation" v-model="newAsset.defaultAnimation" class="form-control" placeholder="例如：idle" value="idle">
+                    </div>
+                    <button class="btn btn-success" @click="addAsset">保存元件</button>
+                    <button class="btn btn-danger" @click="cancelAddAsset">取消</button>
+                </div>
+                
+                <!-- 元件編輯器 -->
+                <div v-if="selectedAssetId && !isAddingAsset">
+                    <h2>編輯元件</h2>
+                    
+                    <!-- 基本資訊 -->
+                    <div class="form-group">
+                        <label for="assetName">元件名稱</label>
+                        <input type="text" id="assetName" v-model="currentAsset.name" class="form-control" @change="updateAsset">
+                    </div>
+                    <div class="form-group">
+                        <label for="defaultAnimation">預設動畫</label>
+                        <input type="text" id="defaultAnimation" v-model="currentAsset.defaultAnimation" class="form-control" @change="updateAsset">
+                    </div>
+                    
+                    <!-- 動畫列表 -->
+                    <h3>動畫列表</h3>
+                    <button class="btn btn-primary" @click="showAddAnimationForm">+ 新增動畫</button>
+                    
+                    <div v-if="isAddingAnimation" class="form-group" style="margin-top: 10px;">
+                        <input type="text" v-model="newAnimation.name" class="form-control" placeholder="動畫名稱">
+                        <div style="margin-top: 10px;">
+                            <label>
+                                <input type="checkbox" v-model="newAnimation.loop"> 循環播放
+                            </label>
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <button class="btn btn-success" @click="addAnimation">保存動畫</button>
+                            <button class="btn btn-danger" @click="cancelAddAnimation">取消</button>
+                        </div>
+                    </div>
+                    
+                    <div class="animation-list">
+                        <div v-if="!hasAnimations">暫無動畫，請先添加動畫。</div>
+                        
+                        <div v-for="(animation, animName) in currentAsset.animations" :key="animName" class="animation-item">
+                            <div>
+                                <strong>{{ animation.name }}</strong>
+                                <span v-if="animation.loop">(循環播放)</span>
+                            </div>
+                            <div class="animation-actions">
+                                <button class="btn btn-primary" @click="editFrames(animName)">編輯幀</button>
+                                <button class="btn btn-danger" @click="deleteAnimation(animName)">刪除</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 幀編輯器 -->
+                    <div v-if="currentEditingAnimation" class="frame-editor">
+                        <h3>編輯「{{ currentEditingAnimation }}」動畫的幀</h3>
+                        
+                        <!-- 幀列表 -->
+                        <div class="frame-list">
+                            <div v-if="!hasFrames">暫無幀，請先添加幀。</div>
+                            
+                            <div v-for="(frame, index) in currentFrames" :key="index" class="frame-item">
+                                <div class="frame-preview">
+                                    <img v-if="spritePreview(frame.spriteId)" :src="spritePreview(frame.spriteId)" width="50" height="50" style="object-fit: contain;">
+                                    <span v-else>無預覽</span>
+                                </div>
+                                <div class="frame-info">
+                                    <div><strong>Sprite ID:</strong> {{ frame.spriteId }}</div>
+                                    <div><strong>持續時間:</strong> {{ frame.duration }}ms</div>
+                                </div>
+                                <div class="frame-actions">
+                                    <button class="btn btn-danger" @click="deleteFrame(index)">刪除</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 新增幀表單 -->
+                        <div class="frame-form">
+                            <h4>新增幀</h4>
+                            
+                            <div class="form-group">
+                                <label for="imageUrl">圖片來源 (URL)</label>
+                                <input type="text" id="imageUrl" v-model.lazy="newFrame.imageUrl" class="form-control" placeholder="貼上URL後，在下方畫布選取範圍">
+                            </div>
+
+                            <div class="canvas-editor">
+                                <div class="canvas-controls form-group">
+                                    <label>縮放:</label>
+                                    <button @click="setZoom(1)" class="btn" :class="{ 'active': zoomLevel === 1 }">1x</button>
+                                    <button @click="setZoom(2)" class="btn" :class="{ 'active': zoomLevel === 2 }">2x</button>
+                                    <button @click="setZoom(4)" class="btn" :class="{ 'active': zoomLevel === 4 }">4x</button>
+                                </div>
+                                <div class="canvas-area">
+                                    <canvas ref="mainCanvasRef" id="mainCanvas" @mousedown="onCanvasMouseDown" @mousemove="onCanvasMouseMove" @mouseup="onCanvasMouseUp" @mouseleave="onCanvasMouseUp"></canvas>
+                                    <div class="preview-area">
+                                        <label>選區預覽</label>
+                                        <canvas ref="previewCanvasRef" id="previewCanvas"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>座標與尺寸 (自動填入)</label>
+                                <div class="coord-inputs">
+                                    <div>
+                                        <label for="x">X</label>
+                                        <input type="number" id="x" v-model.number="newFrame.x" class="form-control" min="0">
+                                    </div>
+                                    <div>
+                                        <label for="y">Y</label>
+                                        <input type="number" id="y" v-model.number="newFrame.y" class="form-control" min="0">
+                                    </div>
+                                    <div>
+                                        <label for="w">寬度</label>
+                                        <input type="number" id="w" v-model.number="newFrame.w" class="form-control" min="1">
+                                    </div>
+                                    <div>
+                                        <label for="h">高度</label>
+                                        <input type="number" id="h" v-model.number="newFrame.h" class="form-control" min="1">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="duration">持續時間 (毫秒)</label>
+                                <input type="number" id="duration" v-model.number="newFrame.duration" class="form-control" min="1">
+                            </div>
+                            
+                            <button class="btn btn-success" @click="addFrame">新增幀</button>
+                            <button class="btn btn-primary" @click="closeFrameEditor">完成編輯</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const { createApp, ref, reactive, computed, watch, onMounted } = Vue;
+        
+        createApp({
+            setup() {
+                // 數據結構
+                const data = reactive({
+                    version: 1,
+                    assets: {},
+                    sprites: {}
+                });
+                
+                // 狀態管理
+                const selectedAssetId = ref(null);
+                const isAddingAsset = ref(false);
+                const isAddingAnimation = ref(false);
+                const currentEditingAnimation = ref(null);
+
+                // Canvas and selection state
+                const mainCanvasRef = ref(null);
+                const previewCanvasRef = ref(null);
+                const zoomLevel = ref(1);
+                const originalImage = ref(null);
+                const isDragging = ref(false);
+                const selectionRect = reactive({ x: 0, y: 0, w: 0, h: 0 });
+                const startPos = reactive({ x: 0, y: 0 });
+
+                const newAsset = reactive({ name: '', defaultAnimation: 'idle' });
+                const newAnimation = reactive({ name: '', loop: true });
+                const newFrame = reactive({
+                    imageUrl: '',
+                    x: 0,
+                    y: 0,
+                    w: 32,
+                    h: 32,
+                    duration: 1000
+                });
+                
+                // 從 localStorage 讀取初始數據
+                const initData = () => {
+                    const savedData = localStorage.getItem('gameAssetCreator');
+                    if (savedData) {
+                        try {
+                            const parsedData = JSON.parse(savedData);
+                            data.version = parsedData.version || 1;
+                            data.assets = parsedData.assets || {};
+                            data.sprites = parsedData.sprites || {};
+                        } catch (error) {
+                            console.error('解析保存的數據時發生錯誤:', error);
+                        }
+                    }
+                };
+                
+                // 初始化數據
+                initData();
+                
+                // 保存數據到 localStorage
+                const saveData = () => {
+                    localStorage.setItem('gameAssetCreator', JSON.stringify(data));
+                };
+                
+                // 計算屬性
+                const assets = computed(() => {
+                    return Object.values(data.assets);
+                });
+                
+                const currentAsset = computed(() => {
+                    if (!selectedAssetId.value) return null;
+                    return data.assets[selectedAssetId.value];
+                });
+                
+                const hasAnimations = computed(() => {
+                    if (!currentAsset.value) return false;
+                    return Object.keys(currentAsset.value.animations).length > 0;
+                });
+                
+                const currentFrames = computed(() => {
+                    if (!currentAsset.value || !currentEditingAnimation.value) return [];
+                    const animation = currentAsset.value.animations[currentEditingAnimation.value];
+                    return animation ? animation.frames : [];
+                });
+                
+                const hasFrames = computed(() => {
+                    return currentFrames.value.length > 0;
+                });
+                
+                // --- Canvas Methods ---
+
+                const setZoom = (level) => {
+                    zoomLevel.value = level;
+                    drawCanvas();
+                };
+
+                const loadImage = () => {
+                    if (!newFrame.imageUrl) {
+                        originalImage.value = null;
+                        drawCanvas(); // Clear canvas
+                        return;
+                    }
+                    const img = new Image();
+                    img.crossOrigin = "Anonymous"; // Handle CORS
+                    img.src = newFrame.imageUrl;
+                    img.onload = () => {
+                        originalImage.value = img;
+                        drawCanvas();
+                    };
+                    img.onerror = () => {
+                        originalImage.value = null;
+                        alert('圖片加載失敗，請檢查URL是否正確或是否存在CORS問題。');
+                        drawCanvas();
+                    };
+                };
+
+                const drawCanvas = () => {
+                    const canvas = mainCanvasRef.value;
+                    if (!canvas) return;
+                    const ctx = canvas.getContext('2d');
+
+                    if (!originalImage.value) {
+                        canvas.width = 300;
+                        canvas.height = 150;
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.fillStyle = '#888';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('請貼上圖片 URL', canvas.width / 2, canvas.height / 2);
+                        return;
+                    }
+                    
+                    const img = originalImage.value;
+                    canvas.width = img.width * zoomLevel.value;
+                    canvas.height = img.height * zoomLevel.value;
+
+                    // Disable smoothing for pixelated images
+                    ctx.imageSmoothingEnabled = false;
+
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                    // Draw selection rectangle
+                    if (selectionRect.w > 0 && selectionRect.h > 0) {
+                        ctx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(selectionRect.x, selectionRect.y, selectionRect.w, selectionRect.h);
+                    }
+                };
+                
+                const onCanvasMouseDown = (e) => {
+                    if (!originalImage.value) return;
+                    isDragging.value = true;
+                    const rect = mainCanvasRef.value.getBoundingClientRect();
+                    startPos.x = e.clientX - rect.left;
+                    startPos.y = e.clientY - rect.top;
+                    selectionRect.x = startPos.x;
+                    selectionRect.y = startPos.y;
+                    selectionRect.w = 0;
+                    selectionRect.h = 0;
+                };
+
+                const onCanvasMouseMove = (e) => {
+                    if (!isDragging.value) return;
+                    const rect = mainCanvasRef.value.getBoundingClientRect();
+                    const currentX = e.clientX - rect.left;
+                    const currentY = e.clientY - rect.top;
+
+                    selectionRect.w = currentX - startPos.x;
+                    selectionRect.h = currentY - startPos.y;
+
+                    drawCanvas(); // Redraw with selection
+                    updateFormFields();
+                    updatePreview();
+                };
+
+                const onCanvasMouseUp = (e) => {
+                    if (!isDragging.value) return;
+                    isDragging.value = false;
+                    
+                    // Normalize rectangle (handle dragging up and left)
+                    if (selectionRect.w < 0) {
+                        selectionRect.x += selectionRect.w;
+                        selectionRect.w = Math.abs(selectionRect.w);
+                    }
+                    if (selectionRect.h < 0) {
+                        selectionRect.y += selectionRect.h;
+                        selectionRect.h = Math.abs(selectionRect.h);
+                    }
+
+                    drawCanvas();
+                    updateFormFields();
+                    updatePreview();
+                };
+                
+                const updateFormFields = () => {
+                    const zoom = zoomLevel.value;
+                    
+                    let realX = selectionRect.x;
+                    let realY = selectionRect.y;
+                    let realW = selectionRect.w;
+                    let realH = selectionRect.h;
+
+                    // Normalize before calculation
+                    if (realW < 0) {
+                        realX += realW;
+                        realW = Math.abs(realW);
+                    }
+                    if (realH < 0) {
+                        realY += realH;
+                        realH = Math.abs(realH);
+                    }
+
+                    newFrame.x = Math.round(realX / zoom);
+                    newFrame.y = Math.round(realY / zoom);
+                    newFrame.w = Math.round(realW / zoom);
+                    newFrame.h = Math.round(realH / zoom);
+                };
+
+                const updatePreview = () => {
+                    const previewCanvas = previewCanvasRef.value;
+                    if (!previewCanvas || !originalImage.value || newFrame.w <= 0 || newFrame.h <= 0) {
+                        const ctx = previewCanvas.getContext('2d');
+                        previewCanvas.width = 128;
+                        previewCanvas.height = 128;
+                        ctx.clearRect(0,0,128,128);
+                        return;
+                    };
+                    const ctx = previewCanvas.getContext('2d');
+                    ctx.imageSmoothingEnabled = false;
+
+                    const previewZoom = 4;
+                    previewCanvas.width = Math.max(1, newFrame.w) * previewZoom;
+                    previewCanvas.height = Math.max(1, newFrame.h) * previewZoom;
+
+                    ctx.drawImage(
+                        originalImage.value,
+                        newFrame.x, // sx from original
+                        newFrame.y, // sy from original
+                        newFrame.w, // sWidth from original
+                        newFrame.h, // sHeight from original
+                        0, 0,       // dx, dy on preview canvas
+                        previewCanvas.width,  // dWidth on preview canvas
+                        previewCanvas.height  // dHeight on preview canvas
+                    );
+                };
+
+                watch(() => newFrame.imageUrl, loadImage);
+                
+                onMounted(() => {
+                    drawCanvas();
+                    updatePreview();
+                });
+
+                // --- End Canvas Methods ---
+                
+                // 方法
+                const selectAsset = (assetId) => {
+                    selectedAssetId.value = assetId;
+                    isAddingAsset.value = false;
+                    isAddingAnimation.value = false;
+                    currentEditingAnimation.value = null;
+                };
+                
+                const showAddAssetForm = () => {
+                    isAddingAsset.value = true;
+                    selectedAssetId.value = null;
+                    currentEditingAnimation.value = null;
+                    newAsset.name = '';
+                    newAsset.defaultAnimation = 'idle';
+                };
+                
+                const cancelAddAsset = () => {
+                    isAddingAsset.value = false;
+                };
+                
+                const addAsset = () => {
+                    if (!newAsset.name) {
+                        alert('請輸入元件名稱');
+                        return;
+                    }
+                    
+                    const assetId = 'asset_' + Date.now();
+                    data.assets[assetId] = {
+                        id: assetId,
+                        name: newAsset.name,
+                        defaultAnimation: newAsset.defaultAnimation,
+                        animations: {}
+                    };
+                    
+                    saveData();
+                    
+                    isAddingAsset.value = false;
+                    selectedAssetId.value = assetId;
+                };
+                
+                const updateAsset = () => {
+                    if (!currentAsset.value) return;
+                    saveData();
+                };
+                
+                const showAddAnimationForm = () => {
+                    isAddingAnimation.value = true;
+                    newAnimation.name = '';
+                    newAnimation.loop = true;
+                };
+                
+                const cancelAddAnimation = () => {
+                    isAddingAnimation.value = false;
+                };
+                
+                const addAnimation = () => {
+                    if (!newAnimation.name) {
+                        alert('請輸入動畫名稱');
+                        return;
+                    }
+                    
+                    const animName = newAnimation.name;
+                    if (currentAsset.value.animations[animName]) {
+                        alert(`動畫名稱 "${animName}" 已經存在。`);
+                        return;
+                    }
+
+                    currentAsset.value.animations[animName] = {
+                        name: animName,
+                        loop: newAnimation.loop,
+                        frames: []
+                    };
+                    
+                    // 如果是第一個動畫，設為默認動畫
+                    if (Object.keys(currentAsset.value.animations).length === 1) {
+                        currentAsset.value.defaultAnimation = animName;
+                    }
+                    
+                    saveData();
+                    
+                    isAddingAnimation.value = false;
+                    editFrames(animName); // 直接進入幀編輯模式
+                };
+                
+                const deleteAnimation = (animName) => {
+                    if (confirm(`確定要刪除「${animName}」動畫嗎？`)) {
+                        delete currentAsset.value.animations[animName];
+                        
+                        // 如果刪除的是默認動畫，重新設置默認動畫
+                        if (currentAsset.value.defaultAnimation === animName) {
+                            const animKeys = Object.keys(currentAsset.value.animations);
+                            currentAsset.value.defaultAnimation = animKeys.length > 0 ? animKeys[0] : '';
+                        }
+                        
+                        if (currentEditingAnimation.value === animName) {
+                            currentEditingAnimation.value = null;
+                        }
+                        
+                        saveData();
+                    }
+                };
+                
+                const editFrames = (animName) => {
+                    currentEditingAnimation.value = animName;
+                    // 重置新幀表單
+                    newFrame.imageUrl = '';
+                    newFrame.x = 0;
+                    newFrame.y = 0;
+                    newFrame.w = 32;
+                    newFrame.h = 32;
+                    newFrame.duration = 1000;
+                    // Reset selection
+                    selectionRect.x = 0;
+                    selectionRect.y = 0;
+                    selectionRect.w = 0;
+                    selectionRect.h = 0;
+                    drawCanvas();
+                    updatePreview();
+                };
+                
+                const closeFrameEditor = () => {
+                    currentEditingAnimation.value = null;
+                };
+                
+                const spritePreview = (spriteId) => {
+                    if (!spriteId || !data.sprites[spriteId]) return null;
+                    
+                    const sprite = data.sprites[spriteId];
+                    return sprite.imageUrl;
+                };
+                
+                const addFrame = () => {
+                    if (!currentEditingAnimation.value) return;
+                    
+                    if (!newFrame.imageUrl) {
+                        alert('請輸入圖片URL');
+                        return;
+                    }
+                    
+                    if (!newFrame.w || !newFrame.h || newFrame.duration <= 0) {
+                        alert('請輸入有效的尺寸和持續時間');
+                        return;
+                    }
+                    
+                    // 尋找相同的 sprite，避免重複創建
+                    let spriteId = null;
+                    for (const id in data.sprites) {
+                        const sprite = data.sprites[id];
+                        if (sprite.imageUrl === newFrame.imageUrl && 
+                            sprite.x === newFrame.x && 
+                            sprite.y === newFrame.y && 
+                            sprite.w === newFrame.w && 
+                            sprite.h === newFrame.h) {
+                            spriteId = id;
+                            break;
+                        }
+                    }
+                    
+                    // 如果沒有找到相同的 sprite，創建新的
+                    if (!spriteId) {
+                        spriteId = 'sprite_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+                        data.sprites[spriteId] = {
+                            id: spriteId,
+                            imageUrl: newFrame.imageUrl,
+                            x: newFrame.x,
+                            y: newFrame.y,
+                            w: newFrame.w,
+                            h: newFrame.h
+                        };
+                    }
+                    
+                    // 添加到當前動畫的幀列表
+                    const animation = currentAsset.value.animations[currentEditingAnimation.value];
+                    animation.frames.push({
+                        spriteId: spriteId,
+                        duration: newFrame.duration
+                    });
+                    
+                    saveData();
+                    
+                    // 重置表單
+                    newFrame.imageUrl = '';
+                    newFrame.x = 0;
+                    newFrame.y = 0;
+                    newFrame.w = 32;
+                    newFrame.h = 32;
+                    newFrame.duration = 1000;
+                    
+                    // Clear selection on canvas
+                    selectionRect.x = 0;
+                    selectionRect.y = 0;
+                    selectionRect.w = 0;
+                    selectionRect.h = 0;
+                    if (originalImage.value) {
+                       drawCanvas();
+                       updatePreview();
+                    }
+                };
+                
+                const deleteFrame = (frameIndex) => {
+                    if (!currentEditingAnimation.value) return;
+                    
+                    const animation = currentAsset.value.animations[currentEditingAnimation.value];
+                    if (animation && animation.frames && frameIndex >= 0 && frameIndex < animation.frames.length) {
+                        animation.frames.splice(frameIndex, 1);
+                        saveData();
+                    }
+                };
+                
+                const exportJson = () => {
+                    const jsonStr = JSON.stringify(data, null, 2);
+                    const blob = new Blob([jsonStr], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'game-assets.json';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                };
+                
+                const triggerImportFile = () => {
+                    document.getElementById('importJsonInput').click();
+                };
+                
+                const importJson = (event) => {
+                    const file = event.target.files[0];
+                    if (!file) return;
+                    
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const importedData = JSON.parse(e.target.result);
+                            
+                            if (!importedData.version || !importedData.assets || !importedData.sprites) {
+                                throw new Error('無效的數據格式');
+                            }
+                            
+                            if (confirm('匯入將覆蓋現有數據，確定要繼續嗎？')) {
+                                data.version = importedData.version;
+                                data.assets = importedData.assets;
+                                data.sprites = importedData.sprites;
+                                
+                                saveData();
+                                selectedAssetId.value = null;
+                                currentEditingAnimation.value = null;
+                                
+                                alert('數據匯入成功！');
+                            }
+                        } catch (error) {
+                            alert('解析JSON檔案時發生錯誤: ' + error.message);
+                            console.error(error);
+                        }
+                    };
+                    reader.readAsText(file);
+                    
+                    // 清空 file input，確保可以再次選擇同一個檔案
+                    event.target.value = '';
+                };
+                
+                return {
+                    assets,
+                    selectedAssetId,
+                    isAddingAsset,
+                    isAddingAnimation,
+                    currentEditingAnimation,
+                    mainCanvasRef,
+                    previewCanvasRef,
+                    zoomLevel,
+                    newAsset,
+                    newAnimation,
+                    newFrame,
+                    currentAsset,
+                    currentFrames,
+                    hasAnimations,
+                    hasFrames,
+                    selectAsset,
+                    showAddAssetForm,
+                    cancelAddAsset,
+                    addAsset,
+                    updateAsset,
+                    showAddAnimationForm,
+                    cancelAddAnimation,
+                    addAnimation,
+                    deleteAnimation,
+                    editFrames,
+                    closeFrameEditor,
+                    addFrame,
+                    deleteFrame,
+                    spritePreview,
+                    exportJson,
+                    triggerImportFile,
+                    importJson,
+                    // Canvas methods
+                    setZoom
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

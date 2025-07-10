@@ -28,10 +28,10 @@ const app = express();
 // --- CORS (Cross-Origin Resource Sharing) Setup ---
  const cors = require('cors');
 
-if (process.env.NODE_ENV !== 'production') {
-    console.log('[CORS] 開發模式下，啟用 CORS 並允許 http://localhost:5173');
+ if (process.env.NODE_ENV !== 'production') {
+    console.log('[CORS] 開發模式下，啟用 CORS 並允許 http://localhost:5173 和 http://localhost:3000');
     app.use(cors({
-        origin: 'http://localhost:5173', // 允許來自 Vite 開發伺服器的請求
+        origin: ['http://localhost:5173', 'http://localhost:3000'], // 允許來自 Vite 和本機伺服器的請求
         credentials: true // 允許傳遞 cookie 等憑證
     }));
 }
