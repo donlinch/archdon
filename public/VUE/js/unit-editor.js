@@ -4,17 +4,6 @@ new Vue({
         imageUrl: '',
         previewImageUrl: '',
         placedComponents: [], // 改名並初始化為空陣列
-        editorState: {
-            imageUrl: '',
-            placedComponents: [], // 對應更改
-            scale: 2,
-            selection: null,
-            savedComponents: [],
-            alignmentMode: 'grid',
-            anchorPoint: 'bottom-left',
-            offsetX: 0,
-            offsetY: 0
-        },
         scale: 2,
         mouseX: 0,
         mouseY: 0,
@@ -30,21 +19,16 @@ new Vue({
         draggingComponentIndex: -1,
         isDraggingCanvas: false,
         hoverCellIndex: -1,
+        isResizing: false, // For pane resizing
+        // Component categorization
+        componentCategory: '人物', // Default category
+        categories: ['人物', '物品', '背景'], // Available categories
+        // Hardcoded settings
         alignmentMode: 'grid',
-        anchorPoint: 'bottom-left', // 預設為左下角
+        anchorPoint: 'bottom-left',
         offsetX: 0,
-        offsetY: 0,
-        anchorPoints: [
-            { value: 'top-left', icon: '↖' },
-            { value: 'top-center', icon: '↑' },
-            { value: 'top-right', icon: '↗' },
-            { value: 'middle-left', icon: '←' },
-            { value: 'center', icon: '·' },
-            { value: 'middle-right', icon: '→' },
-            { value: 'bottom-left', icon: '↙' },
-            { value: 'bottom-center', icon: '↓' },
-            { value: 'bottom-right', icon: '↘' }
-        ]
+        offsetY: 0
+        // 移除 anchorPoints 陣列
     },
     computed: {
         selectionStyle() {
@@ -68,6 +52,40 @@ new Vue({
         },
         canApplyToGrid() {
             return (this.selectedComponentIndex !== -1 || this.componentImageData) && this.selectedCellIndex !== -1;
+        },
+        categorizedComponents() {
+            const grouped = {};
+            this.savedComponents.forEach((component, index) => {
+                const componentWithIndex = { ...component, originalIndex: index };
+                const category = component.category || '物品'; // Default for uncategorized
+                if (!grouped[category]) {
+                    grouped[category] = [];
+                }
+                grouped[category].push(componentWithIndex);
+            });
+            return grouped;
+        },
+        placedComponentsJSON() {
+            const layout = this.placedComponents.map(p => {
+                return {
+                    id: p.id,
+                    componentId: p.componentId,
+                    x: p.gridX,
+                    y: p.gridY,
+                }
+            });
+
+            const exportObject = {
+                description: {
+                    id: "元件在網格上的唯一實例 ID (Instance ID)",
+                    componentId: "元件在元件庫中的原始索引 (若來自預覽畫布則為 'canvas')",
+                    x: "元件錨點對齊的網格 X 座標 (欄, 0-4)",
+                    y: "元件錨點對齊的網格 Y 座標 (列, 0-4)"
+                },
+                layout: layout
+            };
+
+            return JSON.stringify(exportObject, null, 2);
         }
     },
     mounted() {
@@ -89,27 +107,18 @@ new Vue({
     },
     watch: {
         scale() {
-            this.editorState.scale = this.scale;
             this.saveToLocalStorage();
             // 縮放變更時重新計算選擇區域
             this.$nextTick(() => {
                 this.$forceUpdate();
             });
         },
-        alignmentMode() {
-            this.editorState.alignmentMode = this.alignmentMode;
-            this.saveToLocalStorage();
-        },
-        anchorPoint() {
-            this.editorState.anchorPoint = this.anchorPoint;
-            this.saveToLocalStorage();
-        },
+        // 移除對 alignmentMode 的監聽
+        // 移除對 anchorPoint 的監聽
         offsetX() {
-            this.editorState.offsetX = this.offsetX;
             this.saveToLocalStorage();
         },
         offsetY() {
-            this.editorState.offsetY = this.offsetY;
             this.saveToLocalStorage();
         },
         // 新增對 placedComponents 的監聽，以便在變動時重繪調試層
@@ -167,17 +176,41 @@ new Vue({
                 height: `${component.height}px`,
                 backgroundImage: `url(${component.componentData})`,
                 backgroundRepeat: 'no-repeat',
-                backgroundSize: 'contain', // 或 '100% 100%'
+                backgroundSize: '100% 100%', // 修正：從 'contain' 改為 '100% 100%'
                 zIndex: component.zIndex, // z-index
                 // 用於選中效果
                 border: this.selectedPlacedComponentId === component.id ? '2px dashed #ff0000' : 'none'
             };
         },
+
+        getSmartImageUrl(url) {
+            try {
+                // For relative URLs, the new URL() constructor would fail. Treat them as same-origin.
+                if (!url.startsWith('http')) {
+                    console.log('相對路徑圖片，直接載入:', url);
+                    return url;
+                }
+                const imageUrlObject = new URL(url);
+                const currentDomain = window.location.hostname;
+
+                if (imageUrlObject.hostname === currentDomain) {
+                    console.log('同網域圖片，直接載入:', url);
+                    return url;
+                } else {
+                    console.log('外部圖片，透過代理載入:', url);
+                    return `/proxy-image?url=${encodeURIComponent(url)}`;
+                }
+            } catch (e) {
+                // If URL is invalid, fall back to proxy to handle it.
+                console.warn('URL 格式無法判斷或無效，使用代理作為回退:', url, e);
+                return `/proxy-image?url=${encodeURIComponent(url)}`;
+            }
+        },
+
         previewImage() {
             if (this.imageUrl) {
-                // 使用伺服器的代理API來避免CORS問題
-                this.previewImageUrl = `/proxy-image?url=${encodeURIComponent(this.imageUrl)}`;
-                this.editorState.imageUrl = this.imageUrl;
+                // 使用智能判斷後的URL
+                this.previewImageUrl = this.getSmartImageUrl(this.imageUrl);
                 this.saveToLocalStorage();
                 
                 // 重置選擇區域
@@ -197,11 +230,17 @@ new Vue({
             alert('圖片載入失敗，請檢查URL是否正確');
             this.previewImageUrl = '';
         },
+        getAppState() {
+            return {
+                imageUrl: this.imageUrl,
+                placedComponents: this.placedComponents,
+                savedComponents: this.savedComponents,
+                scale: this.scale,
+            };
+        },
         saveToLocalStorage() {
-            // 更新 editorState 中要保存的數據
-            this.editorState.placedComponents = this.placedComponents;
-            this.editorState.savedComponents = this.savedComponents;
-            localStorage.setItem('unitEditorState', JSON.stringify(this.editorState));
+            const state = this.getAppState();
+            localStorage.setItem('unitEditorState', JSON.stringify(state));
             console.log('狀態已保存到 localStorage');
         },
         loadFromLocalStorage() {
@@ -209,37 +248,23 @@ new Vue({
             if (savedState) {
                 console.log('從 localStorage 載入狀態');
                 const parsedState = JSON.parse(savedState);
-                
-                // 為了兼容舊的數據結構 (gridData)，我們可以做一個轉換
+
+                // Compatibility for old format
                 if (parsedState.gridData && !parsedState.placedComponents) {
                     console.warn('偵測到舊的 gridData 格式，將其轉換...');
                     parsedState.placedComponents = this.convertGridDataToPlacedComponents(parsedState.gridData);
-                    delete parsedState.gridData; // 刪除舊數據
+                    delete parsedState.gridData;
                 }
 
-                this.editorState = parsedState;
                 this.imageUrl = parsedState.imageUrl || '';
                 this.scale = parsedState.scale || 2;
-                this.alignmentMode = parsedState.alignmentMode || 'grid';
-                this.anchorPoint = parsedState.anchorPoint || 'bottom-left';
-                this.offsetX = parsedState.offsetX || 0;
-                this.offsetY = parsedState.offsetY || 0;
+                this.placedComponents = parsedState.placedComponents || [];
+                this.savedComponents = parsedState.savedComponents || [];
                 
                 if (this.imageUrl) {
                     this.previewImage();
                 }
-                // 使用新的 placedComponents 數據
-                if (parsedState.placedComponents) {
-                    this.placedComponents = parsedState.placedComponents;
-                }
-                if (parsedState.savedComponents && parsedState.savedComponents.length > 0) {
-                    this.savedComponents = parsedState.savedComponents;
-                }
-                if (parsedState.selection) {
-                    this.selectionStart = parsedState.selection.start;
-                    this.selectionEnd = parsedState.selection.end;
-                    this.hasSelection = true;
-                }
+
                  this.$nextTick(() => {
                     this.redrawPlacedComponentOverlays();
                 });
@@ -266,20 +291,18 @@ new Vue({
             const x = Math.floor((event.clientX - rect.left) / this.scale);
             const y = Math.floor((event.clientY - rect.top) / this.scale);
             
-            // 只有在選擇區域內才更新座標
-            if (x >= 0 && y >= 0 && x <= rect.width / this.scale && y <= rect.height / this.scale) {
-                this.mouseX = x;
-                this.mouseY = y;
-            }
+            // 限制在圖片範圍內
+            const imgWidth = this.$refs.previewImage.naturalWidth;
+            const imgHeight = this.$refs.previewImage.naturalHeight;
+            
+            this.mouseX = Math.max(0, Math.min(x, imgWidth));
+            this.mouseY = Math.max(0, Math.min(y, imgHeight));
         },
         initializeSelection() {
-            // 圖片載入後，更新選擇區域大小
+            // This function is now only for ensuring the view is updated after image load.
+            // The logic for restoring selection from a saved state has been removed
+            // as selection is now considered transient.
             this.$forceUpdate();
-            
-            // 圖片載入後，如果有保存的選擇區域，則恢復它
-            if (this.editorState.selection && this.hasSelection) {
-                this.extractComponent();
-            }
         },
         startSelection(event) {
             const rect = this.$refs.selectionArea.getBoundingClientRect();
@@ -317,19 +340,11 @@ new Vue({
             // 確保選擇區域有大小
             if (this.selectionWidth > 5 && this.selectionHeight > 5) {
                 this.hasSelection = true;
-                
-                // 保存選擇區域
-                this.editorState.selection = {
-                    start: this.selectionStart,
-                    end: this.selectionEnd,
-                    scale: this.scale // 保存當前縮放比例
-                };
-                this.saveToLocalStorage();
-                
-                // 提取選擇區域的圖像
+                // Selection is transient and not saved to localStorage anymore.
+                // The 'extractComponent' call will handle the selected area.
                 this.extractComponent();
             } else {
-                this.cancelSelection();
+                this.hasSelection = false;
             }
         },
         cancelSelection() {
@@ -339,11 +354,10 @@ new Vue({
             // 不要在這裡重置 hasSelection，只在明確點擊取消按鈕時重置
         },
         clearSelection() {
-            // 新增一個明確的清除選擇方法
+            // Clears the current selection state.
             this.hasSelection = false;
             this.componentImageData = null;
-            delete this.editorState.selection;
-            this.saveToLocalStorage();
+            // No longer interacts with a persistent selection state.
         },
         extractComponent() {
             if (!this.$refs.previewImage || !this.$refs.previewImage.complete) {
@@ -439,7 +453,8 @@ new Vue({
                 this.savedComponents.push({
                     imageData: this.componentImageData,
                     width: this.selectionWidth,
-                    height: this.selectionHeight
+                    height: this.selectionHeight,
+                    category: this.componentCategory // Save the selected category
                 });
                 
                 this.selectedComponentIndex = this.savedComponents.length - 1;
@@ -517,75 +532,58 @@ new Vue({
             }
             
             const data = event.dataTransfer.getData('text/plain');
-            let componentData, componentWidth, componentHeight;
+            let componentData, componentWidth, componentHeight, componentId;
             
             if (data.startsWith('component:')) {
-                const componentIndex = parseInt(data.split(':')[1]);
-                if (componentIndex >= 0 && componentIndex < this.savedComponents.length) {
-                    const component = this.savedComponents[componentIndex];
+                const index = parseInt(data.split(':')[1]);
+                if (index >= 0 && index < this.savedComponents.length) {
+                    const component = this.savedComponents[index];
                     componentData = component.imageData;
                     componentWidth = component.width;
                     componentHeight = component.height;
+                    componentId = index; // Use index as the component ID
                 } else { return; }
             } else if (data === 'canvas' && this.componentImageData) {
                 componentData = this.componentImageData;
                 componentWidth = this.selectionWidth;
                 componentHeight = this.selectionHeight;
+                componentId = 'canvas'; // Mark as from canvas preview
             } else { return; }
             
             if (!componentData) { return; }
             
             const testImg = new Image();
             testImg.onload = () => {
-                // 將 event 傳遞給 calculatePlacementPosition
-                const { x, y } = this.calculatePlacementPosition(cellIndex, event);
+                const { x, y, row, col } = this.calculatePlacementPosition(cellIndex, event);
                 let anchorOffsetX = 0;
                 let anchorOffsetY = 0;
                 
-                switch(this.anchorPoint) {
-                    case 'top-center': anchorOffsetX = -componentWidth / 2; break;
-                    case 'top-right': anchorOffsetX = -componentWidth; break;
-                    case 'middle-left': anchorOffsetY = -componentHeight / 2; break;
-                    case 'center':
-                        anchorOffsetX = -componentWidth / 2;
-                        anchorOffsetY = -componentHeight / 2;
-                        break;
-                    case 'middle-right':
-                        anchorOffsetX = -componentWidth;
-                        anchorOffsetY = -componentHeight / 2;
-                        break;
-                    case 'bottom-left': anchorOffsetY = -componentHeight; break;
-                    case 'bottom-center':
-                        anchorOffsetX = -componentWidth / 2;
-                        anchorOffsetY = -componentHeight;
-                        break;
-                    case 'bottom-right':
-                        anchorOffsetX = -componentWidth;
-                        anchorOffsetY = -componentHeight;
-                        break;
-                }
+                // This logic is simplified as the anchor point is hardcoded to bottom-left
+                anchorOffsetY = -componentHeight;
                 
                 const finalX = x + anchorOffsetX;
                 const finalY = y + anchorOffsetY;
                 
-                // 新增元件到 placedComponents 陣列
                 const newComponent = {
                     id: `comp_${Date.now()}`,
+                    componentId: componentId, // Reference to original component
                     componentData: componentData,
                     width: componentWidth,
                     height: componentHeight,
                     positionX: finalX,
                     positionY: finalY,
+                    gridX: col, // Store grid coordinates for export
+                    gridY: row, // Store grid coordinates for export
                     anchorPoint: this.anchorPoint,
                     alignmentMode: this.alignmentMode,
-                    zIndex: this.placedComponents.length // 新的元件在最上層
+                    zIndex: this.placedComponents.length
                 };
                 
                 this.placedComponents.push(newComponent);
                 
                 console.log('元件已放置:', newComponent);
                 
-                this.saveToLocalStorage(); // 保存狀態
+                this.saveToLocalStorage();
                 this.hoverCellIndex = -1;
             };
             
@@ -636,14 +634,12 @@ new Vue({
             console.warn('applyComponentToGrid 已過時');
         },
         clearGrid() {
-            if (confirm('確定要清除整個網格嗎？')) {
-                this.placedComponents = []; // 清空陣列
-                this.saveToLocalStorage();
-                // 清除調試覆蓋層
-                this.$nextTick(() => {
-                    this.clearDebugCanvas();
-                });
-            }
+            this.placedComponents = []; // 清空陣列
+            this.saveToLocalStorage();
+            // 清除調試覆蓋層
+            this.$nextTick(() => {
+                this.clearDebugCanvas();
+            });
         },
         saveGrid() {
             alert('網格已自動儲存到本地！');
@@ -689,94 +685,50 @@ new Vue({
             const width = this.selectionWidth;
             const height = this.selectionHeight;
             
-            switch(this.anchorPoint) {
-                case 'top-left':
-                    x = 0; y = 0;
-                    break;
-                case 'top-center':
-                    x = width / 2; y = 0;
-                    break;
-                case 'top-right':
-                    x = width; y = 0;
-                    break;
-                case 'middle-left':
-                    x = 0; y = height / 2;
-                    break;
-                case 'center':
-                    x = width / 2; y = height / 2;
-                    break;
-                case 'middle-right':
-                    x = width; y = height / 2;
-                    break;
-                case 'bottom-left':
-                    x = 0; y = height;
-                    break;
-                case 'bottom-center':
-                    x = width / 2; y = height;
-                    break;
-                case 'bottom-right':
-                    x = width; y = height;
-                    break;
-            }
+            // 因為錨點固定為 bottom-left，所以直接計算
+            x = 0; y = height;
             
             return {
                 left: `${x}px`,
                 top: `${y}px`
             };
         },
-        calculatePlacementPosition(cellIndex, event) { // 接收 event 物件
+        calculatePlacementPosition(cellIndex, event) {
             const gridContainer = this.$refs.gridContainer;
             if (!gridContainer) {
                 return { x: 0, y: 0, row: 0, col: 0 };
             }
-            
-            const gridRect = gridContainer.getBoundingClientRect();
+
             const gridWidth = 5;
+            const row = Math.floor(cellIndex / gridWidth);
+            const col = cellIndex % gridWidth;
+            let x, y;
+
+            // 邏輯簡化：只保留唯一的精確網格對齊模式
+            const cellElement = document.getElementById(`grid-cell-${cellIndex}`);
+            if (cellElement) {
+                const cellRect = {
+                    left: cellElement.offsetLeft,
+                    top: cellElement.offsetTop,
+                    width: cellElement.offsetWidth,
+                    height: cellElement.offsetHeight
+                };
+
+                // 根據錨點（已固定為 bottom-left），計算網格上對應的目標點
+                x = cellRect.left;
+                y = cellRect.top + cellRect.height;
+                
+                console.log(`錨點對位: 元件錨點=${this.anchorPoint}, 網格目標=(${x}, ${y})`);
+                return { x, y, row, col };
+            }
+            
+            // 保留一個最基本的回退計算，以防萬一
+            console.warn(`找不到格子DOM元素: cell-${cellIndex}，使用數學計算回退。`);
             const cellWidth = 32;
             const cellHeight = 32;
             const gap = 1;
-
-            const row = Math.floor(cellIndex / gridWidth);
-            const col = cellIndex % gridWidth;
-
-            let x, y;
-
-            switch (this.alignmentMode) {
-                case 'free':
-                    // 自由模式：基於滑鼠精確位置，但相對於 grid container
-                    // 這需要 onDrop 事件傳遞 clientX/Y
-                    if (event) {
-                        const dropX = event.clientX - gridRect.left;
-                        const dropY = event.clientY - gridRect.top;
-                        x = dropX;
-                        y = dropY;
-                    } else {
-                        // 如果沒有事件（例如從舊數據加載），則回退到網格對齊
-                        x = col * (cellWidth + gap);
-                        y = row * (cellHeight + gap);
-                    }
-                    break;
-                case 'half-grid':
-                    // 半格對齊
-                    // 同樣需要滑鼠位置
-                     if (event) {
-                        const dropHalfX = event.clientX - gridRect.left;
-                        const dropHalfY = event.clientY - gridRect.top;
-                        x = Math.round(dropHalfX / (cellWidth / 2)) * (cellWidth / 2);
-                        y = Math.round(dropHalfY / (cellHeight / 2)) * (cellHeight / 2);
-                    } else {
-                        x = col * (cellWidth + gap);
-                        y = row * (cellHeight + gap);
-                    }
-                    break;
-                case 'grid':
-                default:
-                    // 嚴格網格對齊
-                    x = col * (cellWidth + gap);
-                    y = row * (cellHeight + gap);
-                    break;
-            }
-
+            x = col * (cellWidth + gap);
+            y = row * (cellHeight + gap) + cellHeight; // 左下角的回退
             return { x, y, row, col };
         },
         // renderComponentDebugOverlay 需要重做
@@ -845,9 +797,59 @@ new Vue({
 
         // 新增輔助方法
         recalculateZIndexes() {
-            this.placedComponents.forEach((c, index) => {
-                c.zIndex = index;
+            this.placedComponents.sort((a, b) => a.zIndex - b.zIndex);
+            this.placedComponents.forEach((p, index) => {
+                p.zIndex = index + 1;
             });
+        },
+
+        copyLayoutData() {
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(this.placedComponentsJSON).then(() => {
+                    alert('佈局數據 (JSON) 已複製到剪貼簿！');
+                }).catch(err => {
+                    console.error('無法複製到剪貼簿: ', err);
+                    alert('複製失敗，請手動複製。');
+                });
+            } else {
+                const textArea = document.createElement("textarea");
+                textArea.value = this.placedComponentsJSON;
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    alert('佈局數據 (JSON) 已複製到剪貼簿！');
+                } catch (err) {
+                    console.error('Fallback 複製失敗: ', err);
+                    alert('複製失敗，請手動複製。');
+                }
+                document.body.removeChild(textArea);
+            }
+        },
+
+        // ===== Category Methods =====
+        setCategory(category) {
+            this.componentCategory = category;
+        },
+
+        // ===== Pane Resizing Methods =====
+        startResize(event) {
+            event.preventDefault();
+            this.isResizing = true;
+            document.addEventListener('mousemove', this.resize);
+            document.addEventListener('mouseup', this.stopResize);
+        },
+        resize(event) {
+            if (!this.isResizing) return;
+            // Set the new width of the inspector pane
+            const newWidth = window.innerWidth - event.clientX;
+            this.$refs.inspectorPane.style.width = `${newWidth}px`;
+        },
+        stopResize() {
+            this.isResizing = false;
+            document.removeEventListener('mousemove', this.resize);
+            document.removeEventListener('mouseup', this.stopResize);
         }
     }
 });

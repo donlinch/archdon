@@ -5,23 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>圖片元件編輯器</title>
     <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/unit-editor.css">
 </head>
 <body>
-    <div id="app" class="container">
-        <h1>圖片元件編輯器</h1>
-        
-        <div class="two-column">
-            <div class="column">
-                <h3>網格編輯區</h3>
-                <div class="grid-container" ref="gridContainer" 
+    <div id="app">
+        <div class="main-container">
+            <!-- ===== Editor Pane (Left) ===== -->
+            <div class="editor-pane">
+                <div class="grid-toolbar">
+                    <h2 class="pane-title">網格編輯區</h2>
+                    <div class="grid-status" v-if="selectedPlacedComponentId">
+                        已選擇元件ID: {{ selectedPlacedComponentId }}
+                    </div>
+                    <div class="grid-status" v-else-if="selectedCellIndex !== -1">
+                        已選擇格子: {{ Math.floor(selectedCellIndex / 5) }}, {{ selectedCellIndex % 5 }}
+                    </div>
+                </div>
+                <div class="grid-container" ref="gridContainer"
                      @dragover.prevent="onDragOver"
                      @drop.prevent="onDrop"
-                     @click="handleCellClick"> 
-                    <div 
-                        class="grid-cell" 
-                        v-for="i in 25" 
+                     @click="handleCellClick">
+                    <div
+                        class="grid-cell"
+                        v-for="i in 25"
                         :key="'cell-' + i"
+                        :id="'grid-cell-' + (i - 1)"
                         :class="{ 
                             'active': selectedCellIndex === (i - 1),
                             'hover-preview': hoverCellIndex === (i - 1)
@@ -39,126 +48,145 @@
 
                     <canvas ref="gridOverlay" class="grid-overlay"></canvas>
                 </div>
-                <div class="grid-status" v-if="selectedPlacedComponentId">
-                    已選擇元件ID: {{ selectedPlacedComponentId }}
-                </div>
-                <div class="grid-status" v-else-if="selectedCellIndex !== -1">
-                    已選擇格子: {{ Math.floor(selectedCellIndex / 5) }}, {{ selectedCellIndex % 5 }}
-                </div>
-              
-                <div class="alignment-controls">
-                    <h4>元件對齊設置</h4>
-                    <div class="control-group">
-                        <label>對齊模式:</label>
-                        <div class="radio-group">
-                            <label class="radio-option">
-                                <input type="radio" v-model="alignmentMode" value="grid">
-                                嚴格網格
-                            </label>
-                            <label class="radio-option">
-                                <input type="radio" v-model="alignmentMode" value="half-grid">
-                                半格對齊
-                            </label>
-                            <label class="radio-option">
-                                <input type="radio" v-model="alignmentMode" value="free">
-                                自由放置
-                            </label>
-                        </div>
-                    </div>
-                    <!-- 移除位置微調控制 -->
-                </div>
-                <div class="grid-controls">
-                    <button @click="deleteSelectedPlacedComponent" :disabled="!selectedPlacedComponentId">刪除元件</button>
-                    <button @click="clearGrid" class="clear-btn">清除網格</button>
-                </div>
             </div>
-            
-            <div class="column">
-                <div class="image-input">
-                    <input type="text" v-model="imageUrl" placeholder="請輸入圖片URL">
-                    <button @click="previewImage">預覽圖片</button>
-                </div>
-                
-                <div class="controls" v-if="previewImageUrl">
-                    <div class="scale-selector">
-                        <label>縮放比例:</label>
-                        <select v-model="scale">
-                            <option value="1">1X</option>
-                            <option value="2">2X</option>
-                            <option value="4">4X</option>
-                        </select>
-                    </div>
-                    <div class="coordinates">
-                        <span>X: {{ mouseX }}</span>
-                        <span>Y: {{ mouseY }}</span>
-                    </div>
-                </div>
-                
-                <div class="image-preview" v-if="previewImageUrl">
-                    <h3>圖片預覽 <span v-if="hasSelection">(已選擇區域: {{ Math.round(selectionWidth) }}x{{ Math.round(selectionHeight) }})</span></h3>
-                    <div class="selection-area" ref="selectionArea" :style="getSelectionAreaStyle()">
-                        <img :src="previewImageUrl" 
-                            @error="handleImageError" 
-                            alt="預覽圖片" 
-                            ref="previewImage"
-                            @load="initializeSelection"
-                            @mousedown="startSelection"
-                            @mousemove="updateSelection"
-                            @mouseup="endSelection"
-                            @mouseleave="endSelection"
-                            :style="getPreviewImageStyle()">
-                        <div class="selection-box" 
-                            v-show="isSelecting || hasSelection" 
-                            :style="selectionStyle"></div>
-                    </div>
-                    
-                    <div class="selection-controls" v-if="hasSelection" style="margin-top: 20px;">
-                        <!-- 移除提取元件按鈕 -->
-                        <button @click="saveComponent" class="save-btn">保存為元件</button>
-                        <button @click="clearSelection" class="cancel-btn">取消選擇</button>
-                    </div>
-                </div>
-                
-                <div class="component-preview" v-if="componentImageData">
-                    <h3>元件預覽 ({{ Math.round(selectionWidth) }}x{{ Math.round(selectionHeight) }})</h3>
-                    <div class="component-preview-container">
-                        <canvas ref="componentCanvas" 
-                                :width="selectionWidth" 
-                                :height="selectionHeight"
-                                draggable="true"
-                                @dragstart="onDragStartCanvas($event)"></canvas>
-                        <div class="component-preview-overlay">
-                            <div class="anchor-marker" :style="getAnchorMarkerStyle()"></div>
-                        </div>
-                    </div>
-                    <div class="debug-info" style="margin-top: 10px; font-size: 12px; color: #666;">
-                        <div>元件尺寸: {{ Math.round(selectionWidth) }}x{{ Math.round(selectionHeight) }}</div>
-                        <div>錨點: {{ anchorPoint }}</div>
-                        <div>對齊模式: {{ alignmentMode }}</div>
-                    </div>
-                </div>
-                
-                <div class="saved-components" v-if="savedComponents.length > 0">
-                    <h3>已保存的元件</h3>
-                    <div class="components-list">
-                        <div 
-                            v-for="(component, index) in savedComponents" 
-                            :key="index"
-                            class="component-item"
-                            :class="{ 
-                                selected: selectedComponentIndex === index,
-                                dragging: draggingComponentIndex === index
-                            }"
-                            @click="selectComponent(index)">
-                            <img :src="component.imageData" 
-                                 :alt="'元件 ' + (index + 1)"
-                                 draggable="true"
-                                 @dragstart="onDragStart($event, index)"
-                                 @dragend="onDragEnd">
-                            <button class="delete-btn" @click.stop="deleteComponent(index)">×</button>
+
+            <!-- ===== Resizer Handle ===== -->
+            <div class="resizer" @mousedown="startResize"></div>
+
+            <!-- ===== Inspector Pane (Right) ===== -->
+            <div class="inspector-pane" ref="inspectorPane">
+                <h1 class="main-title">圖片元件編輯器</h1>
+
+                <!-- Panel 1: Load Spritesheet -->
+                <div class="panel">
+                    <h3 class="panel-title">1. 載入精靈圖</h3>
+                    <div class="panel-content">
+                        <div class="image-input">
+                            <input type="text" v-model="imageUrl" placeholder="貼上圖片 URL">
+                            <button @click="previewImage" class="btn">載入</button>
                         </div>
                     </div>
                 </div>
+
+                <!-- Panel 2: Select Category -->
+                <div class="panel">
+                    <h3 class="panel-title">2. 選擇元件分類</h3>
+                    <div class="panel-content">
+                        <div class="category-selector">
+                             <button 
+                                v-for="cat in categories" 
+                                :key="cat" 
+                                class="btn category-btn"
+                                :class="{ 'active': componentCategory === cat }"
+                                @click="setCategory(cat)">
+                                {{ cat }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Panel 3: Select & Create Component -->
+                <div class="panel" v-if="previewImageUrl">
+                    <h3 class="panel-title">3. 圈選 & 建立元件</h3>
+                    <div class="panel-content">
+                        <div class="controls">
+                            <div class="control-item">
+                                <label>縮放:</label>
+                                <select v-model="scale">
+                                    <option value="1">1X</option>
+                                    <option value="2">2X</option>
+                                    <option value="4">4X</option>
+                                </select>
+                            </div>
+                            <div class="coordinates control-item">
+                                <span>X: {{ mouseX }}</span>
+                                <span>Y: {{ mouseY }}</span>
+                            </div>
+                        </div>
+
+                        <div class="image-preview">
+                            <div class="selection-area" ref="selectionArea" :style="getSelectionAreaStyle()">
+                                <img :src="previewImageUrl"
+                                     @error="handleImageError"
+                                     alt="預覽圖片"
+                                     ref="previewImage"
+                                     @load="initializeSelection"
+                                     @mousedown="startSelection"
+                                     @mousemove="updateSelection"
+                                     @mouseup="endSelection"
+                                     @mouseleave="endSelection"
+                                     :style="getPreviewImageStyle()">
+                                <div class="selection-box"
+                                     v-show="isSelecting || hasSelection"
+                                     :style="selectionStyle"></div>
+                            </div>
+                        </div>
+
+                        <div v-if="hasSelection">
+                            <div class="selection-info">
+                                已選取: {{ Math.round(selectionWidth) }}x{{ Math.round(selectionHeight) }}px
+                            </div>
+                            <div class="component-preview" v-if="componentImageData">
+                                <canvas ref="componentCanvas"
+                                        :width="selectionWidth"
+                                        :height="selectionHeight"
+                                        draggable="true"
+                                        @dragstart="onDragStartCanvas($event)"></canvas>
+                                <div class="component-preview-overlay">
+                                    <div class="anchor-marker" :style="getAnchorMarkerStyle()"></div>
+                                </div>
+                            </div>
+                            <div class="selection-controls">
+                                <button @click="saveComponent" class="btn btn-primary">建立元件</button>
+                                <button @click="clearSelection" class="btn btn-secondary">取消</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Panel 4: Component Library -->
+                <div class="panel" v-if="savedComponents.length > 0">
+                    <h3 class="panel-title">4. 元件庫</h3>
+                    <div class="panel-content">
+                        <div v-for="category in categories" :key="category" class="category-group">
+                            <h4 class="category-title">{{ category }}</h4>
+                            <div class="components-list" v-if="categorizedComponents[category] && categorizedComponents[category].length > 0">
+                                <div
+                                    v-for="component in categorizedComponents[category]"
+                                    :key="component.originalIndex"
+                                    class="component-item"
+                                    :class="{ 
+                                        'selected': selectedComponentIndex === component.originalIndex,
+                                        'dragging': draggingComponentIndex === component.originalIndex
+                                    }"
+                                    @click="selectComponent(component.originalIndex)">
+                                    <img :src="component.imageData"
+                                         :alt="'元件 ' + (component.originalIndex + 1)"
+                                         draggable="true"
+                                         @dragstart="onDragStart($event, component.originalIndex)"
+                                         @dragend="onDragEnd">
+                                    <button class="delete-btn" @click.stop="deleteComponent(component.originalIndex)">×</button>
+                                </div>
+                            </div>
+                            <div class="empty-category-placeholder" v-else>
+                                (此分類暫無元件)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                 <!-- Panel 5: Layout Data -->
+                <div class="panel" v-if="placedComponents.length > 0">
+                    <h3 class="panel-title">5. 佈局數據</h3>
+                    <div class="panel-content">
+                        <textarea readonly class="data-output" @focus="$event.target.select()">{{ placedComponentsJSON }}</textarea>
+                        <div class="panel-controls">
+                            <button @click="copyLayoutData" class="btn">複製 JSON</button>
+                            <button @click="clearGrid" class="btn btn-danger">清除網格</button>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>

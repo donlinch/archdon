@@ -1,33 +1,209 @@
+/* === CSS Variables for Theming === */
+:root {
+    --bg-primary: #1e1e1e;
+    --bg-secondary: #252526;
+    --bg-tertiary: #333333;
+    --border-color: #444444;
+    --text-primary: #d4d4d4;
+    --text-secondary: #a0a0a0;
+    --accent-primary: #007acc;
+    --accent-primary-hover: #009bff;
+    --accent-secondary: #5c5c5c;
+    --accent-danger: #f44336;
+    --font-family: 'Noto Sans TC', sans-serif;
+}
+
+/* === Global Styles === */
 body {
-    font-family: Arial, sans-serif;
+    font-family: var(--font-family);
     margin: 0;
-    padding: 20px;
-    background-color: #f5f5f5;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    overflow: hidden; /* Prevent body scroll */
 }
-.container {
-    max-width: 1000px;
-    margin: 0 auto;
-    background-color: white;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+
+h1, h2, h3, h4 {
+    font-weight: 500;
 }
-h1 {
+
+/* === Main Layout === */
+#app {
+    height: 100vh;
+    display: flex;
+}
+
+.main-container {
+    display: flex;
+    width: 100%;
+    height: 100%;
+}
+
+.editor-pane {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    background-color: var(--bg-primary);
+    height: 100vh;
+    box-sizing: border-box;
+    /* Prevent shrinking below a certain size */
+    min-width: 300px;
+}
+
+.resizer {
+    width: 5px;
+    cursor: col-resize;
+    background-color: var(--bg-tertiary);
+    height: 100vh;
+    transition: background-color 0.2s;
+}
+.resizer:hover {
+    background-color: var(--accent-primary);
+}
+
+.inspector-pane {
+    /* width is now controlled by JS */
+    background-color: var(--bg-secondary);
+    border-left: 1px solid var(--border-color);
+    padding: 20px;
+    overflow-y: auto;
+    height: 100vh;
+    box-sizing: border-box;
+    /* Prevent shrinking below a certain size */
+    min-width: 300px;
+}
+
+.pane-title {
+    margin-top: 0;
+    color: var(--text-primary);
+}
+
+.main-title {
+    font-size: 24px;
     text-align: center;
-    color: #333;
+    color: white;
+    margin-bottom: 30px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 15px;
 }
+
+/* === Panels in Inspector === */
+.panel {
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    margin-bottom: 20px;
+}
+
+.panel-title {
+    font-size: 16px;
+    padding: 10px 15px;
+    margin: 0;
+    background-color: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+}
+
+.panel-content {
+    padding: 15px;
+}
+
+/* === Form Elements & Buttons === */
+input[type="text"], select {
+    width: 100%;
+    padding: 8px 10px;
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-primary);
+    box-sizing: border-box;
+    font-family: var(--font-family);
+}
+
+.image-input {
+    display: flex;
+    gap: 10px;
+}
+
+.image-input input {
+    flex-grow: 1;
+}
+
+.btn {
+    padding: 8px 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    cursor: pointer;
+    background-color: var(--accent-secondary);
+    color: var(--text-primary);
+    font-family: var(--font-family);
+    font-size: 14px;
+    transition: background-color 0.2s, border-color 0.2s;
+    flex-shrink: 0;
+}
+
+.btn:hover {
+    background-color: #6a6a6a;
+}
+
+.btn-primary {
+    background-color: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: var(--accent-primary-hover);
+    border-color: var(--accent-primary-hover);
+}
+
+.btn-secondary {
+    background-color: transparent;
+}
+.btn-secondary:hover {
+    background-color: var(--bg-tertiary);
+}
+
+.btn-danger {
+    background-color: var(--accent-danger);
+    border-color: var(--accent-danger);
+    color: white;
+}
+.btn-danger:hover {
+    background-color: #ff6659;
+    border-color: #ff6659;
+}
+
+
+/* === Editor Pane Specifics === */
+.grid-toolbar {
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.grid-status {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
 .grid-container {
     display: grid;
     grid-template-columns: repeat(5, 32px);
     grid-template-rows: repeat(5, 32px);
+    border: 1px solid var(--border-color);
     gap: 1px;
-    background-color: #ccc;
-    width: 170px; /* 5 * 32px + 4 * 1px(gap) + 2px(border) */
-    padding: 10px;
-    margin: 20px auto;
+    background-color: #111;
+    width: 162px; /* 5 * 32px + 2 * 1px(border) */
+    height: 162px;
+    padding: 0;
+    margin: auto; /* Center the grid */
     position: relative;
-    overflow: visible; /* 允許內容超出網格 */
+    overflow: visible;
 }
+
 .grid-overlay {
     position: absolute;
     top: 0;
@@ -37,324 +213,97 @@ h1 {
     pointer-events: none;
     z-index: 5;
 }
+
 .grid-cell {
     width: 32px;
     height: 32px;
-    background-color: white;
-    border: 1px solid #eee;
+    background-color: var(--bg-secondary);
     box-sizing: border-box;
     cursor: pointer;
     position: relative;
-    overflow: visible; /* 允許內容超出網格 */
+    overflow: visible;
 }
-.grid-cell.has-component {
-    background-size: cover;
-    background-position: center;
-    border: 1px solid #aaa;
-}
+
 .grid-cell.active {
-    border: 2px solid #4CAF50;
+    outline: 2px solid var(--accent-primary);
+    outline-offset: -1px;
+    z-index: 1;
 }
+
 .grid-cell.hover-preview {
-    border: 2px dashed #2196F3;
+    background-color: rgba(0, 122, 204, 0.3);
 }
-.component-boundary {
+
+.placed-component {
     position: absolute;
-    border: 1px dashed red;
-    pointer-events: none;
-    z-index: 10;
-}
-.component-anchor {
-    position: absolute;
-    width: 4px;
-    height: 4px;
-    background-color: red;
-    border-radius: 50%;
-    z-index: 11;
-    pointer-events: none;
-}
-.image-input {
-    margin: 20px 0;
-}
-.image-input input {
-    width: 80%;
-    padding: 8px;
-    margin-right: 10px;
-}
-.image-input button {
-    padding: 8px 15px;
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
-.image-preview {
-    margin: 20px 0;
-    text-align: center;
-    position: relative;
-    overflow: visible;
-    min-height: 200px;
-}
-.image-preview img {
-    border: 1px solid #ddd;
-    display: block;
-}
-.controls {
-    margin: 20px 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 20px;
-}
-.scale-selector {
-    display: flex;
-    align-items: center;
-}
-.scale-selector label {
-    margin-right: 10px;
-}
-.coordinates {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-.coordinates span {
-    font-weight: bold;
-}
-.selection-area {
-    position: relative;
-    margin: 20px auto;
-    border: 1px solid #ddd;
-    overflow: visible;
-    display: inline-block;
-    min-height: 100px;
-    min-width: 100px;
-}
-.selection-box {
-    position: absolute;
-    border: 2px dashed red;
-    background-color: rgba(255, 0, 0, 0.2);
-    pointer-events: none;
-    z-index: 10;
-}
-.selection-canvas {
-    position: absolute;
-    top: 0;
-    left: 0;
-    pointer-events: none;
-}
-.component-preview {
-    margin: 20px 0;
-    text-align: center;
-}
-.component-preview canvas {
-    border: 1px solid #ddd;
-    margin: 0 auto;
-}
-.selection-controls {
-    margin-top: 10px;
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-}
-.selection-controls button {
-    padding: 8px 15px;
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-    min-width: 100px;
-}
-.selection-controls button.save-btn {
-    background-color: #2196F3;
-}
-.selection-controls button.cancel-btn {
-    background-color: #f44336;
-}
-.saved-components {
-    margin: 20px 0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    justify-content: center;
-}
-.component-item {
-    border: 1px solid #ddd;
-    padding: 5px;
-    cursor: pointer;
-    position: relative;
-    transition: transform 0.2s;
-}
-.component-item.selected {
-    border: 2px solid #4CAF50;
-}
-.component-item.dragging {
-    opacity: 0.7;
-    transform: scale(1.05);
-}
-.component-item img {
-    display: block;
-    max-width: 50px;
-    max-height: 50px;
+    image-rendering: pixelated;
+    background-repeat: no-repeat;
     cursor: grab;
 }
-.component-item img:active {
-    cursor: grabbing;
-}
-.component-item .delete-btn {
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    background-color: red;
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 20px;
-    height: 20px;
-    font-size: 12px;
-    cursor: pointer;
-    display: none;
-}
-.component-item:hover .delete-btn {
-    display: block;
-}
-.grid-controls {
-    margin-top: 10px;
+
+
+/* === Inspector Pane Specifics === */
+.controls {
     display: flex;
-    justify-content: center;
-    gap: 10px;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    gap: 15px;
 }
-.grid-controls button {
-    padding: 5px 10px;
-    background-color: #2196F3;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
-.grid-controls button.clear-btn {
-    background-color: #f44336;
-}
-.grid-status {
-    margin-top: 5px;
-    text-align: center;
+.control-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-size: 14px;
-    color: #666;
 }
-.drag-instructions {
-    margin: 10px 0;
-    padding: 8px;
-    background-color: #e8f5e9;
-    border-radius: 4px;
-    font-size: 14px;
-    color: #2e7d32;
-    text-align: center;
-}
-.alignment-controls {
-    margin: 15px 0;
-    padding: 10px;
-    background-color: #f5f5f5;
-    border-radius: 4px;
-    border: 1px solid #ddd;
-}
-.alignment-controls h4 {
-    margin-top: 0;
-    margin-bottom: 10px;
-    font-size: 14px;
-    color: #333;
-}
-.control-group {
-    margin-bottom: 10px;
-}
-.control-group:last-child {
-    margin-bottom: 0;
-}
-.control-group label {
-    display: block;
-    margin-bottom: 5px;
-    font-size: 12px;
-    color: #555;
-}
-.radio-group {
-    display: flex;
-    gap: 10px;
-}
-.radio-option {
-    display: flex;
-    align-items: center;
-    font-size: 12px;
-}
-.radio-option input {
-    margin-right: 4px;
-}
-.anchor-selector {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(3, 1fr);
-    width: 90px;
-    height: 90px;
-    margin: 0 auto;
-    border: 1px solid #ddd;
-}
-.anchor-point {
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    background-color: #f9f9f9;
-}
-.anchor-point:hover {
-    background-color: #e9e9e9;
-}
-.anchor-point.selected {
-    background-color: #2196F3;
-    color: white;
-}
-.offset-controls {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    margin-top: 10px;
-}
-.offset-control {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-.offset-control label {
-    font-size: 12px;
-    margin-bottom: 5px;
-}
-.offset-input {
-    width: 50px;
-    text-align: center;
-}
-.offset-buttons {
-    display: flex;
-    margin-top: 5px;
-}
-.offset-button {
-    width: 25px;
-    height: 25px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #f0f0f0;
-    border: 1px solid #ddd;
-    cursor: pointer;
-    user-select: none;
-}
-.offset-button:hover {
-    background-color: #e0e0e0;
-}
-.component-preview-container {
+
+.image-preview {
     position: relative;
-    margin: 20px 0;
+    background-color: var(--bg-primary);
+    padding: 10px;
+    border: 1px dashed var(--border-color);
+    border-radius: 4px;
+    max-height: 300px;
+    overflow: auto;
+}
+
+.selection-area {
+    position: relative;
+    display: inline-block;
+}
+
+.selection-area img {
+    display: block;
+    user-select: none;
+    image-rendering: pixelated; /* Keep sprite sharp */
+}
+
+.selection-box {
+    position: absolute;
+    border: 1px dashed var(--accent-danger);
+    background-color: rgba(244, 67, 54, 0.3);
+    pointer-events: none;
+    z-index: 10;
+}
+
+.selection-info {
+    margin-top: 10px;
+    font-size: 14px;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.component-preview {
+    position: relative;
+    margin: 15px auto;
+    width: fit-content;
+    border: 1px solid var(--border-color);
+    padding: 5px;
+    background-color: var(--bg-primary);
+}
+.component-preview canvas {
+    display: block;
+    image-rendering: pixelated;
 }
 .component-preview-overlay {
     position: absolute;
@@ -363,21 +312,149 @@ h1 {
     width: 100%;
     height: 100%;
     pointer-events: none;
-    z-index: 10;
 }
 .anchor-marker {
     position: absolute;
-    width: 6px;
-    height: 6px;
-    background-color: red;
+    width: 5px;
+    height: 5px;
+    background-color: var(--accent-danger);
     border-radius: 50%;
+    border: 1px solid white;
     transform: translate(-50%, -50%);
-    z-index: 11;
 }
-.two-column {
+
+.selection-controls {
+    margin-top: 15px;
     display: flex;
-    gap: 20px;
+    justify-content: center;
+    gap: 10px;
 }
-.column {
+
+/* Component Library */
+.components-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+    gap: 10px;
+}
+
+.category-group {
+    margin-bottom: 20px;
+}
+.category-group:last-child {
+    margin-bottom: 0;
+}
+.category-title {
+    font-size: 14px;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.empty-category-placeholder {
+    font-size: 13px;
+    color: var(--text-secondary);
+    padding: 10px 5px;
+    text-align: center;
+    font-style: italic;
+}
+
+/* === Category Selector Buttons === */
+.category-selector {
+    display: flex;
+    justify-content: space-around;
+    gap: 10px;
+}
+.category-btn {
     flex: 1;
+    background-color: var(--bg-tertiary);
+}
+.category-btn.active {
+    background-color: var(--accent-primary);
+    color: white;
+    border-color: var(--accent-primary-hover);
+}
+
+.component-item {
+    position: relative;
+    border: 2px solid transparent;
+    border-radius: 4px;
+    padding: 5px;
+    cursor: pointer;
+    background-color: var(--bg-tertiary);
+    transition: all 0.2s ease;
+    aspect-ratio: 1/1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.component-item:hover {
+    border-color: var(--accent-secondary);
+}
+.component-item.selected {
+    border-color: var(--accent-primary);
+    background-color: #00568f;
+}
+.component-item.dragging {
+    opacity: 0.5;
+    transform: scale(1.05);
+}
+.component-item img {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    cursor: grab;
+    image-rendering: pixelated;
+}
+.component-item img:active {
+    cursor: grabbing;
+}
+.delete-btn {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background-color: var(--accent-danger);
+    color: white;
+    border: 1px solid var(--bg-primary);
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 14px;
+    line-height: 18px;
+    text-align: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.2s;
+    transform: scale(0.8);
+    z-index: 2;
+}
+.component-item:hover .delete-btn {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* Data Output Panel */
+.data-output {
+    width: 100%;
+    height: 150px;
+    resize: vertical;
+    font-family: monospace;
+    font-size: 12px;
+    background-color: #111;
+    color: #cecece;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 10px;
+    box-sizing: border-box;
+    white-space: pre;
+}
+
+.panel-controls {
+    margin-top: 10px;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
 }
