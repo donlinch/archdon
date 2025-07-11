@@ -29,7 +29,7 @@
 
                 <!-- Panel 2: Select Category -->
                 <div class="panel">
-                    <h3 class="panel-title">2. 選擇元件分類</h3>
+                    <h3 class="panel-title">2. 選擇元件分類 &amp; 命名</h3>
                     <div class="panel-content">
                         <div class="category-selector">
                              <button 
@@ -40,6 +40,15 @@
                                 @click="setCategory(cat)">
                                 {{ cat }}
                             </button>
+                        </div>
+                        <div class="control-item" style="margin-top: 15px;">
+                            <label for="component-name" style="margin-right: 10px;">元件名稱:</label>
+                            <input type="text" id="component-name" v-model="componentName" placeholder="例如：英雄角色、生命藥水...">
+                        </div>
+                        <div class="control-item" style="margin-top: 10px;">
+                            <label for="display-scale" style="margin-right: 10px;">顯示比例:</label>
+                            <input type="number" id="display-scale" v-model.number="displayScale" min="1" max="500" placeholder="100" style="width: 80px;">
+                            <span style="margin-left: 5px;">%</span>
                         </div>
                     </div>
                 </div>
@@ -62,6 +71,19 @@
                             <div class="coordinates control-item">
                                 <span>X: {{ mouseX }}</span>
                                 <span>Y: {{ mouseY }}</span>
+                            </div>
+                        </div>
+                        
+                        <!-- 網格預覽區域，固定顯示 -->
+                        <div class="grid-preview-container">
+                            <h5>網格預覽</h5>
+                            <div class="grid-preview" ref="gridPreview">
+                                <!-- 2x2 網格底圖 -->
+                                <div class="grid-cells">
+                                    <div class="grid-cell" v-for="i in 4" :key="i"></div>
+                                </div>
+                                <!-- 元件預覽 -->
+                                <div class="preview-component" :style="getGridPreviewStyle()"></div>
                             </div>
                         </div>
 
@@ -100,6 +122,7 @@
                                     <div class="anchor-marker" :style="getAnchorMarkerStyle()"></div>
                                 </div>
                             </div>
+                            
                             <div class="selection-controls">
                                 <button @click="saveComponent" class="btn btn-primary">建立靜態元件</button>
                                 <button @click="addFrameToAnimation" class="btn btn-secondary">加入動畫幀 ({{ multiSelectionFrames.length }})</button>
@@ -151,7 +174,8 @@
                 <div class="panel" v-if="savedComponents.length > 0">
                     <h3 class="panel-title">
                         4. 元件庫
-                        <button @click="pasteComponent" class="btn btn-secondary btn-sm" style="float: right;">貼上元件</button>
+                        <button @click="exportToFile" class="btn btn-primary btn-sm" style="float: right; margin-left: 5px;">儲存到檔案</button>
+                        <button @click="copyAllState" class="btn btn-secondary btn-sm" style="float: right;">一鍵複製</button>
                     </h3>
                     <div class="panel-content">
                         <!-- Category Filter Buttons -->
@@ -174,34 +198,37 @@
 
                         <div v-for="category in categories" :key="category" class="category-group" v-if="activeCategoryFilter === 'all' || activeCategoryFilter === category">
                             <h4 class="category-title">{{ category }}</h4>
-                            <div class="components-list" v-if="categorizedComponents[category] && categorizedComponents[category].length > 0">
-                                <div
-                                    v-for="component in categorizedComponents[category]"
-                                    :key="component.originalIndex"
-                                    class="component-item"
-                                    :class="{ 
-                                        'selected': selectedComponentIndex === component.originalIndex
-                                    }"
-                                    @click="selectComponent(component.originalIndex)">
-                                    
-                                    <!-- Static Image for non-animation components -->
-                                    <img v-if="component.type !== 'animation'"
-                                         :src="component.imageData"
-                                         :alt="'元件 ' + (component.originalIndex + 1)">
-                                    
-                                    <!-- Canvas for animation components -->
-                                    <canvas v-if="component.type === 'animation'"
-                                            :ref="'anim-canvas-' + component.originalIndex"
-                                            :width="component.width"
-                                            :height="component.height">
-                                    </canvas>
+                            <div v-if="categorizedComponents[category] && Object.keys(categorizedComponents[category]).length > 0">
+                                <div v-for="(components, name) in categorizedComponents[category]" :key="name" class="name-group" style="margin-bottom: 10px;">
+                                    <h5 class="name-group-title" style="margin: 10px 0 5px; padding-left: 5px; font-weight: 500; color: var(--text-secondary);">{{ name }} ({{ components.length }})</h5>
+                                    <div class="components-list">
+                                        <div
+                                            v-for="component in components"
+                                            :key="component.originalIndex"
+                                            class="component-item"
+                                            :class="{ 'selected': selectedComponentIndex === component.originalIndex }"
+                                            @click="selectComponent(component.originalIndex)">
+                                            
+                                            <!-- Static Image for non-animation components -->
+                                            <img v-if="component.type !== 'animation'"
+                                                 :src="component.imageData"
+                                                 :alt="'元件 ' + (component.originalIndex + 1)">
+                                            
+                                            <!-- Canvas for animation components -->
+                                            <canvas v-if="component.type === 'animation'"
+                                                    :ref="'anim-canvas-' + component.originalIndex"
+                                                    :width="component.width"
+                                                    :height="component.height">
+                                            </canvas>
 
-                                    <button class="delete-btn" @click.stop="deleteComponent(component.originalIndex)">×</button>
-                                    <button class="edit-btn" @click.stop="openEditModal(component.originalIndex)">✎</button>
-                                    <button class="copy-btn" @click.stop="copyComponentData(component.originalIndex)">
-                                        <span v-if="copiedFeedback[component.originalIndex]">已複製!</span>
-                                        <span v-else>📋</span>
-                                    </button>
+                                            <button class="delete-btn" @click.stop="deleteComponent(component.originalIndex)">×</button>
+                                            <button class="edit-btn" @click.stop="openEditModal(component.originalIndex)">✎</button>
+                                            <button class="copy-btn" @click.stop="copyComponentData(component.originalIndex)">
+                                                <span v-if="copiedFeedback[component.originalIndex]">已複製!</span>
+                                                <span v-else>📋</span>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <div class="empty-category-placeholder" v-else>
@@ -225,12 +252,23 @@
                     <h3>編輯元件</h3>
                 </div>
                 <div class="modal-body">
+                    <!-- Edit Name -->
+                    <div class="form-group">
+                        <label for="edit-name">名稱</label>
+                        <input type="text" id="edit-name" v-model="editingComponent.name">
+                    </div>
                     <!-- Edit Category -->
                     <div class="form-group">
                         <label for="edit-category">分類</label>
                         <select id="edit-category" v-model="editingComponent.category">
                             <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
                         </select>
+                    </div>
+                    
+                    <!-- Edit Display Scale -->
+                    <div class="form-group">
+                        <label for="edit-display-scale">顯示比例 (%)</label>
+                        <input type="number" id="edit-display-scale" v-model.number="editingComponent.displayScale" min="1" max="500" placeholder="100">
                     </div>
 
                     <!-- Edit Animation Properties (only for animation components) -->

@@ -40,20 +40,25 @@ new Vue({
             };
         },
         categorizedComponents() {
-            const grouped = {};
+            const groupedByCategory = {};
             this.savedComponents.forEach((component, index) => {
                 const componentWithIndex = { ...component, originalIndex: index };
                 const category = component.category || '物品';
-                if (!grouped[category]) {
-                    grouped[category] = [];
+                const name = component.name || '未命名';
+
+                if (!groupedByCategory[category]) {
+                    groupedByCategory[category] = {};
                 }
-                grouped[category].push(componentWithIndex);
+                if (!groupedByCategory[category][name]) {
+                    groupedByCategory[category][name] = [];
+                }
+                groupedByCategory[category][name].push(componentWithIndex);
             });
-            return grouped;
+            return groupedByCategory;
         },
     },
     mounted() {
-        this.loadFromLocalStorage();
+        this.loadFromDatabase(); // CHANGE: Load from DB instead of LocalStorage
         this.mainAnimationLoop();
     },
     beforeDestroy() {
@@ -122,15 +127,128 @@ new Vue({
         }
     },
     methods: {
-        loadFromLocalStorage() {
-            const savedState = localStorage.getItem('unitEditorState');
-            if (savedState) {
-                console.log('從 localStorage 載入狀態 (Viewer)');
-                const parsedState = JSON.parse(savedState);
-                this.savedComponents = parsedState.savedComponents || [];
-                this.placedComponents = parsedState.placedComponents || [];
-                // You can add grid size loading here if you save it in the editor
+        async loadFromDatabase() {
+            try {
+                const response = await fetch('/api/units/all');
+                if (!response.ok) {
+                    throw new Error(`伺服器錯誤: ${response.statusText}`);
+                }
+                const state = await response.json();
+                
+                // 在載入前重繪狀態
+                this.rehydrateState(state).then(hydratedState => {
+                    this.savedComponents = hydratedState.savedComponents || [];
+                    this.placedComponents = hydratedState.placedComponents || [];
+                    console.log('已成功從資料庫載入並重繪元件資料 (Viewer)。');
+
+                    // 清除現有的動畫狀態以強制重新初始化
+                    this.animationStates = {}; 
+                }).catch(error => {
+                    console.error('Rehydration failed:', error);
+                    alert(`元件資料重繪失敗: ${error.message}`);
+                });
+
+            } catch (error) {
+                console.error('從資料庫載入資料失敗:', error);
+                alert('從資料庫載入資料失敗，請檢查主控台訊息。');
             }
+        },
+
+        // The following methods are no longer needed as data is loaded from the DB
+        // handleFileUpload, saveToLocalStorage, loadFromLocalStorage
+
+        getSmartImageUrl(url) {
+            if (url.startsWith('http://localhost') || url.startsWith('http://127.0.0.1')) {
+                return url;
+            }
+             // Assume other URLs might need CORS proxy
+            return `/proxy-image?url=${encodeURIComponent(url)}`;
+        },
+
+        rehydrateState(state) {
+            return new Promise((resolve, reject) => {
+                if (!state.savedComponents || state.savedComponents.length === 0) {
+                    return resolve(state);
+                }
+
+                const componentsByUrl = {};
+                state.savedComponents.forEach(component => {
+                    const url = component.type === 'animation' 
+                        ? component.animation?.spritesheetUrl 
+                        : component.spritesheetUrl;
+                    
+                    if (url) {
+                        if (!componentsByUrl[url]) {
+                            componentsByUrl[url] = [];
+                        }
+                        componentsByUrl[url].push(component);
+                    }
+                });
+
+                const promises = Object.keys(componentsByUrl).map(url => {
+                    return new Promise((resolveSprite, rejectSprite) => {
+                        const spritesheet = new Image();
+                        spritesheet.crossOrigin = 'Anonymous';
+                        spritesheet.src = this.getSmartImageUrl(url);
+
+                        spritesheet.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d');
+                            
+                            componentsByUrl[url].forEach(component => {
+                                // Only static components need imageData rehydration.
+                                // Animation components draw directly from the spritesheet in the animation loop.
+                                if (component.type === 'static' && component.sourceRect) {
+                                    const { x, y, w, h } = component.sourceRect;
+                                    canvas.width = w;
+                                    canvas.height = h;
+                                    ctx.clearRect(0, 0, w, h);
+                                    try {
+                                        ctx.drawImage(spritesheet, x, y, w, h, 0, 0, w, h);
+                                        component.imageData = canvas.toDataURL();
+                                    } catch (e) {
+                                        console.error(`Error rehydrating component for url ${url}:`, component, e);
+                                    }
+                                }
+                            });
+                            resolveSprite();
+                        };
+
+                        spritesheet.onerror = () => {
+                            console.error(`無法載入 spritesheet: ${url}`);
+                            // Resolve even on error to not block other images from loading
+                            resolveSprite(); 
+                        };
+                    });
+                });
+
+                Promise.all(promises).then(() => {
+                    resolve(state);
+                });
+            });
+        },
+    
+        getOriginalComponent(componentId) {
+            if (typeof componentId === 'number' && this.savedComponents[componentId]) {
+                return this.savedComponents[componentId];
+            }
+            // Return a dummy static component to prevent errors
+            return { type: 'static' }; 
+        },
+    
+        getPlacedComponentStyle(component) {
+            const original = this.getOriginalComponent(component.componentId);
+            return {
+                position: 'absolute',
+                left: `${component.positionX}px`,
+                top: `${component.positionY}px`,
+                width: `${component.width}px`,
+                height: `${component.height}px`,
+                backgroundImage: `url(${original.imageData})`,
+                backgroundRepeat: 'no-repeat',
+                backgroundSize: '100% 100%',
+                zIndex: component.zIndex,
+            };
         },
 
         // ===== Drag and Drop Methods =====
@@ -298,7 +416,7 @@ new Vue({
         },
 
         getOriginalComponent(componentId) {
-            if (typeof componentId === 'number' && componentId < this.savedComponents.length) {
+            if (typeof componentId === 'number' && this.savedComponents[componentId]) {
                 return this.savedComponents[componentId];
             }
             return { type: 'static' }; // Return a dummy static component to prevent errors
@@ -332,7 +450,7 @@ new Vue({
                 if (!sourceImage) {
                     const newImg = new Image();
                     newImg.crossOrigin = "Anonymous";
-                    newImg.src = spritesheetUrl;
+                    newImg.src = this.getSmartImageUrl(spritesheetUrl);
                     this.$set(this.spritesheetCache, spritesheetUrl, newImg);
                     return;
                 }

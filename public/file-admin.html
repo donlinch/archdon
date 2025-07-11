@@ -87,10 +87,45 @@
             border: 1px solid #ccc;
             background-color: #f8f9fa; /* 淺灰色背景，表示唯讀 */
             box-sizing: border-box; /* 確保 padding/border 包含在寬度內 */
-            cursor: text; /* 顯示文字選擇游標 */
+            cursor: pointer; /* 改為指針游標，表示可點擊 */
             overflow: hidden; /* 隱藏超出部分 */
             text-overflow: ellipsis; /* 用省略號顯示 */
             white-space: nowrap; /* 不換行 */
+            transition: all 0.2s ease; /* 平滑過渡效果 */
+            position: relative; /* 用於添加偽元素 */
+        }
+        
+        .file-url-input:hover {
+            background-color: #e9ecef; /* 滑鼠懸停時變色 */
+            border-color: #adb5bd; /* 滑鼠懸停時邊框變色 */
+        }
+        
+        .file-url-input::after {
+            content: "點擊複製"; /* 提示文字 */
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.75em;
+            color: #6c757d;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        
+        .file-url-input:hover::after {
+            opacity: 1;
+        }
+        
+        .file-url-input.copied {
+            background-color: #d4edda !important;
+            border-color: #28a745 !important;
+            color: #155724 !important;
+        }
+        
+        .file-url-input.copied::after {
+            content: "已複製！";
+            color: #155724;
+            opacity: 1;
         }
 
         /* 修正格狀模式下輸入框的間距 */
@@ -112,9 +147,141 @@
             object-fit: contain;
         }
 
+        /* PNG Gallery Styles */
+        #png-gallery-container {
+            background-color: #fdfdfd;
+            margin-bottom: 2rem;
+            padding: 1rem;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        #png-gallery-container h2 {
+            margin-top: 0;
+            font-size: 1.2rem;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        #png-gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+        .png-item {
+            background-color: #fff;
+            border: 1px solid #eee;
+            border-radius: 5px;
+            padding: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        .png-item .preview {
+            height: 100px;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px;
+        }
+        .png-item .preview img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        .png-item .filename {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+            width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .png-item .url-container {
+            width: 100%;
+            margin-bottom: 8px;
+        }
+        .png-item .meta {
+            font-size: 0.8em;
+            color: #888;
+            margin-bottom: 10px;
+        }
+        .png-item .delete-btn {
+            padding: 4px 8px;
+            font-size: 0.8em;
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 3px;
+            margin-top: auto; /* Push to bottom */
+        }
+        .png-item .delete-btn:hover {
+            background-color: #c82333;
+        }
+        #png-gallery-pagination {
+            margin-top: 1.5rem;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+        }
+        #png-gallery-pagination a {
+            display: inline-block;
+            padding: 6px 12px;
+            border: 1px solid #ccc;
+            text-decoration: none;
+            color: #337ab7;
+            border-radius: 4px;
+        }
+        #png-gallery-pagination a.active,
+        #png-gallery-pagination a:hover {
+            background-color: #f0f0f0;
+            border-color: #adadad;
+        }
+        #png-gallery-pagination a.active {
+            font-weight: bold;
+            color: #333;
+            pointer-events: none;
+        }
+        #png-gallery-loading {
+            text-align: center;
+            padding: 1.5rem;
+            color: #777;
+            font-style: italic;
+        }
 
 
-
+        /* View Switcher styles */
+        .view-switcher {
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid #ccc;
+            display: flex;
+        }
+        .switcher-btn {
+            padding: 10px 18px;
+            font-size: 1rem;
+            border: 1px solid transparent;
+            border-bottom: none;
+            background-color: #f8f9fa;
+            cursor: pointer;
+            border-radius: 5px 5px 0 0;
+            margin-bottom: -1px;
+            color: #007bff;
+        }
+        .switcher-btn.active {
+            background-color: #fff;
+            color: #333;
+            border-color: #ccc;
+            border-bottom: 1px solid #fff;
+            font-weight: bold;
+        }
+        .switcher-btn:not(.active):hover {
+            background-color: #e9ecef;
+        }
 
     </style>
 </head>
@@ -123,93 +290,117 @@
 
     <main class="admin-container file-manager-container">
         <h1>檔案管理</h1>
-        <a href="/" style="display: inline-block; margin-bottom: 1rem;">返回首頁</a>
 
-        <!-- 操作控制列 -->
-        <div class="controls-bar">
-            <button id="upload-new-file-btn">➕ 上傳新檔案...</button>
-            <input type="text" id="file-search-input" placeholder="搜尋原始檔名...">
-            <select id="file-type-filter">
-                <option value="all">所有類型</option>
-                <option value="image">圖片</option>
-                <option value="pdf">PDF</option>
-                <option value="other">其他</option>
-            </select>
-            <select id="file-sort-by">
-                <option value="newest">最新上傳</option>
-                <option value="oldest">最早上傳</option>
-                <option value="name_asc">名稱 (A-Z)</option>
-                <option value="name_desc">名稱 (Z-A)</option>
-                <option value="size_asc">大小 (小→大)</option>
-                <option value="size_desc">大小 (大→小)</option>
-            </select>
-            <button id="refresh-list-btn">🔄 刷新</button>
-            <div style="margin-left: auto; display: flex; gap: 5px;"> <!-- 推到最右邊並使用 flex 佈局 -->
-                 <button id="view-mode-db" class="view-toggle" data-mode="database">資料庫檔案</button>
-                 <button id="view-mode-disk" class="view-toggle active" data-mode="disk">磁碟檔案</button>
-                 <span style="border-left: 1px solid #ccc; margin: 0 5px;"></span> <!-- 分隔線 -->
-                 <button id="view-toggle-list" class="view-toggle" data-view="list">列表</button>
-                 <button id="view-toggle-grid" class="view-toggle active" data-view="grid">格狀</button>
-            </div>
+        <!-- View Switcher -->
+        <div class="view-switcher">
+            <button id="view-tab-png" class="switcher-btn">PNG/GIF 圖片預覽</button>
+            <button id="view-tab-manager" class="switcher-btn active">完整檔案管理</button>
         </div>
 
-        <!-- 檔案顯示區 -->
-        <div id="file-display-area">
-            <div id="file-loading" style="display: none;">正在載入檔案列表...</div>
-            <div id="file-error" style="display: none; color: red;"></div>
-
-            <!-- 資料庫 - 列表視圖 -->
-            <div id="file-list-view" class="file-view database-view" style="display: none;" data-viewtype="list">
-                <table id="file-list-table">
-                    <thead>
-                        <tr>
-                            <th>預覽</th>
-                            <th>原始檔名</th>
-                            <th>檔案路徑 (URL)</th>
-                            <th>類型</th>
-                            <th>大小</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- 列表內容由 JS 填充 -->
-                    </tbody>
-                </table>
+        <!-- PNG Gallery Section -->
+        <div id="png-gallery-container" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2 style="margin: 0;">PNG/GIF 圖片預覽</h2>
+                <button id="upload-direct-btn" class="btn btn-success">➕ 上傳 PNG/GIF</button>
             </div>
-
-            <!-- 資料庫 - 格狀視圖 -->
-            <div id="file-grid-view" class="file-view database-view" style="display: none;" data-viewtype="grid">
-                <!-- 卡片由 JS 填充 -->
+            <div id="png-gallery-grid">
+                <!-- PNG images will be loaded here by JS -->
             </div>
-
-            <!-- 磁碟檔案 - 列表視圖 -->
-            <div id="disk-file-list-view" class="file-view disk-view" style="display: none;" data-viewtype="list">
-                 <table id="disk-file-list-table">
-                    <thead>
-                        <tr>
-                            <th>預覽</th>
-                            <th>檔名</th>
-                            <th>URL 路徑</th>
-                            <th>類型</th>
-                            <th>大小</th>
-                            <th>修改時間</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- 磁碟檔案列表內容由 JS 填充 -->
-                    </tbody>
-                </table>
+            <div id="png-gallery-pagination">
+                <!-- Pagination controls will be loaded here by JS -->
             </div>
-            
-            <!-- 磁碟檔案 - 格狀視圖 (預設顯示，JS會根據狀態調整) -->
-            <div id="disk-file-grid-view" class="file-view disk-view active-view" data-viewtype="grid">
-                <!-- 磁碟檔案卡片由 JS 填充 -->
-            </div>
+            <div id="png-gallery-loading" style="display: none;">正在載入 PNG 圖片...</div>
         </div>
+        
+        <div id="full-manager-panel">
+            <a href="/" style="display: inline-block; margin-bottom: 1rem;">返回首頁</a>
 
-        <!-- 分頁控制 (資料庫視圖使用) -->
-        <div id="pagination-controls" class="pagination-controls" style="margin-top: 1.5rem;"></div>
+            <!-- 操作控制列 -->
+            <div class="controls-bar">
+                <button id="upload-new-file-btn">➕ 上傳新檔案...</button>
+                <input type="text" id="file-search-input" placeholder="搜尋原始檔名...">
+                <select id="file-type-filter">
+                    <option value="all">所有類型</option>
+                    <option value="image">圖片</option>
+                    <option value="pdf">PDF</option>
+                    <option value="other">其他</option>
+                </select>
+                <select id="file-sort-by">
+                    <option value="newest">最新上傳</option>
+                    <option value="oldest">最早上傳</option>
+                    <option value="name_asc">名稱 (A-Z)</option>
+                    <option value="name_desc">名稱 (Z-A)</option>
+                    <option value="size_asc">大小 (小→大)</option>
+                    <option value="size_desc">大小 (大→小)</option>
+                </select>
+                <button id="refresh-list-btn">🔄 刷新</button>
+                <div style="margin-left: auto; display: flex; gap: 5px;"> <!-- 推到最右邊並使用 flex 佈局 -->
+                     <button id="view-mode-db" class="view-toggle" data-mode="database">資料庫檔案</button>
+                     <button id="view-mode-disk" class="view-toggle active" data-mode="disk">磁碟檔案</button>
+                     <span style="border-left: 1px solid #ccc; margin: 0 5px;"></span> <!-- 分隔線 -->
+                     <button id="view-toggle-list" class="view-toggle" data-view="list">列表</button>
+                     <button id="view-toggle-grid" class="view-toggle active" data-view="grid">格狀</button>
+                </div>
+            </div>
+
+            <!-- 檔案顯示區 -->
+            <div id="file-display-area">
+                <div id="file-loading" style="display: none;">正在載入檔案列表...</div>
+                <div id="file-error" style="display: none; color: red;"></div>
+
+                <!-- 資料庫 - 列表視圖 -->
+                <div id="file-list-view" class="file-view database-view" style="display: none;" data-viewtype="list">
+                    <table id="file-list-table">
+                        <thead>
+                            <tr>
+                                <th>預覽</th>
+                                <th>原始檔名</th>
+                                <th>檔案路徑 (URL)</th>
+                                <th>類型</th>
+                                <th>大小</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- 列表內容由 JS 填充 -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 資料庫 - 格狀視圖 -->
+                <div id="file-grid-view" class="file-view database-view" style="display: none;" data-viewtype="grid">
+                    <!-- 卡片由 JS 填充 -->
+                </div>
+
+                <!-- 磁碟檔案 - 列表視圖 -->
+                <div id="disk-file-list-view" class="file-view disk-view" style="display: none;" data-viewtype="list">
+                     <table id="disk-file-list-table">
+                        <thead>
+                            <tr>
+                                <th>預覽</th>
+                                <th>檔名</th>
+                                <th>URL 路徑</th>
+                                <th>類型</th>
+                                <th>大小</th>
+                                <th>修改時間</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- 磁碟檔案列表內容由 JS 填充 -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- 磁碟檔案 - 格狀視圖 (預設顯示，JS會根據狀態調整) -->
+                <div id="disk-file-grid-view" class="file-view disk-view active-view" data-viewtype="grid">
+                    <!-- 磁碟檔案卡片由 JS 填充 -->
+                </div>
+            </div>
+
+            <!-- 分頁控制 (資料庫視圖使用) -->
+            <div id="pagination-controls" class="pagination-controls" style="margin-top: 1.5rem;"></div>
+        </div>
 
     </main>
 
@@ -233,11 +424,317 @@
         </div>
     </div>
 
+    <!-- 新增：PNG/GIF 直接上傳 Modal -->
+    <div id="direct-upload-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" id="close-direct-upload-modal">×</span>
+            <h2>上傳 PNG 或 GIF</h2>
+            <p style="font-size: 0.9em; color: #666; margin-top: -10px; margin-bottom: 15px;">此上傳方式會保留原始檔案格式，不會轉換成 JPG。</p>
+            <form id="direct-upload-form">
+                <div class="form-group">
+                    <label for="direct-file-input">選擇檔案 (僅限 .png, .gif):</label>
+                    <input type="file" id="direct-file-input" name="file" accept=".png,.gif" required>
+                    <div id="direct-upload-preview" style="margin-top: 10px;"></div>
+                </div>
+                <div class="form-actions">
+                    <p id="direct-upload-status" class="status-message" style="text-align: left; flex-grow: 1; margin: 0;"></p>
+                    <button type="button" class="btn btn-secondary close-modal-btn">取消</button>
+                    <button type="submit" id="confirm-direct-upload-btn" class="btn btn-primary">確認上傳</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <footer>
         <!-- 後台頁腳 -->
     </footer>
 
     <!-- 引入新的 JS 文件 -->
     <script src="file-admin.js"></script>
+    
+    <!-- PNG Gallery Logic -->
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Tab Switching Logic ---
+        const pngTab = document.getElementById('view-tab-png');
+        const managerTab = document.getElementById('view-tab-manager');
+        const pngPanel = document.getElementById('png-gallery-container');
+        const managerPanel = document.getElementById('full-manager-panel');
+
+        // --- New Direct Upload Modal Elements ---
+        const directUploadBtn = document.getElementById('upload-direct-btn');
+        const directUploadModal = document.getElementById('direct-upload-modal');
+        const closeDirectUploadModalBtn = document.getElementById('close-direct-upload-modal');
+        const directUploadForm = document.getElementById('direct-upload-form');
+        const directFileInput = document.getElementById('direct-file-input');
+        const directUploadPreview = document.getElementById('direct-upload-preview');
+        const directUploadStatus = document.getElementById('direct-upload-status');
+        const confirmDirectUploadBtn = document.getElementById('confirm-direct-upload-btn');
+        const directUploadModalCancelBtns = directUploadModal ? directUploadModal.querySelectorAll('.close-modal-btn') : [];
+
+        if (pngTab && managerTab && pngPanel && managerPanel) {
+            pngTab.addEventListener('click', (e) => {
+                e.preventDefault();
+                pngPanel.style.display = 'block';
+                managerPanel.style.display = 'none';
+                pngTab.classList.add('active');
+                managerTab.classList.remove('active');
+            });
+
+            managerTab.addEventListener('click', (e) => {
+                e.preventDefault();
+                pngPanel.style.display = 'none';
+                managerPanel.style.display = 'block';
+                pngTab.classList.remove('active');
+                managerTab.classList.add('active');
+            });
+        }
+
+        // --- Direct Upload Logic ---
+        if (directUploadBtn) {
+            directUploadBtn.addEventListener('click', () => {
+                directUploadForm.reset();
+                directUploadPreview.innerHTML = '';
+                directUploadStatus.textContent = '';
+                directUploadModal.style.display = 'flex';
+            });
+        }
+        
+        const closeDirectModal = () => directUploadModal.style.display = 'none';
+        
+        if(closeDirectUploadModalBtn) closeDirectUploadModalBtn.addEventListener('click', closeDirectModal);
+        if(directUploadModal) directUploadModal.addEventListener('click', (e) => { if (e.target === directUploadModal) closeDirectModal(); });
+        directUploadModalCancelBtns.forEach(btn => btn.addEventListener('click', closeDirectModal));
+
+        if (directFileInput) {
+            directFileInput.addEventListener('change', () => {
+                directUploadPreview.innerHTML = '';
+                directUploadStatus.textContent = '';
+                if (directFileInput.files && directFileInput.files[0]) {
+                    const file = directFileInput.files[0];
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        directUploadPreview.innerHTML = `<img src="${e.target.result}" alt="預覽" style="max-width: 100%; max-height: 150px; object-fit: contain;">`;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        if (directUploadForm) {
+            directUploadForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const file = directFileInput.files[0];
+                if (!file) {
+                    directUploadStatus.textContent = '請選擇一個檔案。';
+                    directUploadStatus.style.color = 'orange';
+                    return;
+                }
+
+                const allowedTypes = ['image/png', 'image/gif'];
+                if (!allowedTypes.includes(file.type)) {
+                    directUploadStatus.textContent = '檔案類型錯誤，僅限 PNG 或 GIF。';
+                    directUploadStatus.style.color = 'red';
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                confirmDirectUploadBtn.disabled = true;
+                directUploadStatus.textContent = '上傳中，請稍候...';
+                directUploadStatus.style.color = 'blue';
+
+                try {
+                    const response = await fetch('/api/admin/files/upload-image-direct', {
+                        method: 'POST',
+                        body: formData,
+                    });
+                    const result = await response.json();
+                    if (!response.ok || !result.success) {
+                        throw new Error(result.error || `上傳失敗 (${response.status})`);
+                    }
+                    
+                    directUploadStatus.textContent = '上傳成功！正在刷新...';
+                    directUploadStatus.style.color = 'green';
+                    
+                    setTimeout(() => {
+                        closeDirectModal();
+                        fetchPngs(1); // 刷新 PNG/GIF 預覽
+                    }, 1000);
+
+                } catch (error) {
+                    directUploadStatus.textContent = `上傳失敗: ${error.message}`;
+                    directUploadStatus.style.color = 'red';
+                } finally {
+                    confirmDirectUploadBtn.disabled = false;
+                }
+            });
+        }
+
+        // --- PNG Gallery Logic ---
+        const galleryGrid = document.getElementById('png-gallery-grid');
+        const paginationContainer = document.getElementById('png-gallery-pagination');
+        const loadingIndicator = document.getElementById('png-gallery-loading');
+
+        async function fetchPngs(page = 1) {
+            if (!galleryGrid || !paginationContainer || !loadingIndicator) return;
+
+            loadingIndicator.style.display = 'block';
+            galleryGrid.innerHTML = '';
+            paginationContainer.innerHTML = '';
+
+            try {
+                // 修改查詢參數，使用新的 extensions 參數同時查詢 PNG 和 GIF 檔案
+                const response = await fetch(`/api/admin/files?extensions=png,gif&fileType=image&limit=12&page=${page}&sortBy=newest`);
+                if (!response.ok) {
+                    throw new Error(`伺服器錯誤: ${response.statusText}`);
+                }
+                const data = await response.json();
+
+                if (data.files && data.files.length > 0) {
+                    data.files.forEach(file => {
+                        const card = document.createElement('div');
+                        card.className = 'png-item';
+                        card.setAttribute('data-file-id', file.id);
+
+                        // Preview
+                        const previewDiv = document.createElement('div');
+                        previewDiv.className = 'preview';
+                        const img = document.createElement('img');
+                        img.src = file.file_path;
+                        img.alt = file.original_filename;
+                        previewDiv.appendChild(img);
+
+                        // Filename
+                        const filenameDiv = document.createElement('div');
+                        filenameDiv.className = 'filename';
+                        filenameDiv.textContent = file.original_filename;
+                        filenameDiv.title = file.original_filename;
+
+                        // URL input field
+                        const urlContainer = document.createElement('div');
+                        urlContainer.className = 'url-container';
+                        const urlInput = document.createElement('input');
+                        urlInput.type = 'text';
+                        urlInput.className = 'file-url-input';
+                        urlInput.readOnly = true;
+                        urlInput.value = window.location.origin + file.file_path;
+                        urlInput.onclick = function() {
+                            this.select();
+                            document.execCommand('copy');
+                            
+                            // Add visual feedback
+                            this.classList.add('copied');
+                            
+                            // Remove visual feedback after 2 seconds
+                            setTimeout(() => {
+                                this.classList.remove('copied');
+                            }, 2000);
+                        };
+                        urlContainer.appendChild(urlInput);
+
+                        // Meta (size)
+                        const metaDiv = document.createElement('div');
+                        metaDiv.className = 'meta';
+                        const sizeInKB = file.size_bytes ? (file.size_bytes / 1024).toFixed(1) + ' KB' : 'N/A';
+                        metaDiv.textContent = sizeInKB;
+
+                        // Delete button
+                        const deleteBtn = document.createElement('button');
+                        deleteBtn.className = 'delete-btn';
+                        deleteBtn.textContent = '刪除';
+                        deleteBtn.setAttribute('data-id', file.id);
+                        deleteBtn.addEventListener('click', handleDeletePng);
+
+                        card.appendChild(previewDiv);
+                        card.appendChild(filenameDiv);
+                        card.appendChild(urlContainer);
+                        card.appendChild(metaDiv);
+                        card.appendChild(deleteBtn);
+
+                        galleryGrid.appendChild(card);
+                    });
+                } else {
+                    galleryGrid.innerHTML = '<p>找不到 PNG 或 GIF 圖片。</p>';
+                }
+
+                renderPngPagination(data.currentPage, data.totalPages);
+
+            } catch (error) {
+                console.error('無法載入 PNG 圖片:', error);
+                galleryGrid.innerHTML = `<p style="color: red;">載入失敗: ${error.message}</p>`;
+            } finally {
+                loadingIndicator.style.display = 'none';
+            }
+        }
+
+        async function handleDeletePng(event) {
+            const button = event.target;
+            const fileId = button.dataset.id;
+            const card = button.closest('.png-item');
+
+            if (!fileId) return;
+
+            if (confirm(`確定要刪除檔案 "${card.querySelector('.filename').textContent}" 嗎？此操作無法復原。`)) {
+                try {
+                    // Start animation early for better UX
+                    card.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+                    card.style.transform = 'scale(0.9)';
+                    card.style.opacity = '0.5';
+
+                    const response = await fetch(`/api/admin/files/${fileId}`, {
+                        method: 'DELETE'
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({ error: '無法解析錯誤訊息' }));
+                        throw new Error(errorData.error || `伺服器回應: ${response.statusText}`);
+                    }
+                    
+                    // On success, complete removal animation
+                    card.style.opacity = '0';
+                    setTimeout(() => card.remove(), 300);
+
+                } catch (error) {
+                    console.error('刪除檔案時出錯:', error);
+                    alert(`刪除失敗: ${error.message}`);
+                    // Restore card appearance on failure
+                    card.style.transform = 'scale(1)';
+                    card.style.opacity = '1';
+                }
+            }
+        }
+
+        function renderPngPagination(currentPage, totalPages) {
+            if (totalPages <= 1) {
+                paginationContainer.innerHTML = '';
+                return;
+            };
+
+            paginationContainer.innerHTML = ''; // Clear previous pagination
+            for (let i = 1; i <= totalPages; i++) {
+                const pageLink = document.createElement('a');
+                pageLink.href = '#';
+                pageLink.innerText = i;
+                if (i === currentPage) {
+                    pageLink.classList.add('active');
+                }
+
+                pageLink.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (i !== currentPage) {
+                        fetchPngs(i);
+                    }
+                });
+
+                paginationContainer.appendChild(pageLink);
+            }
+        }
+
+        // Initial load
+        fetchPngs(1);
+    });
+    </script>
 </body>
 </html>

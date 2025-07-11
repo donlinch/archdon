@@ -58,6 +58,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const openModal = (modal) => { if(modal) modal.style.display = 'flex'; };
     const closeModal = (modal) => { if(modal) modal.style.display = 'none'; };
 
+    // 複製文本到剪貼板並顯示視覺反饋
+    function copyToClipboard(input) {
+        input.select(); // 選中文本
+        document.execCommand('copy'); // 複製到剪貼板
+        
+        // 添加視覺反饋
+        input.classList.add('copied');
+        
+        // 2秒後移除視覺反饋
+        setTimeout(() => {
+            input.classList.remove('copied');
+        }, 2000);
+    }
+
     function formatBytes(bytes, decimals = 2) {
         if (!+bytes) return '0 Bytes';
         const k = 1024;
@@ -197,7 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
             urlInput.className = 'file-url-input';
             urlInput.readOnly = true;
             urlInput.value = window.location.origin + (file.file_path || '');
-            urlInput.onclick = function() { this.select(); };
+            urlInput.onclick = function() { copyToClipboard(this); };
             cellPath.appendChild(urlInput);
             row.insertCell().textContent = file.file_type || '未知';
             const cellSize = row.insertCell();
@@ -246,7 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
             urlInput.className = 'file-url-input';
             urlInput.readOnly = true;
             urlInput.value = window.location.origin + (file.file_path || '');
-            urlInput.onclick = function() { this.select(); };
+            urlInput.onclick = function() { copyToClipboard(this); };
             urlLineDiv.appendChild(urlInput);
             card.appendChild(urlLineDiv);
             const metaDiv = document.createElement('div');
@@ -307,7 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
             urlInput.className = 'file-url-input';
             urlInput.readOnly = true;
             urlInput.value = window.location.origin + file.urlPath;
-            urlInput.onclick = function() { this.select(); };
+            urlInput.onclick = function() { copyToClipboard(this); };
             cellUrl.appendChild(urlInput);
             row.insertCell().textContent = file.type;
             const cellSize = row.insertCell();
@@ -356,7 +370,7 @@ document.addEventListener('DOMContentLoaded', () => {
             urlInput.className = 'file-url-input';
             urlInput.readOnly = true;
             urlInput.value = window.location.origin + file.urlPath;
-            urlInput.onclick = function() { this.select(); };
+            urlInput.onclick = function() { copyToClipboard(this); };
             urlLineDiv.appendChild(urlInput);
             card.appendChild(urlLineDiv);
             const metaDiv = document.createElement('div');

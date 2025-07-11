@@ -12,9 +12,12 @@ new Vue({
         selectionEnd: { x: 0, y: 0 },
         componentImageData: null,
         savedComponents: [],
+        placedComponents: [], // For data model consistency with viewer and backend
         selectedComponentIndex: -1,
         // Component categorization
         componentCategory: '人物', // Default category
+        componentName: '',
+        displayScale: 100, // 預設顯示比例為 100%
         categories: ['人物', '物品', '背景'], // Available categories
         // Hardcoded settings
         anchorPoint: 'bottom-left',
@@ -67,22 +70,26 @@ new Vue({
             return Math.abs(this.selectionEnd.y - this.selectionStart.y);
         },
         categorizedComponents() {
-            const grouped = {};
+            const groupedByCategory = {};
             this.savedComponents.forEach((component, index) => {
                 const componentWithIndex = { ...component, originalIndex: index };
-                // 修正：預設分類應該在建立時就設定好
                 const category = component.category || '物品';
-                if (!grouped[category]) {
-                    grouped[category] = [];
+                const name = component.name || '未命名';
+
+                if (!groupedByCategory[category]) {
+                    groupedByCategory[category] = {};
                 }
-                grouped[category].push(componentWithIndex);
+                if (!groupedByCategory[category][name]) {
+                    groupedByCategory[category][name] = [];
+                }
+                groupedByCategory[category][name].push(componentWithIndex);
             });
-            return grouped;
+            return groupedByCategory;
         },
     },
     mounted() {
-        // 載入本地儲存的資料
-        this.loadFromLocalStorage();
+        // 從資料庫載入資料
+        this.loadFromDatabase();
         
         // 監聽滑鼠移動以更新座標
         window.addEventListener('mousemove', this.updateMouseCoordinates);
@@ -121,12 +128,14 @@ new Vue({
                     }
                 });
                 
-                this.saveToLocalStorage(); // Save any changes (like deletions)
+                // 保存操作改為由用戶點擊按鈕觸發，避免在每次數據變動時都向後端發送請求
+                // this.saveToDatabase(); 
             },
             deep: true
         },
         scale() {
-            this.saveToLocalStorage();
+            // 介面縮放屬性為UI狀態，不儲存到資料庫
+            // this.saveToLocalStorage();
             // 縮放變更時重新計算選擇區域
             this.$nextTick(() => {
                 this.$forceUpdate();
@@ -134,6 +143,129 @@ new Vue({
         },
     },
     methods: {
+        // ===== Database & State Methods =====
+        async loadFromDatabase() {
+            try {
+                const response = await fetch('/api/units/all');
+                if (!response.ok) {
+                    throw new Error(`伺服器錯誤: ${response.statusText}`);
+                }
+                const state = await response.json();
+                
+                // 在載入前重繪狀態
+                this.rehydrateState(state).then(hydratedState => {
+                    this.savedComponents = hydratedState.savedComponents || [];
+                    this.placedComponents = hydratedState.placedComponents || [];
+                    console.log('已成功從資料庫載入並重繪元件資料。');
+
+                    // 如果舊的 spritesheet URL 存在，也載入它
+                    if (localStorage.getItem('unitEditorImageUrl')) {
+                        this.imageUrl = localStorage.getItem('unitEditorImageUrl');
+                        this.previewImage();
+                    }
+                }).catch(error => {
+                    console.error('Rehydration failed:', error);
+                    alert(`元件資料重繪失敗: ${error.message}`);
+                });
+
+            } catch (error) {
+                console.error('從資料庫載入資料失敗:', error);
+                alert('從資料庫載入資料失敗，請檢查主控台訊息。');
+            }
+        },
+
+        async saveToDatabase() {
+            try {
+                const stateToSave = {
+                    savedComponents: this.savedComponents,
+                    placedComponents: this.placedComponents || [] // 編輯器中通常沒有放置的元件
+                };
+
+                const response = await fetch('/api/units/all', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(stateToSave),
+                });
+
+                if (!response.ok) {
+                    throw new Error(`伺服器錯誤: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                if (result.success) {
+                    console.log('已成功儲存所有元件到資料庫。');
+                } else {
+                    throw new Error(result.error || '未知的儲存錯誤');
+                }
+            } catch (error) {
+                console.error('儲存到資料庫失敗:', error);
+                alert(`儲存到資料庫失敗: ${error.message}`);
+            }
+        },
+
+        rehydrateState(state) {
+            return new Promise((resolve, reject) => {
+                if (!state.savedComponents || state.savedComponents.length === 0) {
+                    return resolve(state);
+                }
+
+                const componentsByUrl = {};
+                state.savedComponents.forEach(component => {
+                    const url = component.type === 'animation' 
+                        ? component.animation?.spritesheetUrl 
+                        : component.spritesheetUrl;
+                    
+                    if (url) {
+                        if (!componentsByUrl[url]) {
+                            componentsByUrl[url] = [];
+                        }
+                        componentsByUrl[url].push(component);
+                    }
+                });
+
+                const promises = Object.keys(componentsByUrl).map(url => {
+                    return new Promise((resolveSprite, rejectSprite) => {
+                        const spritesheet = new Image();
+                        spritesheet.crossOrigin = 'Anonymous';
+                        spritesheet.src = this.getSmartImageUrl(url);
+
+                        spritesheet.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d');
+                            
+                            componentsByUrl[url].forEach(component => {
+                                // 只有靜態元件需要重繪 imageData
+                                if (component.type === 'static' && component.sourceRect) {
+                                    const { x, y, w, h } = component.sourceRect;
+                                    canvas.width = w;
+                                    canvas.height = h;
+                                    ctx.clearRect(0, 0, w, h);
+                                    try {
+                                        ctx.drawImage(spritesheet, x, y, w, h, 0, 0, w, h);
+                                        component.imageData = canvas.toDataURL();
+                                    } catch (e) {
+                                        console.error(`Error rehydrating component for url ${url}:`, component, e);
+                                    }
+                                }
+                            });
+                            resolveSprite();
+                        };
+
+                        spritesheet.onerror = () => {
+                            console.error(`無法載入 spritesheet: ${url}`);
+                            resolveSprite(); 
+                        };
+                    });
+                });
+
+                Promise.all(promises).then(() => {
+                    resolve(state);
+                });
+            });
+        },
+        
         // ===== Animation Playback Methods =====
         mainAnimationLoop(currentTime) {
             Object.keys(this.animationStates).forEach(indexKey => {
@@ -152,7 +284,7 @@ new Vue({
                     // If image is not in cache, create and start loading it
                     const newImg = new Image();
                     newImg.crossOrigin = "Anonymous";
-                    newImg.src = spritesheetUrl;
+                    newImg.src = this.getSmartImageUrl(spritesheetUrl);
                     // Use Vue.$set to make the cache reactive
                     this.$set(this.spritesheetCache, spritesheetUrl, newImg);
                     return; // Skip drawing this frame
@@ -228,7 +360,8 @@ new Vue({
                 return;
             }
             this.previewImageUrl = this.getSmartImageUrl(this.imageUrl);
-            this.saveToLocalStorage();
+            // 將當前使用的 imageUrl 存到 localstorage，方便下次開啟時直接載入
+            localStorage.setItem('unitEditorImageUrl', this.imageUrl);
         },
         handleImageError() {
             alert('圖片載入失敗，請檢查 URL 是否正確，或是否有 CORS 問題。');
@@ -317,6 +450,7 @@ new Vue({
             this.selectionEnd = { x: 0, y: 0 };
             this.componentImageData = null;
             this.addedFrameCoordinates = [];
+            this.displayScale = 100; // 重置顯示比例為預設值
         },
         extractComponent() {
             if (!this.hasSelection || !this.$refs.previewImage) return;
@@ -338,6 +472,7 @@ new Vue({
                 this.componentImageData = canvas.toDataURL();
                  // Update the component preview canvas immediately
                 this.$nextTick(() => {
+                    // 更新元件預覽畫布
                     if (this.$refs.componentCanvas) {
                         const previewCtx = this.$refs.componentCanvas.getContext('2d');
                         previewCtx.clearRect(0, 0, sw, sh);
@@ -347,6 +482,9 @@ new Vue({
                         };
                         img.src = this.componentImageData;
                     }
+                    
+                    // 更新網格預覽
+                    // 不需要額外的代碼，因為預覽組件會使用 getGridPreviewStyle 自動更新
                 });
             } catch (e) {
                 console.error("無法從 Canvas 提取圖片:", e);
@@ -360,6 +498,7 @@ new Vue({
             if (!this.componentImageData) return;
             
             const newComponent = {
+                name: this.componentName || '未命名',
                 type: 'static',
                 imageData: this.componentImageData,
                 spritesheetUrl: this.imageUrl, // Save source URL
@@ -373,12 +512,14 @@ new Vue({
                 height: Math.round(this.selectionHeight),
                 category: this.componentCategory,
                 scale: 1, // Default scale for components
+                displayScale: this.displayScale || 100, // 顯示比例
                 anchor: this.anchorPoint,
             };
             
             this.savedComponents.push(newComponent);
-            this.saveToLocalStorage();
+            this.saveToDatabase();
             this.clearSelection();
+            this.componentName = '';
         },
         addFrameToAnimation() {
             if (!this.componentImageData) return;
@@ -410,11 +551,13 @@ new Vue({
             const firstFrame = this.multiSelectionFrames[0];
             
             const newAnimationComponent = {
+                name: this.componentName || '未命名動畫',
                 type: 'animation',
                 category: this.componentCategory,
                 width: Math.round(firstFrame.sourceRect.w),
                 height: Math.round(firstFrame.sourceRect.h),
                 scale: 1,
+                displayScale: this.displayScale || 100, // 顯示比例
                 anchor: this.anchorPoint,
                 animation: {
                     spritesheetUrl: this.imageUrl, // Save source URL
@@ -425,12 +568,14 @@ new Vue({
             };
             
             this.savedComponents.push(newAnimationComponent);
-            this.saveToLocalStorage();
+            this.saveToDatabase();
             this.clearAnimationFrames();
+            this.componentName = '';
         },
         clearAnimationFrames() {
             this.multiSelectionFrames = [];
             this.addedFrameCoordinates = [];
+            this.displayScale = 100; // 重置顯示比例為預設值
         },
         selectComponent(index) {
             this.selectedComponentIndex = index;
@@ -438,7 +583,7 @@ new Vue({
         deleteComponent(index) {
             if (confirm(`確定要刪除這個元件嗎？`)) {
                 this.savedComponents.splice(index, 1);
-                this.saveToLocalStorage();
+                this.saveToDatabase();
                 
                 if (this.selectedComponentIndex === index) {
                     this.selectedComponentIndex = -1;
@@ -455,7 +600,7 @@ new Vue({
             if (this.editingComponent && this.editingComponentIndex !== -1) {
                 // Replace the old component with the edited version
                 this.$set(this.savedComponents, this.editingComponentIndex, this.editingComponent);
-                this.saveToLocalStorage();
+                this.saveToDatabase();
                 this.closeEditModal();
             }
         },
@@ -482,41 +627,140 @@ new Vue({
             
             return style;
         },
-        pasteComponent() {
-            navigator.clipboard.readText().then(text => {
-                if (!text) {
-                    alert('剪貼簿是空的。');
-                    return;
+
+        // 網格預覽樣式
+        getGridPreviewStyle() {
+            if (!this.componentImageData) {
+                // 沒有選擇元件時，返回空樣式
+                return {
+                    width: '0px',
+                    height: '0px',
+                    display: 'none'
+                };
+            }
+
+            // 計算比例，保持原始寬高比
+            const cellSize = 50; // 網格單元格大小
+            const displayScale = this.displayScale / 100; // 轉換為小數
+            const originalWidth = Math.round(this.selectionWidth || 0);
+            const originalHeight = Math.round(this.selectionHeight || 0);
+            
+            // 防止除以零錯誤
+            if (originalHeight === 0) {
+                return {
+                    width: '0px',
+                    height: '0px',
+                    display: 'none'
+                };
+            }
+            
+            // 計算元件在網格中的縮放比例
+            // 使元件的高度為網格單元格高度的合適比例
+            const scaleFactor = cellSize / originalHeight * displayScale;
+            
+            // 計算縮放後的寬度和高度
+            const scaledWidth = originalWidth * scaleFactor;
+            const scaledHeight = originalHeight * scaleFactor;
+            
+            return {
+                backgroundImage: `url(${this.componentImageData})`,
+                width: `${scaledWidth}px`,
+                height: `${scaledHeight}px`
+            };
+        },
+        getCleanStateForExport() {
+            // 從當前 Vue 實例的狀態創建一個深拷貝，以避免修改原始數據
+            const exportState = JSON.parse(JSON.stringify({
+                savedComponents: this.savedComponents,
+                placedComponents: this.placedComponents || []
+            }));
+
+            // imageUrl 是編輯器特有的，匯出的資料中不需要
+            delete exportState.imageUrl;
+
+            // 輔助函式：移除代理URL前綴
+            const cleanUrl = (url) => {
+                const prefix = '/proxy-image?url=';
+                if (typeof url === 'string' && url.startsWith(prefix)) {
+                    try {
+                        return decodeURIComponent(url.substring(prefix.length));
+                    } catch (e) {
+                        console.error('Failed to decode URL:', url, e);
+                        return url;
+                    }
                 }
-                try {
-                    const component = JSON.parse(text);
+                return url;
+            };
 
-                    // Basic validation
-                    if (!component.type || !component.width || !component.height) {
-                        throw new Error('無效的元件資料格式。');
+            // 清理元件中的URL，並移除 imageData 和資料庫 id
+            if (exportState.savedComponents && Array.isArray(exportState.savedComponents)) {
+                exportState.savedComponents.forEach(component => {
+                    // imageData 是用於即時預覽的，不包含在匯出狀態中
+                    delete component.imageData;
+                    // 資料庫 ID 不是可攜式格式的一部分
+                    delete component.id;
+
+                    if (component.type === 'static' && component.spritesheetUrl) {
+                        component.spritesheetUrl = cleanUrl(component.spritesheetUrl);
+                    } else if (component.type === 'animation' && component.animation && component.animation.spritesheetUrl) {
+                        component.animation.spritesheetUrl = cleanUrl(component.animation.spritesheetUrl);
                     }
-                    if(component.type === 'animation' && (!component.animation || !component.animation.frames || !component.animation.spritesheetUrl)) {
-                        throw new Error('無效的動畫元件資料格式。');
-                    }
-                    if(component.type === 'static' && !component.spritesheetUrl) {
-                        throw new Error('無效的靜態元件資料格式。');
-                    }
+                });
+            }
 
+            // 清理放置元件的即時狀態 (例如 isDragging)
+            if (exportState.placedComponents && Array.isArray(exportState.placedComponents)) {
+                exportState.placedComponents.forEach(pComponent => {
+                    pComponent.isDragging = false;
+                });
+            }
+            
+            return exportState;
+        },
+        copyAllState() {
+            const exportState = this.getCleanStateForExport();
+            if (!exportState) {
+                alert('沒有儲存的資料可以複製。');
+                return;
+            }
+            try {
+                const dataStr = JSON.stringify(exportState, null, 2);
+                navigator.clipboard.writeText(dataStr).then(() => {
+                    alert('已複製所有設定到剪貼簿！');
+                }).catch(err => {
+                    console.error('無法複製到剪貼簿:', err);
+                    alert('複製失敗，詳情請見控制台。');
+                });
+            } catch (error) {
+                console.error('複製失敗:', error);
+                alert('複製失敗，請檢查主控台中的錯誤訊息。');
+            }
+        },
 
-                    // Add to library
-                    this.savedComponents.push(component);
-                    this.saveToLocalStorage();
+        exportToFile() {
+            const exportState = this.getCleanStateForExport();
+            if (!exportState) {
+                alert('沒有儲存的資料可以匯出。');
+                return;
+            }
 
-                    alert('元件已成功貼上！');
+            try {
+                const dataStr = JSON.stringify(exportState, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
 
-                } catch (err) {
-                    console.error('貼上元件失敗:', err);
-                    alert('貼上失敗，無效的元件 JSON 格式。');
-                }
-            }).catch(err => {
-                console.error('無法讀取剪貼簿:', err);
-                alert('無法讀取剪貼簿。請確認您已授權瀏覽器讀取剪貼簿的權限。');
-            });
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'unit-layout.json';
+                document.body.appendChild(a);
+                a.click();
+
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error('匯出檔案失敗:', error);
+                alert('匯出檔案失敗，請檢查主控台中的錯誤訊息。');
+            }
         },
 
         // ===== Component Actions =====

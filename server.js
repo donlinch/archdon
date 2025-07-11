@@ -275,6 +275,8 @@ const authenticateBoxUser = (req, res, next) => {
  
 
 
+
+
 // GET /api/admin/password-reset-requests/pending - 獲取待處理的密碼重設請求
 app.get('/api/admin/password-reset-requests/pending', isAdminAuthenticated, async (req, res) => {
     try {
@@ -2470,6 +2472,30 @@ const upload = multer({
   limits: { fileSize: 4 * 1024 * 1024 } // 限制 4MB
 });
 
+// --- 新增：專用於 PNG/GIF 直接上傳的 Multer 設定 ---
+// 這個設定會保留原始檔案格式
+const directImageStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadDir),
+  filename: (req, file, cb) => {
+    const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1e5) + path.extname(file.originalname);
+    cb(null, uniqueName);
+  }
+});
+
+const directImageUpload = multer({
+  storage: directImageStorage,
+  fileFilter: (req, file, cb) => {
+    const allowedMimes = ['image/png', 'image/gif'];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('只允許上傳 PNG 或 GIF 檔案！'), false);
+    }
+  },
+  limits: { fileSize: 4 * 1024 * 1024 } // 同樣限制 4MB
+});
+
+
 // --- 新增 publicSafeUpload 的定義 ---
 const publicSafeUpload = multer({
   storage, // 重用相同的儲存設定
@@ -3155,6 +3181,8 @@ app.get('/api/admin/files', isAdminAuthenticated, async (req, res) => { // <-- �
     const sortBy = req.query.sortBy || 'newest'; // newest, oldest, name_asc, name_desc, size_asc, size_desc
     const fileType = req.query.fileType || 'all'; // all, image, pdf, other
     const search = req.query.search?.trim() || '';
+    // 新增：支援多檔案類型篩選，格式為逗號分隔的副檔名，例如 "png,gif"
+    const extensions = req.query.extensions?.trim().toLowerCase().split(',').filter(Boolean) || [];
 
     let orderByClause = 'ORDER BY uploaded_at DESC'; // 預設最新
     switch (sortBy) {
@@ -3173,6 +3201,16 @@ app.get('/api/admin/files', isAdminAuthenticated, async (req, res) => { // <-- �
         whereClauses.push(`file_type = $${paramIndex++}`);
         queryParams.push(fileType);
     }
+    
+    // 如果有指定副檔名篩選
+    if (extensions.length > 0) {
+        const extensionClauses = extensions.map(ext => {
+            queryParams.push(`%.${ext}`);
+            return `LOWER(original_filename) LIKE LOWER($${paramIndex++})`;
+        });
+        whereClauses.push(`(${extensionClauses.join(' OR ')})`);
+    }
+    
     if (search) {
         // 使用 LOWER() 進行不區分大小寫搜尋
         whereClauses.push(`LOWER(original_filename) LIKE LOWER($${paramIndex++})`);
@@ -3730,7 +3768,89 @@ app.post('/api/admin/files/upload', isAdminAuthenticated, upload.single('file'),
 
 
 
+// --- 新增：專用於 PNG/GIF 直接上傳的 API 端點 ---
+app.post('/api/admin/files/upload-image-direct', isAdminAuthenticated, directImageUpload.single('file'), async (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ success: false, error: '沒有上傳檔案或欄位名稱不符 (應為 "file")' });
+    }
 
+    const file = { ...req.file };
+    const originalFilePath = file.path;
+    const fileUrlPath = '/uploads/' + file.filename;
+    const fileType = 'image'; // 此路由固定為 image 類型
+
+    try {
+        const imageBuffer = await fs.promises.readFile(originalFilePath);
+
+        // 使用 sharp 處理圖片，animated: true 確保 GIF 動畫能被處理
+        let sharpInstance = sharp(imageBuffer, { animated: true }).rotate(); // 自動旋轉
+
+        const metadata = await sharpInstance.metadata();
+        const currentWidth = metadata.width;
+        let targetWidth = currentWidth;
+        let needsResize = false;
+
+        // 與主要上傳器相同的縮放邏輯
+        if (currentWidth > 1500) {
+            targetWidth = Math.round(currentWidth * 0.25);
+            needsResize = true;
+        } else if (currentWidth > 800) {
+            targetWidth = Math.round(currentWidth * 0.50);
+            needsResize = true;
+        } else if (currentWidth > 500) {
+            targetWidth = Math.round(currentWidth * 0.75);
+            needsResize = true;
+        }
+        
+        let finalBuffer;
+        if (needsResize) {
+            console.log(`[Direct Upload] 正在縮放圖片 ${file.originalname} 從 ${currentWidth}px 到 ${targetWidth}px.`);
+            // 縮放並保留原始格式 (PNG/GIF)
+            finalBuffer = await sharpInstance.resize({ width: targetWidth, withoutEnlargement: true }).toBuffer();
+        } else {
+            console.log(`[Direct Upload] 圖片 ${file.originalname} (寬度: ${currentWidth}px) 無需縮放.`);
+            finalBuffer = imageBuffer; // 如果不需縮放，直接使用原始 buffer
+        }
+
+        // 將處理後的 buffer 寫回檔案
+        await fs.promises.writeFile(originalFilePath, finalBuffer);
+        
+        // 更新檔案大小資訊
+        const newStats = await fs.promises.stat(originalFilePath);
+        file.size = newStats.size;
+
+        // 將檔案資訊存入資料庫
+        const client = await pool.connect();
+        try {
+            const insertResult = await client.query(
+                `INSERT INTO uploaded_files (file_path, original_filename, mimetype, size_bytes, file_type)
+                 VALUES ($1, $2, $3, $4, $5)
+                 RETURNING id, file_path, original_filename, mimetype, size_bytes, file_type, uploaded_at`,
+                [fileUrlPath, file.originalname, file.mimetype, file.size, fileType]
+            );
+            console.log(`[Direct Upload] 檔案 ${file.originalname} 已成功上傳並記錄到資料庫，ID: ${insertResult.rows[0].id}`);
+            res.status(201).json({ success: true, file: insertResult.rows[0] });
+        } catch (dbError) {
+            console.error('[Direct Upload] 資料庫寫入錯誤:', dbError);
+            throw dbError; // 拋出錯誤由外層 catch 處理
+        } finally {
+            client.release();
+        }
+
+    } catch (error) {
+        console.error(`[Direct Upload] 處理檔案 ${file.originalname} 時發生錯誤:`, error);
+        // 如果過程中發生任何錯誤，刪除已上傳的暫存檔案
+        if (fs.existsSync(originalFilePath)) {
+            try {
+                fs.unlinkSync(originalFilePath);
+                console.warn(`[Direct Upload] 已刪除處理失敗的檔案: ${originalFilePath}`);
+            } catch (unlinkErr) {
+                console.error(`[Direct Upload] 刪除失敗檔案 ${originalFilePath} 時再次出錯:`, unlinkErr);
+            }
+        }
+        res.status(500).json({ success: false, error: `處理檔案失敗: ${error.message}` });
+    }
+});
 
 
 // DELETE /api/admin/files/:id - 刪除檔案
@@ -3799,7 +3919,196 @@ app.delete('/api/admin/files/:id', isAdminAuthenticated, async (req, res) => {
 
 
 
+// ===============================================
+// Unit Editor/Viewer Database API
+// ===============================================
 
+// GET /api/units/all - 讀取所有元件和放置資料
+app.get('/api/units/all', async (req, res) => {
+    const client = await pool.connect();
+    try {
+        // 1. 獲取所有元件資料，並透過 JOIN 合併相關表格
+        const componentsQuery = `
+            SELECT
+                c.id, c.name, c.type, c.width, c.height, c.category, c.scale, c.display_scale, c.anchor, c.spritesheet_url,
+                s.source_rect_x, s.source_rect_y, s.source_rect_w, s.source_rect_h,
+                a.speed, a.loop,
+                f.id as frame_id, f.frame_index, f.source_rect_x as frame_x, f.source_rect_y as frame_y, f.source_rect_w as frame_w, f.source_rect_h as frame_h
+            FROM
+                unit_components c
+            LEFT JOIN
+                unit_static_components s ON c.id = s.component_id
+            LEFT JOIN
+                unit_animations a ON c.id = a.component_id
+            LEFT JOIN
+                unit_animation_frames f ON a.component_id = f.animation_id
+            ORDER BY
+                c.id, f.frame_index;
+        `;
+        const componentsResult = await client.query(componentsQuery);
+
+        // 2. 處理查詢結果，將扁平的資料重新組合成前端所需的巢狀結構
+        const componentsMap = new Map();
+        for (const row of componentsResult.rows) {
+            if (!componentsMap.has(row.id)) {
+                const component = {
+                    id: row.id,
+                    name: row.name,
+                    type: row.type,
+                    width: row.width,
+                    height: row.height,
+                    category: row.category,
+                    scale: row.scale,
+                    displayScale: row.display_scale,
+                    anchor: row.anchor,
+                };
+
+                if (row.type === 'static') {
+                    component.spritesheetUrl = row.spritesheet_url;
+                    component.sourceRect = {
+                        x: row.source_rect_x,
+                        y: row.source_rect_y,
+                        w: row.source_rect_w,
+                        h: row.source_rect_h,
+                    };
+                } else if (row.type === 'animation') {
+                    component.animation = {
+                        spritesheetUrl: row.spritesheet_url,
+                        speed: row.speed,
+                        loop: row.loop,
+                        frames: [],
+                    };
+                }
+                componentsMap.set(row.id, component);
+            }
+
+            if (row.type === 'animation' && row.frame_id) {
+                const component = componentsMap.get(row.id);
+                component.animation.frames.push({
+                    x: row.frame_x,
+                    y: row.frame_y,
+                    w: row.frame_w,
+                    h: row.frame_h,
+                });
+            }
+        }
+        
+        const savedComponents = Array.from(componentsMap.values());
+
+        // 3. 獲取所有放置的元件資料
+        const placedResult = await client.query('SELECT * FROM unit_placed_components ORDER BY z_index');
+        
+        // 4. 將 component_id (資料庫 ID) 轉換回 savedComponents 的索引
+        //    這是為了與前端舊有的邏輯相容
+        const componentIdToIndexMap = new Map();
+        savedComponents.forEach((comp, index) => {
+            componentIdToIndexMap.set(comp.id, index);
+        });
+
+        const placedComponents = placedResult.rows.map(p => ({
+            id: p.id,
+            componentId: componentIdToIndexMap.get(p.component_id),
+            width: p.width, // 注意：寬高可能需要從原元件獲取，此處暫用DB值
+            height: p.height,
+            positionX: p.position_x,
+            positionY: p.position_y,
+            gridX: p.grid_x,
+            gridY: p.grid_y,
+            zIndex: p.z_index,
+            isDragging: false,
+        })).filter(p => p.componentId !== undefined);
+
+
+        res.json({
+            savedComponents: savedComponents,
+            placedComponents: placedComponents,
+        });
+
+    } catch (error) {
+        console.error('[API Get All Units] Error fetching units data:', error);
+        res.status(500).json({ error: 'Failed to fetch units data' });
+    } finally {
+        client.release();
+    }
+});
+
+
+// POST /api/units/all - 儲存所有元件和放置資料 (採用完全取代策略)
+app.post('/api/units/all', async (req, res) => {
+    const { savedComponents, placedComponents } = req.body;
+
+    if (!Array.isArray(savedComponents) || !Array.isArray(placedComponents)) {
+        return res.status(400).json({ error: 'Invalid data format' });
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // 1. 清空所有相關表格
+        await client.query('DELETE FROM unit_placed_components;');
+        await client.query('DELETE FROM unit_animation_frames;');
+        await client.query('DELETE FROM unit_animations;');
+        await client.query('DELETE FROM unit_static_components;');
+        await client.query('DELETE FROM unit_components;');
+        
+        const componentIndexToIdMap = new Map();
+
+        // 2. 重新插入所有元件
+        for (const [index, component] of savedComponents.entries()) {
+            const compRes = await client.query(
+                `INSERT INTO unit_components (name, type, width, height, category, scale, display_scale, anchor, spritesheet_url)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+                [component.name, component.type, component.width, component.height, component.category, component.scale, component.displayScale, component.anchor, component.type === 'static' ? component.spritesheetUrl : component.animation.spritesheetUrl]
+            );
+            const newComponentId = compRes.rows[0].id;
+            componentIndexToIdMap.set(index, newComponentId);
+
+            if (component.type === 'static') {
+                await client.query(
+                    `INSERT INTO unit_static_components (component_id, source_rect_x, source_rect_y, source_rect_w, source_rect_h)
+                     VALUES ($1, $2, $3, $4, $5)`,
+                    [newComponentId, component.sourceRect.x, component.sourceRect.y, component.sourceRect.w, component.sourceRect.h]
+                );
+            } else if (component.type === 'animation') {
+                await client.query(
+                    `INSERT INTO unit_animations (component_id, speed, loop) VALUES ($1, $2, $3)`,
+                    [newComponentId, component.animation.speed, component.animation.loop]
+                );
+                for (const [frameIndex, frame] of component.animation.frames.entries()) {
+                    await client.query(
+                        `INSERT INTO unit_animation_frames (animation_id, frame_index, source_rect_x, source_rect_y, source_rect_w, source_rect_h)
+                         VALUES ($1, $2, $3, $4, $5, $6)`,
+                        [newComponentId, frameIndex, frame.x, frame.y, frame.w, frame.h]
+                    );
+                }
+            }
+        }
+
+        // 3. 重新插入所有放置的元件
+        for (const pComponent of placedComponents) {
+            const dbComponentId = componentIndexToIdMap.get(pComponent.componentId);
+            if (dbComponentId) {
+                 const originalComponent = savedComponents[pComponent.componentId];
+                 await client.query(
+                    `INSERT INTO unit_placed_components (id, component_id, position_x, position_y, grid_x, grid_y, z_index)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+                    [pComponent.id, dbComponentId, pComponent.positionX, pComponent.positionY, pComponent.gridX, pComponent.gridY, pComponent.zIndex]
+                );
+            }
+        }
+
+        await client.query('COMMIT');
+        res.status(200).json({ success: true, message: 'All units saved successfully.' });
+
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('[API Save All Units] Error saving units data:', error);
+        res.status(500).json({ error: 'Failed to save units data' });
+    } finally {
+        client.release();
+    }
+});
 
 
  
