@@ -29,9 +29,19 @@
                     
                     <!-- Render placed components -->
                     <template v-for="component in placedComponents">
-                        <!-- Static Placed Component -->
-                        <div v-if="getOriginalComponent(component.componentId).type !== 'animation'"
-                             :key="component.id"
+                        <!-- Placed GIF Component -->
+                        <img v-if="getOriginalComponent(component.componentId).type === 'static' && getOriginalComponent(component.componentId).fileType === 'gif'"
+                             :key="'gif-' + component.id"
+                             :src="getOriginalComponent(component.componentId).spritesheetUrl"
+                             :style="getPlacedComponentStyle(component)"
+                             class="placed-component"
+                             :class="{ 'is-dragging': component.isDragging }"
+                             draggable="true"
+                             @dragstart="onDragStart($event, component.id, 'grid')">
+                        
+                        <!-- Static Placed Component (non-GIF) -->
+                        <div v-else-if="getOriginalComponent(component.componentId).type === 'static'"
+                             :key="'static-' + component.id"
                              class="placed-component"
                              :style="getPlacedComponentStyle(component)"
                              :class="{ 'is-dragging': component.isDragging }"
@@ -40,7 +50,7 @@
                         </div>
                         <!-- Animated Placed Component -->
                         <canvas v-else
-                                :key="component.id"
+                                :key="'anim-' + component.id"
                                 class="placed-component"
                                 :style="{ left: component.positionX + 'px', top: component.positionY + 'px', zIndex: component.zIndex }"
                                 :class="{ 'is-dragging': component.isDragging }"
@@ -59,12 +69,20 @@
 
             <!-- Right Pane: Component Library -->
             <div class="inspector-pane" ref="inspectorPane">
-                <h1 class="main-title">
-                    元件庫
-                    <span style="font-size: 14px; font-weight: normal;">
-                        (<a href="unit-editor.html" style="color: var(--accent-primary-hover);">切換至編輯器</a>)
-                    </span>
-                </h1>
+                <div class="component-library-header">
+                    <h3>元件庫</h3>
+                    <div class="filters">
+                        <input type="text" v-model="searchQuery" placeholder="搜尋元件名稱..." class="search-input">
+                        <select v-model="activeCategoryFilter">
+                            <option value="all">所有分類</option>
+                            <option v-for="category in categories" :key="category" :value="category">{{ category }}</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div v-if="Object.keys(categorizedComponents).length === 0" class="empty-state">
+                    <p>沒有符合條件的元件。</p>
+                </div>
                 <!-- Component Library Panel -->
                 <div class="panel" v-if="savedComponents.length > 0">
                     <div class="panel-content">
@@ -100,21 +118,38 @@
                                             class="component-item"
                                             :class="{ 'dragging': draggingComponentIndex === component.originalIndex }">
                                             
-                                            <img v-if="component.type !== 'animation'"
-                                                 :src="component.imageData"
-                                                 :alt="component.name || '元件 ' + (component.originalIndex + 1)"
-                                                 draggable="true"
-                                                 @dragstart="onDragStart($event, component.originalIndex, 'library')"
-                                                 @dragend="onDragEnd">
+                                            <div class="library-item-content" :draggable="true" @dragstart="onDragStart($event, component.originalIndex, 'library')">
                                             
-                                            <canvas v-if="component.type === 'animation'"
-                                                    :ref="'anim-canvas-library-' + component.originalIndex"
-                                                    :width="component.width"
-                                                    :height="component.height"
-                                                    draggable="true"
-                                                    @dragstart="onDragStart($event, component.originalIndex, 'library')"
-                                                    @dragend="onDragEnd">
-                                            </canvas>
+                                                <div class="copy-button" @click="copyComponentJson(component)" title="複製元件JSON">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                                                </div>
+
+                                                <!-- GIF 檔案直接使用原始 URL -->
+                                                <img v-if="component.type === 'static' && component.fileType === 'gif'"
+                                                     :src="component.spritesheetUrl"
+                                                     :alt="component.name"
+                                                     class="component-preview">
+                                                
+                                                <!-- 其他靜態元件使用 imageData -->
+                                                <img v-else-if="component.type === 'static' && component.imageData"
+                                                     :src="component.imageData"
+                                                     :alt="component.name"
+                                                     class="component-preview">
+                                            
+                                                <canvas v-if="component.type === 'animation'"
+                                                        :ref="'anim-canvas-library-' + component.originalIndex"
+                                                        :width="component.width"
+                                                        :height="component.height"
+                                                        draggable="true"
+                                                        @dragstart="onDragStart($event, component.originalIndex, 'library')"
+                                                        @dragend="onDragEnd">
+                                                </canvas>
+
+                                                <!-- Subcategory display -->
+                                                <div v-if="component.subcategory" class="component-subcategory">
+                                                    {{ component.subcategory }}
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -134,6 +169,7 @@
                 </div>
             </div>
         </div>
+        <div v-if="copyNotification.show" class="copy-notification">{{ copyNotification.message }}</div>
     </div>
 
     <script src="js/unit-viewer.js"></script>

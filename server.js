@@ -3833,8 +3833,8 @@ app.post('/api/admin/files/upload-image-direct', isAdminAuthenticated, directIma
         } catch (dbError) {
             console.error('[Direct Upload] 資料庫寫入錯誤:', dbError);
             throw dbError; // 拋出錯誤由外層 catch 處理
-        } finally {
-            client.release();
+    } finally {
+        client.release();
         }
 
     } catch (error) {
@@ -3930,7 +3930,7 @@ app.get('/api/units/all', async (req, res) => {
         // 1. 獲取所有元件資料，並透過 JOIN 合併相關表格
         const componentsQuery = `
             SELECT
-                c.id, c.name, c.type, c.width, c.height, c.category, c.scale, c.display_scale, c.anchor, c.spritesheet_url,
+                c.id, c.name, c.type, c.width, c.height, c.category, c.subcategory, c.scale, c.display_scale, c.anchor, c.spritesheet_url, c.created_at,
                 s.source_rect_x, s.source_rect_y, s.source_rect_w, s.source_rect_h,
                 a.speed, a.loop,
                 f.id as frame_id, f.frame_index, f.source_rect_x as frame_x, f.source_rect_y as frame_y, f.source_rect_w as frame_w, f.source_rect_h as frame_h
@@ -3943,7 +3943,7 @@ app.get('/api/units/all', async (req, res) => {
             LEFT JOIN
                 unit_animation_frames f ON a.component_id = f.animation_id
             ORDER BY
-                c.id, f.frame_index;
+                c.created_at DESC, c.id, f.frame_index;
         `;
         const componentsResult = await client.query(componentsQuery);
 
@@ -3958,9 +3958,11 @@ app.get('/api/units/all', async (req, res) => {
                     width: row.width,
                     height: row.height,
                     category: row.category,
+                    subcategory: row.subcategory,
                     scale: row.scale,
                     displayScale: row.display_scale,
                     anchor: row.anchor,
+                    createdAt: row.created_at,
                 };
 
                 if (row.type === 'static') {
@@ -4032,7 +4034,6 @@ app.get('/api/units/all', async (req, res) => {
     }
 });
 
-
 // POST /api/units/all - 儲存所有元件和放置資料 (採用完全取代策略)
 app.post('/api/units/all', async (req, res) => {
     const { savedComponents, placedComponents } = req.body;
@@ -4056,21 +4057,42 @@ app.post('/api/units/all', async (req, res) => {
 
         // 2. 重新插入所有元件
         for (const [index, component] of savedComponents.entries()) {
+            // All component types have a top-level spritesheetUrl
+            const spritesheetUrl = component.spritesheetUrl || (component.animation ? component.animation.spritesheetUrl : null);
+
             const compRes = await client.query(
-                `INSERT INTO unit_components (name, type, width, height, category, scale, display_scale, anchor, spritesheet_url)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
-                [component.name, component.type, component.width, component.height, component.category, component.scale, component.displayScale, component.anchor, component.type === 'static' ? component.spritesheetUrl : component.animation.spritesheetUrl]
+                `INSERT INTO unit_components (name, type, width, height, category, subcategory, scale, display_scale, anchor, spritesheet_url, file_type)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
+                [
+                    component.name, 
+                    component.type, 
+                    component.width, 
+                    component.height, 
+                    component.category, 
+                    component.subcategory || '', 
+                    component.scale, 
+                    component.displayScale, 
+                    component.anchor, 
+                    spritesheetUrl,
+                    component.fileType || 'png' // Add file_type, default to 'png'
+                ]
             );
             const newComponentId = compRes.rows[0].id;
             componentIndexToIdMap.set(index, newComponentId);
 
-            if (component.type === 'static') {
-                await client.query(
-                    `INSERT INTO unit_static_components (component_id, source_rect_x, source_rect_y, source_rect_w, source_rect_h)
-                     VALUES ($1, $2, $3, $4, $5)`,
-                    [newComponentId, component.sourceRect.x, component.sourceRect.y, component.sourceRect.w, component.sourceRect.h]
-                );
+            // For 'static' type, also insert into the static components table, but NOT for GIFs
+            if (component.type === 'static' && component.fileType !== 'gif') {
+                 if (!component.sourceRect) {
+                    console.warn(`[API Save All Units] Static component without sourceRect, skipping insert into unit_static_components. Component:`, component);
+                } else {
+                    await client.query(
+                        `INSERT INTO unit_static_components (component_id, source_rect_x, source_rect_y, source_rect_w, source_rect_h)
+                         VALUES ($1, $2, $3, $4, $5)`,
+                        [newComponentId, component.sourceRect.x, component.sourceRect.y, component.sourceRect.w, component.sourceRect.h]
+                    );
+                }
             } else if (component.type === 'animation') {
+                // For 'animation' type, insert animation-specific data
                 await client.query(
                     `INSERT INTO unit_animations (component_id, speed, loop) VALUES ($1, $2, $3)`,
                     [newComponentId, component.animation.speed, component.animation.loop]
@@ -4089,11 +4111,10 @@ app.post('/api/units/all', async (req, res) => {
         for (const pComponent of placedComponents) {
             const dbComponentId = componentIndexToIdMap.get(pComponent.componentId);
             if (dbComponentId) {
-                 const originalComponent = savedComponents[pComponent.componentId];
                  await client.query(
-                    `INSERT INTO unit_placed_components (id, component_id, position_x, position_y, grid_x, grid_y, z_index)
-                     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-                    [pComponent.id, dbComponentId, pComponent.positionX, pComponent.positionY, pComponent.gridX, pComponent.gridY, pComponent.zIndex]
+                    `INSERT INTO unit_placed_components (id, component_id, width, height, position_x, position_y, grid_x, grid_y, z_index)
+                     VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8)`,
+                    [dbComponentId, pComponent.width, pComponent.height, pComponent.positionX, pComponent.positionY, pComponent.gridX, pComponent.gridY, pComponent.zIndex]
                 );
             }
         }
@@ -4109,6 +4130,227 @@ app.post('/api/units/all', async (req, res) => {
         client.release();
     }
 });
+
+
+
+
+// ===== 地圖模板 API 路由 =====
+
+// 獲取所有地圖模板
+app.get('/api/map-templates', authenticateBoxUser, async (req, res) => {
+    try {
+      const query = `
+        SELECT id, name, description, grid_cols, grid_rows, created_at, updated_at
+        FROM unit_map_templates
+        ORDER BY updated_at DESC
+      `;
+      
+      const result = await pool.query(query);
+      res.json(result.rows);
+    } catch (error) {
+      console.error('獲取地圖模板列表失敗:', error);
+      res.status(500).json({ error: '獲取地圖模板列表失敗', details: error.message });
+    }
+  });
+  
+  // 獲取特定地圖模板的詳細資訊
+  app.get('/api/map-templates/:id', authenticateBoxUser, async (req, res) => {
+    try {
+      const templateId = req.params.id;
+      
+      // 獲取模板基本信息
+      const templateQuery = `
+        SELECT id, name, description, grid_cols, grid_rows, created_at, updated_at
+        FROM unit_map_templates
+        WHERE id = $1
+      `;
+      
+      const templateResult = await pool.query(templateQuery, [templateId]);
+      
+      if (templateResult.rows.length === 0) {
+        return res.status(404).json({ error: '找不到指定的模板' });
+      }
+      
+      const template = templateResult.rows[0];
+      
+      // 獲取模板的區域
+      const areasQuery = `
+        SELECT a.id, a.name, a.color, a.show_name
+        FROM unit_map_areas a
+        WHERE a.template_id = $1
+      `;
+      
+      const areasResult = await pool.query(areasQuery, [templateId]);
+      template.areas = [];
+      
+      // 獲取每個區域的單元格
+      for (const area of areasResult.rows) {
+        const cellsQuery = `
+          SELECT cell_index
+          FROM unit_map_area_cells
+          WHERE area_id = $1
+        `;
+        
+        const cellsResult = await pool.query(cellsQuery, [area.id]);
+        area.cells = cellsResult.rows.map(row => row.cell_index);
+        template.areas.push(area);
+      }
+      
+      // 獲取模板的元件
+      const componentsQuery = `
+        SELECT component_id, position_x, position_y, grid_x, grid_y, z_index
+        FROM unit_map_components
+        WHERE template_id = $1
+      `;
+      
+      const componentsResult = await pool.query(componentsQuery, [templateId]);
+      template.components = componentsResult.rows;
+      
+      res.json(template);
+    } catch (error) {
+      console.error('獲取地圖模板詳情失敗:', error);
+      res.status(500).json({ error: '獲取地圖模板詳情失敗', details: error.message });
+    }
+  });
+  
+  // 創建新的地圖模板
+  app.post('/api/map-templates', authenticateBoxUser, async (req, res) => {
+    const client = await pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      const { name, description, grid_cols, grid_rows, areas, components } = req.body;
+      const userId = req.user.id;
+      
+      // 檢查是否已存在同名模板
+      const checkQuery = 'SELECT id FROM unit_map_templates WHERE name = $1';
+      const checkResult = await client.query(checkQuery, [name]);
+      
+      let templateId;
+      
+      if (checkResult.rows.length > 0) {
+        // 更新現有模板
+        templateId = checkResult.rows[0].id;
+        
+        const updateQuery = `
+          UPDATE unit_map_templates
+          SET description = $1, grid_cols = $2, grid_rows = $3, updated_at = NOW()
+          WHERE id = $4
+          RETURNING id
+        `;
+        
+        await client.query(updateQuery, [description, grid_cols, grid_rows, templateId]);
+        
+        // 刪除現有的區域和元件，以便重新創建
+        await client.query('DELETE FROM unit_map_areas WHERE template_id = $1', [templateId]);
+        await client.query('DELETE FROM unit_map_components WHERE template_id = $1', [templateId]);
+      } else {
+        // 創建新模板
+        const insertQuery = `
+          INSERT INTO unit_map_templates (name, description, grid_cols, grid_rows, created_by)
+          VALUES ($1, $2, $3, $4, $5)
+          RETURNING id
+        `;
+        
+        const result = await client.query(insertQuery, [name, description, grid_cols, grid_rows, userId]);
+        templateId = result.rows[0].id;
+      }
+      
+      // 添加區域
+      if (areas && areas.length > 0) {
+        for (const area of areas) {
+          // 插入區域
+          const areaQuery = `
+            INSERT INTO unit_map_areas (template_id, name, color, show_name)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id
+          `;
+          
+          const areaResult = await client.query(areaQuery, [
+            templateId, 
+            area.name, 
+            area.color, 
+            area.show_name || false
+          ]);
+          
+          const areaId = areaResult.rows[0].id;
+          
+          // 插入區域單元格
+          if (area.cells && area.cells.length > 0) {
+            for (const cellIndex of area.cells) {
+              const cellQuery = `
+                INSERT INTO unit_map_area_cells (area_id, cell_index)
+                VALUES ($1, $2)
+              `;
+              
+              await client.query(cellQuery, [areaId, cellIndex]);
+            }
+          }
+        }
+      }
+      
+      // 添加元件
+      if (components && components.length > 0) {
+        for (const component of components) {
+          const componentQuery = `
+            INSERT INTO unit_map_components (
+              template_id, component_id, position_x, position_y, grid_x, grid_y, z_index
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+          `;
+          
+          await client.query(componentQuery, [
+            templateId,
+            component.component_id,
+            component.position_x || 0,
+            component.position_y || 0,
+            component.grid_x || 0,
+            component.grid_y || 0,
+            component.z_index || 0
+          ]);
+        }
+      }
+      
+      await client.query('COMMIT');
+      
+      res.status(201).json({
+        id: templateId,
+        name,
+        message: '地圖模板已保存'
+      });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error('保存地圖模板失敗:', error);
+      res.status(500).json({ error: '保存地圖模板失敗', details: error.message });
+    } finally {
+      client.release();
+    }
+  });
+  
+  // 刪除地圖模板
+  app.delete('/api/map-templates/:id', authenticateBoxUser, async (req, res) => {
+    try {
+      const templateId = req.params.id;
+      
+      // 檢查模板是否存在
+      const checkQuery = 'SELECT id FROM unit_map_templates WHERE id = $1';
+      const checkResult = await pool.query(checkQuery, [templateId]);
+      
+      if (checkResult.rows.length === 0) {
+        return res.status(404).json({ error: '找不到指定的模板' });
+      }
+      
+      // 刪除模板 (因為設置了 ON DELETE CASCADE，相關的區域和元件會自動刪除)
+      const deleteQuery = 'DELETE FROM unit_map_templates WHERE id = $1';
+      await pool.query(deleteQuery, [templateId]);
+      
+      res.json({ message: '地圖模板已刪除' });
+    } catch (error) {
+      console.error('刪除地圖模板失敗:', error);
+      res.status(500).json({ error: '刪除地圖模板失敗', details: error.message });
+    }
+  });
 
 
  

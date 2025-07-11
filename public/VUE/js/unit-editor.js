@@ -17,8 +17,9 @@ new Vue({
         // Component categorization
         componentCategory: '人物', // Default category
         componentName: '',
+        componentSubcategory: '', // 新增：子分類欄位（選填）
         displayScale: 100, // 預設顯示比例為 100%
-        categories: ['人物', '物品', '背景'], // Available categories
+        categories: ['人物', '物品', '背景', 'UI界面', '特效'], // Available categories
         // Hardcoded settings
         anchorPoint: 'bottom-left',
         // Animation creation
@@ -70,21 +71,22 @@ new Vue({
             return Math.abs(this.selectionEnd.y - this.selectionStart.y);
         },
         categorizedComponents() {
-            const groupedByCategory = {};
+            const grouped = {};
             this.savedComponents.forEach((component, index) => {
                 const componentWithIndex = { ...component, originalIndex: index };
                 const category = component.category || '物品';
                 const name = component.name || '未命名';
 
-                if (!groupedByCategory[category]) {
-                    groupedByCategory[category] = {};
+                if (!grouped[category]) {
+                    grouped[category] = {};
                 }
-                if (!groupedByCategory[category][name]) {
-                    groupedByCategory[category][name] = [];
+                
+                if (!grouped[category][name]) {
+                    grouped[category][name] = [];
                 }
-                groupedByCategory[category][name].push(componentWithIndex);
+                grouped[category][name].push(componentWithIndex);
             });
-            return groupedByCategory;
+            return grouped;
         },
     },
     mounted() {
@@ -143,6 +145,23 @@ new Vue({
         },
     },
     methods: {
+        // ===== 檔案類型檢測 =====
+        detectFileType(url) {
+            if (!url) return 'png'; // 預設為 png
+            
+            // 從 URL 中提取副檔名
+            const extension = url.split('.').pop().toLowerCase();
+            
+            // 檢查是否為 GIF
+            if (extension === 'gif') return 'gif';
+            
+            // 檢查是否為 JPG/JPEG
+            if (['jpg', 'jpeg'].includes(extension)) return 'jpg';
+            
+            // 預設為 PNG
+            return 'png';
+        },
+        
         // ===== Database & State Methods =====
         async loadFromDatabase() {
             try {
@@ -176,8 +195,16 @@ new Vue({
 
         async saveToDatabase() {
             try {
+                // Create a clean copy of the state to save
+                const componentsToSave = this.savedComponents.map(component => {
+                    // Create a clean copy without the imageData
+                    const cleanComponent = { ...component };
+                    delete cleanComponent.imageData;
+                    return cleanComponent;
+                });
+                
                 const stateToSave = {
-                    savedComponents: this.savedComponents,
+                    savedComponents: componentsToSave,
                     placedComponents: this.placedComponents || [] // 編輯器中通常沒有放置的元件
                 };
 
@@ -202,7 +229,11 @@ new Vue({
             } catch (error) {
                 console.error('儲存到資料庫失敗:', error);
                 alert(`儲存到資料庫失敗: ${error.message}`);
+                // 儲存失敗時，不要中斷程序，讓用戶可以繼續操作
+                return false;
             }
+            
+            return true;
         },
 
         rehydrateState(state) {
@@ -213,6 +244,11 @@ new Vue({
 
                 const componentsByUrl = {};
                 state.savedComponents.forEach(component => {
+                    // 確保每個元件都有 fileType 欄位
+                    if (!component.fileType) {
+                        component.fileType = this.detectFileType(component.spritesheetUrl);
+                    }
+                    
                     const url = component.type === 'animation' 
                         ? component.animation?.spritesheetUrl 
                         : component.spritesheetUrl;
@@ -227,6 +263,18 @@ new Vue({
 
                 const promises = Object.keys(componentsByUrl).map(url => {
                     return new Promise((resolveSprite, rejectSprite) => {
+                        // 檢查是否有 GIF 類型的元件
+                        const gifComponents = componentsByUrl[url].filter(comp => 
+                            comp.type === 'static' && comp.fileType === 'gif'
+                        );
+                        
+                        // 如果這個 URL 只包含 GIF 元件，不需要重繪
+                        if (gifComponents.length > 0 && gifComponents.length === componentsByUrl[url].length) {
+                            resolveSprite();
+                            return;
+                        }
+                        
+                        // 處理非 GIF 元件
                         const spritesheet = new Image();
                         spritesheet.crossOrigin = 'Anonymous';
                         spritesheet.src = this.getSmartImageUrl(url);
@@ -236,8 +284,8 @@ new Vue({
                             const ctx = canvas.getContext('2d');
                             
                             componentsByUrl[url].forEach(component => {
-                                // 只有靜態元件需要重繪 imageData
-                                if (component.type === 'static' && component.sourceRect) {
+                                // 只有靜態非 GIF 元件需要重繪 imageData
+                                if (component.type === 'static' && component.fileType !== 'gif' && component.sourceRect) {
                                     const { x, y, w, h } = component.sourceRect;
                                     canvas.width = w;
                                     canvas.height = h;
@@ -451,6 +499,8 @@ new Vue({
             this.componentImageData = null;
             this.addedFrameCoordinates = [];
             this.displayScale = 100; // 重置顯示比例為預設值
+            // 不重置元件名稱，但重置子分類
+            this.componentSubcategory = '';
         },
         extractComponent() {
             if (!this.hasSelection || !this.$refs.previewImage) return;
@@ -497,29 +547,42 @@ new Vue({
         saveComponent() {
             if (!this.componentImageData) return;
             
+            // 檢測檔案類型
+            const fileType = this.detectFileType(this.imageUrl);
+            
             const newComponent = {
                 name: this.componentName || '未命名',
                 type: 'static',
-                imageData: this.componentImageData,
+                fileType: fileType, // 添加檔案類型欄位
                 spritesheetUrl: this.imageUrl, // Save source URL
-                sourceRect: {
-                    x: Math.round(Math.min(this.selectionStart.x, this.selectionEnd.x)),
-                    y: Math.round(Math.min(this.selectionStart.y, this.selectionEnd.y)),
-                    w: Math.round(this.selectionWidth),
-                    h: Math.round(this.selectionHeight)
-                },
                 width: Math.round(this.selectionWidth),
                 height: Math.round(this.selectionHeight),
                 category: this.componentCategory,
+                subcategory: this.componentSubcategory || '', // 新增：子分類欄位
                 scale: 1, // Default scale for components
                 displayScale: this.displayScale || 100, // 顯示比例
                 anchor: this.anchorPoint,
             };
             
+            // 只有非 GIF 才需要提取 imageData 和 sourceRect
+            if (fileType !== 'gif') {
+                newComponent.imageData = this.componentImageData;
+                newComponent.sourceRect = {
+                    x: Math.round(Math.min(this.selectionStart.x, this.selectionEnd.x)),
+                    y: Math.round(Math.min(this.selectionStart.y, this.selectionEnd.y)),
+                    w: Math.round(this.selectionWidth),
+                    h: Math.round(this.selectionHeight)
+                };
+            }
+            
             this.savedComponents.push(newComponent);
-            this.saveToDatabase();
-            this.clearSelection();
-            this.componentName = '';
+            this.saveToDatabase().then(success => {
+                if (success) {
+                    this.clearSelection();
+                    // 只清空子分類，保留元件名稱
+                    this.componentSubcategory = '';
+                }
+            });
         },
         addFrameToAnimation() {
             if (!this.componentImageData) return;
@@ -554,6 +617,7 @@ new Vue({
                 name: this.componentName || '未命名動畫',
                 type: 'animation',
                 category: this.componentCategory,
+                subcategory: this.componentSubcategory || '', // 新增：子分類欄位
                 width: Math.round(firstFrame.sourceRect.w),
                 height: Math.round(firstFrame.sourceRect.h),
                 scale: 1,
@@ -568,14 +632,20 @@ new Vue({
             };
             
             this.savedComponents.push(newAnimationComponent);
-            this.saveToDatabase();
-            this.clearAnimationFrames();
-            this.componentName = '';
+            this.saveToDatabase().then(success => {
+                if (success) {
+                    this.clearAnimationFrames();
+                    // 只清空子分類，保留元件名稱
+                    this.componentSubcategory = '';
+                }
+            });
         },
         clearAnimationFrames() {
             this.multiSelectionFrames = [];
             this.addedFrameCoordinates = [];
             this.displayScale = 100; // 重置顯示比例為預設值
+            // 不重置元件名稱，但重置子分類
+            this.componentSubcategory = '';
         },
         selectComponent(index) {
             this.selectedComponentIndex = index;
@@ -583,11 +653,11 @@ new Vue({
         deleteComponent(index) {
             if (confirm(`確定要刪除這個元件嗎？`)) {
                 this.savedComponents.splice(index, 1);
-                this.saveToDatabase();
-                
-                if (this.selectedComponentIndex === index) {
-                    this.selectedComponentIndex = -1;
-                }
+                this.saveToDatabase().then(success => {
+                    if (success && this.selectedComponentIndex === index) {
+                        this.selectedComponentIndex = -1;
+                    }
+                });
             }
         },
         openEditModal(index) {
@@ -598,10 +668,46 @@ new Vue({
         },
         saveComponentChanges() {
             if (this.editingComponent && this.editingComponentIndex !== -1) {
-                // Replace the old component with the edited version
+                // 保存原始元件的一些屬性
+                const originalComponent = this.savedComponents[this.editingComponentIndex];
+                const imageData = originalComponent.imageData;
+                const fileType = originalComponent.fileType || this.detectFileType(originalComponent.spritesheetUrl);
+                
+                // 替換舊元件
                 this.$set(this.savedComponents, this.editingComponentIndex, this.editingComponent);
-                this.saveToDatabase();
-                this.closeEditModal();
+                
+                // 確保 fileType 欄位被保留
+                if (!this.savedComponents[this.editingComponentIndex].fileType) {
+                    this.savedComponents[this.editingComponentIndex].fileType = fileType;
+                }
+                
+                // 根據檔案類型處理 imageData
+                if (this.savedComponents[this.editingComponentIndex].type === 'static') {
+                    if (fileType === 'gif') {
+                        // GIF 不需要 imageData，但需要確保 spritesheetUrl 正確
+                        delete this.savedComponents[this.editingComponentIndex].imageData;
+                    } else if (imageData) {
+                        // 非 GIF 靜態元件需要 imageData
+                        this.savedComponents[this.editingComponentIndex].imageData = imageData;
+                    }
+                } 
+                // 動畫元件處理
+                else if (originalComponent.type === 'animation') {
+                    // 確保動畫狀態被正確維護
+                    const animState = this.animationStates[this.editingComponentIndex];
+                    if (animState) {
+                        this.$set(this.animationStates, this.editingComponentIndex, {
+                            ...animState,
+                            componentRef: this.savedComponents[this.editingComponentIndex]
+                        });
+                    }
+                }
+                
+                this.saveToDatabase().then(success => {
+                    if (success) {
+                        this.closeEditModal();
+                    }
+                });
             }
         },
         closeEditModal() {
@@ -611,61 +717,37 @@ new Vue({
         },
         
         getAnchorMarkerStyle() {
-            if (!this.$refs.componentCanvas) return {};
+            if (!this.editingComponent) return {};
+            const anchor = this.editingComponent.anchor || 'bottom-left';
+            const [yAlign, xAlign] = anchor.split('-');
 
-            const canvasHeight = this.$refs.componentCanvas.height;
-            let style = {
-                bottom: '0px',
-                left: '0px'
-            };
+            let top = '50%', left = '50%';
+            if (yAlign === 'top') top = '0%';
+            if (yAlign === 'bottom') top = '100%';
+            if (xAlign === 'left') left = '0%';
+            if (xAlign === 'right') left = '100%';
 
-            // This logic is simplified because anchor is always bottom-left
-            style = {
-                left: `0px`,
-                top: `${canvasHeight}px`
-            };
-            
-            return style;
+            return { top, left };
         },
 
         // 網格預覽樣式
         getGridPreviewStyle() {
-            if (!this.componentImageData) {
-                // 沒有選擇元件時，返回空樣式
-                return {
-                    width: '0px',
-                    height: '0px',
-                    display: 'none'
-                };
-            }
+            if (!this.componentImageData) return {};
 
-            // 計算比例，保持原始寬高比
-            const cellSize = 50; // 網格單元格大小
-            const displayScale = this.displayScale / 100; // 轉換為小數
-            const originalWidth = Math.round(this.selectionWidth || 0);
-            const originalHeight = Math.round(this.selectionHeight || 0);
-            
-            // 防止除以零錯誤
-            if (originalHeight === 0) {
-                return {
-                    width: '0px',
-                    height: '0px',
-                    display: 'none'
-                };
-            }
-            
-            // 計算元件在網格中的縮放比例
-            // 使元件的高度為網格單元格高度的合適比例
-            const scaleFactor = cellSize / originalHeight * displayScale;
-            
-            // 計算縮放後的寬度和高度
-            const scaledWidth = originalWidth * scaleFactor;
-            const scaledHeight = originalHeight * scaleFactor;
-            
+            const scale = (this.displayScale || 100) / 100;
+            const componentWidth = this.selectionWidth * scale;
+            const componentHeight = this.selectionHeight * scale;
+
+            // Align the component's bottom-left corner to the grid's bottom-left cell's corner.
             return {
                 backgroundImage: `url(${this.componentImageData})`,
-                width: `${scaledWidth}px`,
-                height: `${scaledHeight}px`
+                backgroundSize: '100% 100%', // Ensure the background image scales with the container
+                width: `${componentWidth}px`,
+                height: `${componentHeight}px`,
+                left: '0px',
+                // The grid container is 101px high (2*50px + 1px gap) inside a 110px preview area.
+                // This leaves 9px of space at the bottom.
+                bottom: '9px', 
             };
         },
         getCleanStateForExport() {

@@ -46,6 +46,10 @@
                             <input type="text" id="component-name" v-model="componentName" placeholder="例如：英雄角色、生命藥水...">
                         </div>
                         <div class="control-item" style="margin-top: 10px;">
+                            <label for="component-subcategory" style="margin-right: 10px;">子分類:</label>
+                            <input type="text" id="component-subcategory" v-model="componentSubcategory" placeholder="選填，例如：裝備、道具...">
+                        </div>
+                        <div class="control-item" style="margin-top: 10px;">
                             <label for="display-scale" style="margin-right: 10px;">顯示比例:</label>
                             <input type="number" id="display-scale" v-model.number="displayScale" min="1" max="500" placeholder="100" style="width: 80px;">
                             <span style="margin-left: 5px;">%</span>
@@ -210,9 +214,15 @@
                                             @click="selectComponent(component.originalIndex)">
                                             
                                             <!-- Static Image for non-animation components -->
-                                            <img v-if="component.type !== 'animation'"
+                                            <!-- GIF 檔案直接使用原始 URL -->
+                                            <img v-if="component.type === 'static' && component.fileType === 'gif'"
+                                                 :src="component.spritesheetUrl"
+                                                 :alt="component.name">
+                                                 
+                                            <!-- 其他靜態元件使用 imageData -->
+                                            <img v-else-if="component.type === 'static'"
                                                  :src="component.imageData"
-                                                 :alt="'元件 ' + (component.originalIndex + 1)">
+                                                 :alt="component.name">
                                             
                                             <!-- Canvas for animation components -->
                                             <canvas v-if="component.type === 'animation'"
@@ -220,6 +230,11 @@
                                                     :width="component.width"
                                                     :height="component.height">
                                             </canvas>
+
+                                            <!-- Subcategory display -->
+                                            <div v-if="component.subcategory" class="component-subcategory">
+                                                {{ component.subcategory }}
+                                            </div>
 
                                             <button class="delete-btn" @click.stop="deleteComponent(component.originalIndex)">×</button>
                                             <button class="edit-btn" @click.stop="openEditModal(component.originalIndex)">✎</button>
@@ -263,6 +278,12 @@
                         <select id="edit-category" v-model="editingComponent.category">
                             <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
                         </select>
+                    </div>
+                    
+                    <!-- Edit Subcategory (new) -->
+                    <div class="form-group">
+                        <label for="edit-subcategory">子分類</label>
+                        <input type="text" id="edit-subcategory" v-model="editingComponent.subcategory" placeholder="選填，例如：裝備、道具...">
                     </div>
                     
                     <!-- Edit Display Scale -->

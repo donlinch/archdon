@@ -3,7 +3,7 @@ new Vue({
     data: {
         savedComponents: [],
         placedComponents: [],
-        categories: ['人物', '物品', '背景'],
+        categories: ['人物', '物品', '背景', 'UI界面', '特效'],
         gridCols: 10,
         gridRows: 24,
         
@@ -14,6 +14,14 @@ new Vue({
 
         // Component Library Filtering
         activeCategoryFilter: 'all',
+        searchQuery: '',
+
+        // Copy Notification
+        copyNotification: {
+            show: false,
+            message: '',
+            timer: null
+        },
 
         // Pane Resizing
         isResizing: false,
@@ -40,21 +48,48 @@ new Vue({
             };
         },
         categorizedComponents() {
-            const groupedByCategory = {};
+            const grouped = {};
             this.savedComponents.forEach((component, index) => {
                 const componentWithIndex = { ...component, originalIndex: index };
                 const category = component.category || '物品';
                 const name = component.name || '未命名';
 
-                if (!groupedByCategory[category]) {
-                    groupedByCategory[category] = {};
+                if (!grouped[category]) {
+                    grouped[category] = {};
                 }
-                if (!groupedByCategory[category][name]) {
-                    groupedByCategory[category][name] = [];
+                
+                if (!grouped[category][name]) {
+                    grouped[category][name] = [];
                 }
-                groupedByCategory[category][name].push(componentWithIndex);
+                grouped[category][name].push(componentWithIndex);
             });
-            return groupedByCategory;
+            
+            if (!this.searchQuery) {
+                return grouped;
+            }
+
+            const filteredGrouped = {};
+            const query = this.searchQuery.toLowerCase();
+
+            for (const category in grouped) {
+                const names = grouped[category];
+                const filteredNames = {};
+                
+                for (const name in names) {
+                    if (name.toLowerCase().includes(query)) {
+                        filteredNames[name] = names[name];
+                    }
+                }
+                
+                if (Object.keys(filteredNames).length > 0) {
+                    if (!filteredGrouped[category]) {
+                        filteredGrouped[category] = {};
+                    }
+                    filteredGrouped[category] = { ...filteredGrouped[category], ...filteredNames };
+                }
+            }
+            
+            return filteredGrouped;
         },
     },
     mounted() {
@@ -154,6 +189,33 @@ new Vue({
             }
         },
 
+        showCopyNotification(message) {
+            if (this.copyNotification.timer) {
+                clearTimeout(this.copyNotification.timer);
+            }
+            this.copyNotification.message = message;
+            this.copyNotification.show = true;
+            this.copyNotification.timer = setTimeout(() => {
+                this.copyNotification.show = false;
+            }, 2000);
+        },
+        
+        copyComponentJson(component) {
+            const componentToCopy = { ...this.savedComponents[component.originalIndex] };
+            
+            // 移除由前端產生的資料
+            delete componentToCopy.originalIndex;
+            delete componentToCopy.imageData;
+            
+            const jsonString = JSON.stringify(componentToCopy, null, 2);
+            navigator.clipboard.writeText(jsonString).then(() => {
+                this.showCopyNotification(`'${component.name}' 的 JSON 已複製！`);
+            }).catch(err => {
+                console.error('複製失敗:', err);
+                this.showCopyNotification('複製失敗！請檢查主控台。');
+            });
+        },
+
         // The following methods are no longer needed as data is loaded from the DB
         // handleFileUpload, saveToLocalStorage, loadFromLocalStorage
 
@@ -171,8 +233,22 @@ new Vue({
                     return resolve(state);
                 }
 
+                // 檢測檔案類型的輔助函數
+                const detectFileType = (url) => {
+                    if (!url) return 'png';
+                    const extension = url.split('.').pop().toLowerCase();
+                    if (extension === 'gif') return 'gif';
+                    if (['jpg', 'jpeg'].includes(extension)) return 'jpg';
+                    return 'png';
+                };
+
                 const componentsByUrl = {};
                 state.savedComponents.forEach(component => {
+                    // 確保每個元件都有 fileType 欄位
+                    if (!component.fileType) {
+                        component.fileType = detectFileType(component.spritesheetUrl);
+                    }
+                    
                     const url = component.type === 'animation' 
                         ? component.animation?.spritesheetUrl 
                         : component.spritesheetUrl;
@@ -187,6 +263,17 @@ new Vue({
 
                 const promises = Object.keys(componentsByUrl).map(url => {
                     return new Promise((resolveSprite, rejectSprite) => {
+                        // 檢查是否有 GIF 類型的元件
+                        const gifComponents = componentsByUrl[url].filter(comp => 
+                            comp.type === 'static' && comp.fileType === 'gif'
+                        );
+                        
+                        // 如果這個 URL 只包含 GIF 元件，不需要重繪
+                        if (gifComponents.length > 0 && gifComponents.length === componentsByUrl[url].length) {
+                            resolveSprite();
+                            return;
+                        }
+                        
                         const spritesheet = new Image();
                         spritesheet.crossOrigin = 'Anonymous';
                         spritesheet.src = this.getSmartImageUrl(url);
@@ -196,9 +283,8 @@ new Vue({
                             const ctx = canvas.getContext('2d');
                             
                             componentsByUrl[url].forEach(component => {
-                                // Only static components need imageData rehydration.
-                                // Animation components draw directly from the spritesheet in the animation loop.
-                                if (component.type === 'static' && component.sourceRect) {
+                                // 只有靜態非 GIF 元件需要重繪 imageData
+                                if (component.type === 'static' && component.fileType !== 'gif' && component.sourceRect) {
                                     const { x, y, w, h } = component.sourceRect;
                                     canvas.width = w;
                                     canvas.height = h;
@@ -238,6 +324,23 @@ new Vue({
     
         getPlacedComponentStyle(component) {
             const original = this.getOriginalComponent(component.componentId);
+            
+            // 處理 GIF 類型的元件
+            if (original.type === 'static' && original.fileType === 'gif') {
+                return {
+                    position: 'absolute',
+                    left: `${component.positionX}px`,
+                    top: `${component.positionY}px`,
+                    width: `${component.width}px`,
+                    height: `${component.height}px`,
+                    backgroundImage: `url(${original.spritesheetUrl})`,
+                    backgroundRepeat: 'no-repeat',
+                    backgroundSize: '100% 100%',
+                    zIndex: component.zIndex,
+                };
+            }
+            
+            // 處理其他靜態元件
             return {
                 position: 'absolute',
                 left: `${component.positionX}px`,

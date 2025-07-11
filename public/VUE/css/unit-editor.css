@@ -255,25 +255,41 @@ input[type="text"], select {
     font-size: 14px;
 }
 
+.coordinates {
+    font-size: 14px;
+    color: var(--text-secondary);
+    min-width: 100px;
+}
+
 .image-preview {
     position: relative;
-    background-color: var(--bg-primary);
-    padding: 10px;
-    border: 1px dashed var(--border-color);
-    border-radius: 4px;
-    max-height: 300px;
-    overflow: auto;
+    width: 100%; /* Use width 100% to fill available space */
+    height: 500px; /* Set a fixed height */
+    overflow: auto; /* Ensure scrollbars appear when content overflows */
+    border: 1px solid var(--border-color);
+    margin-top: 15px;
+    background-color: var(--bg-secondary);
+    display: block; /* Change to block to allow the inner element to size properly */
 }
 
 .selection-area {
     position: relative;
-    display: inline-block;
+    display: inline-block; /* Allow the area to size with the image */
+    cursor: crosshair;
+    line-height: 0; /* Removes extra space below the image */
+    margin: 0;
+    padding: 0;
 }
 
-.selection-area img {
+.selection-area > img {
+    border: 1px dashed var(--text-secondary); /* This adds the desired border */
     display: block;
     user-select: none;
     image-rendering: pixelated; /* Keep sprite sharp */
+    pointer-events: auto; /* Ensure clicks are detected */
+    margin: 0;
+    padding: 0;
+    -webkit-user-drag: none; /* Additional protection against dragging */
 }
 
 .selection-box {
@@ -715,9 +731,20 @@ input[type="text"], select {
 
 .preview-component {
     position: absolute;
-    bottom: 0;
-    left: 0;
-    background-size: contain;
+    image-rendering: pixelated;
     background-repeat: no-repeat;
-    background-position: bottom left;
+    pointer-events: none; /* Make sure it doesn't block grid interaction */
+}
+
+.component-subcategory {
+    position: absolute;
+    bottom: 2px;
+    right: 4px;
+    font-size: 10px;
+    font-weight: bold;
+    color: white;
+    background-color: rgba(0, 0, 0, 0.6);
+    padding: 1px 3px;
+    border-radius: 2px;
+    pointer-events: none; /* So it doesn't interfere with clicks on the item */
 }
