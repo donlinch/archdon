@@ -1,0 +1,2419 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Food Killer - 原型</title>
+    <!-- 引入 Vue.js 2 -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <style>
+        body {
+            font-family: 'Microsoft JhengHei', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f7f7f7;
+            touch-action: none; /* 防止页面滑动 */
+            overflow: hidden; /* 防止滚动 */
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            background-image: linear-gradient(to bottom, #f9f9f9, #e9e9e9); /* 添加漸變背景 */
+        }
+
+        /* 游戏容器 - 使用移动优先的垂直布局 */
+        #game-container {
+            position: relative; /* 改為相對定位，讓子元素可以絕對定位 */
+            height: 100vh;
+            width: 100vw;
+            box-sizing: border-box;
+            background-color: transparent; /* 確保容器背景透明 */
+            overflow: hidden; /* 防止內容溢出 */
+            display: flex; /* 使用flex布局 */
+        }
+
+        /* 游戏主要区域 - 佔據左側 */
+        .game-area {
+            position: relative;
+            flex: 1; /* 佔據剩餘空間 */
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            background-color: transparent; /* 改為透明背景 */
+        }
+
+        /* 開發區 - 右側信息面板 */
+        .dev-panel {
+            width: 250px; /* 固定寬度 */
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-left: 1px solid rgba(0, 0, 0, 0.1);
+            padding: 15px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            font-size: 14px;
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .dev-panel h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 16px;
+            color: #333;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 8px;
+        }
+
+        .dev-info-box {
+            background-color: rgba(240, 240, 240, 0.7);
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+
+        .dev-info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        .dev-info-label {
+            font-weight: bold;
+            color: #555;
+        }
+
+        .dev-info-value {
+            color: #0066cc;
+            font-family: monospace;
+        }
+
+        .console-output {
+            background-color: #333;
+            color: #00ff00;
+            font-family: monospace;
+            padding: 10px;
+            border-radius: 4px;
+            height: 150px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+
+        /* 可調整寬度的分隔條 */
+        .resizer {
+            width: 8px;
+            height: 100%;
+            background-color: rgba(200, 200, 200, 0.3);
+            cursor: col-resize;
+            transition: background-color 0.2s;
+            z-index: 100;
+        }
+
+        .resizer:hover, .resizer.active {
+            background-color: rgba(0, 120, 215, 0.5);
+        }
+
+        /* 网格容器 */
+        .grid-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: none; /* 移除邊框 */
+            background-color: transparent; /* 確保背景透明 */
+            padding-bottom: 50px; /* 為底部控制區留出空間 */
+        }
+
+        /* 游戏区域容器 - 包含网格和玩家 */
+        .game-world-container {
+            position: relative;
+            width: fit-content;
+            height: fit-content;
+            transform: scale(0.95); /* 稍微縮小網格，讓整體更協調 */
+        }
+        
+        /* 網格背景 - 添加一個柔和的背景 */
+        .grid-background {
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            right: -10px;
+            bottom: -10px;
+            background-color: rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            backdrop-filter: blur(3px);
+            -webkit-backdrop-filter: blur(3px);
+            z-index: -1;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+        }
+        
+        /* 玩家可移動區域邊界 */
+        .player-boundary {
+            position: absolute;
+            border: 2px solid rgba(0, 255, 0, 0.6);
+            box-sizing: border-box;
+            border-radius: 4px;
+            pointer-events: none;
+            z-index: 5;
+            box-shadow: 0 0 5px rgba(0, 255, 0, 0.3);
+        }
+
+        /* 网格样式 */
+        .grid {
+            display: grid;
+            grid-gap: 1px; /* 與map-editor.html一致 */
+            background-color: rgba(240, 240, 240, 0.8); /* 半透明背景 */
+            position: relative;
+            transform-origin: center;
+            margin: auto;
+            border: 1px solid rgba(204, 204, 204, 0.5); /* 半透明邊框 */
+            border-radius: 8px; /* 添加圓角 */
+            overflow: hidden;
+            box-sizing: border-box;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); /* 添加微妙陰影 */
+        }
+
+        /* 网格单元格 */
+        .grid-cell {
+            background-color: rgba(255, 255, 255, 0.6); /* 更明亮的單元格 */
+            border: 1px solid rgba(150, 150, 150, 0.2);
+            box-sizing: border-box;
+            position: relative;
+            transition: background-color 0.2s ease; /* 添加過渡效果 */
+        }
+        
+        .grid-cell:hover {
+            background-color: rgba(255, 255, 255, 0.8); /* 懸停效果 */
+        }
+
+        /* 玩家角色 */
+        .player {
+            position: absolute;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            transition: all 0.2s ease;
+        }
+
+        /* 对话气泡 */
+        .speech-bubble {
+            position: absolute;
+            background-color: white;
+            border-radius: 15px;
+            padding: 5px 10px;
+            font-size: 16px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        
+        .speech-bubble::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 8px;
+            border-style: solid;
+            border-color: white transparent transparent transparent;
+        }
+
+        /* 控制器区域 - 絕對定位在底部 */
+        .controls-area {
+            position: absolute;
+            bottom: 30px; /* 調整距離底部的距離 */
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            background-color: transparent; /* 透明背景 */
+            z-index: 10; /* 確保控制區在上層 */
+        }
+
+        /* 控制區域背景 - 可選的柔和背景 */
+        .controls-background {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 160px;
+            background: linear-gradient(to top, rgba(0,0,0,0.05), transparent);
+            z-index: 5;
+            pointer-events: none; /* 確保不會干擾點擊事件 */
+        }
+
+        /* 虚拟摇杆 */
+        .joystick-container {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            background-color: rgba(200, 200, 200, 0.15); /* 降低不透明度 */
+            border-radius: 50%;
+            touch-action: none;
+            border: 1px dashed rgba(255, 255, 255, 0.4); /* 添加虛線邊框 */
+        }
+
+        .joystick-knob {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background-color: transparent; /* 改為透明背景 */
+            border: 3px solid rgba(255, 255, 255, 0.8); /* 添加白色邊框 */
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2;
+            transition: transform 0.05s ease-out; /* 平滑過渡效果 */
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5); /* 添加發光效果 */
+        }
+        
+        /* 添加中心點 */
+        .joystick-knob::after {
+            content: '';
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        /* 添加十字線 */
+        .joystick-container::before {
+            content: '';
+            position: absolute;
+            width: 80%;
+            height: 1px;
+            background-color: rgba(255, 255, 255, 0.3);
+            top: 50%;
+            left: 10%;
+        }
+        
+        .joystick-container::after {
+            content: '';
+            position: absolute;
+            width: 1px;
+            height: 80%;
+            background-color: rgba(255, 255, 255, 0.3);
+            top: 10%;
+            left: 50%;
+        }
+
+        /* 添加一個額外的指示器，顯示手指拖動方向 */
+        .joystick-indicator {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            pointer-events: none;
+            opacity: 0;
+            z-index: 3;
+            transition: opacity 0.2s ease;
+        }
+
+        /* 操作按钮 */
+        .action-button {
+            width: 80px;
+            height: 80px;
+            background-color: rgba(255, 71, 87, 0.7); /* 降低不透明度 */
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            color: white;
+            margin-right: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15); /* 調整陰影 */
+            user-select: none;
+            backdrop-filter: blur(2px); /* 添加模糊效果 */
+            -webkit-backdrop-filter: blur(2px); /* Safari 支持 */
+        }
+
+        .action-button:active {
+            transform: scale(0.95);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            background-color: rgba(255, 71, 87, 0.9); /* 按下時顏色更深 */
+        }
+        
+        /* 添加一個微妙的玻璃效果 */
+        .glass-effect {
+            background-color: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+
+        /* 雲端同步相關樣式 */
+        .cloud-sync {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px dashed #ccc;
+        }
+        .cloud-sync h4 {
+            margin-top: 0;
+            text-align: center;
+            font-size: 16px;
+        }
+        .template-list {
+            max-height: 150px;
+            overflow-y: auto;
+            margin: 10px 0;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            padding: 5px;
+            background-color: rgba(0,0,0,0.02);
+        }
+        .template-list-item {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .template-list-item:hover {
+            background-color: #f5f5f5;
+        }
+        .template-list-item:last-child {
+            border-bottom: none;
+        }
+        .template-list-item .template-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .template-list-item button {
+            padding: 2px 5px;
+            font-size: 12px;
+            margin-left: 5px;
+            cursor: pointer;
+        }
+        .loading-spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top-color: #09f;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 5px;
+            vertical-align: middle;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .data-display-section {
+            margin-top: 15px;
+        }
+        .data-display-section h4 {
+             margin-bottom: 10px;
+        }
+        .data-list {
+            max-height: 120px;
+            overflow-y: auto;
+            padding: 8px;
+            background: rgba(0,0,0,0.03);
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .data-list-item {
+            padding: 4px;
+            border-bottom: 1px solid #eee;
+        }
+
+        /* Slide-in notification styles from map-editor */
+        .slide-in-notification {
+            position: fixed;
+            top: 20px;
+            right: -350px; /* Start off-screen */
+            min-width: 250px;
+            padding: 15px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 8px 0 0 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            font-size: 14px;
+            z-index: 2000;
+            transition: right 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .slide-in-notification.show {
+            right: 0;
+        }
+        .slide-in-notification.error {
+            background-color: #f44336;
+        }
+
+        /* Component Library styles from map-editor */
+        .component-loader, .component-library, .template-manager {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #fff;
+        }
+        .component-loader textarea {
+            width: 100%;
+            min-height: 100px;
+            box-sizing: border-box;
+        }
+        .library-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        .library-item {
+            border: 1px solid #eee;
+            border-radius: 4px;
+            padding: 5px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 64px;
+            position: relative;
+            overflow: hidden;
+            background: #f9f9f9;
+        }
+        .library-item img, .library-item canvas {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        .library-item-name {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: rgba(0,0,0,0.5);
+            color: white;
+            font-size: 10px;
+            padding: 2px 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: flex;
+            align-items: center;
+            text-align: center;
+        }
+        .library-item-name > span {
+            flex: 1;
+            padding: 0 20px 0 5px;
+        }
+        .copy-component-button {
+            background: transparent;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 0 5px;
+            font-size: 12px;
+            line-height: 1;
+            position: absolute;
+            right: 2px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        .empty-state {
+            font-size: 13px;
+            color: #888;
+            padding: 20px 5px;
+            text-align: center;
+            font-style: italic;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* --- User Status Indicator --- */
+        .user-status {
+            position: absolute; /* 相對於 game-area 定位 */
+            top: 15px;
+            left: 15px;
+            z-index: 1001;
+            display: flex;
+            align-items: center;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 5px 10px;
+            border-radius: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .user-status:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .user-status img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid #FF9800;
+            object-fit: cover;
+        }
+
+        .user-status .username {
+            margin-left: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+            max-width: 120px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* 編輯模式相關樣式 */
+        .edit-mode-section {
+            margin-bottom: 15px;
+        }
+
+        .mode-toggle-btn, .area-mode-btn {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #fff;
+            transition: all 0.3s ease;
+        }
+
+        .mode-toggle-btn.active {
+            background: #4CAF50;
+            color: white;
+            border-color: #388E3C;
+        }
+
+        .area-mode-btn.active {
+            background: #2196F3;
+            color: white;
+            border-color: #1976D2;
+        }
+
+        .area-edit-panel {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+
+        .area-form {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 4px;
+        }
+
+        .form-group {
+            margin-bottom: 10px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #666;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+
+        .save-area-btn {
+            width: 100%;
+            padding: 8px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .save-area-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .area-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .area-item {
+            display: flex;
+            align-items: center;
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .area-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            margin-right: 8px;
+        }
+
+        .area-name {
+            flex: 1;
+            font-size: 14px;
+        }
+
+        .area-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .area-actions button {
+            padding: 3px 8px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        /* 網格單元格選擇樣式 */
+        .grid-cell.selectable {
+            cursor: pointer;
+        }
+
+        .grid-cell.selected {
+            border: 2px solid #2196F3;
+        }
+
+        .grid-cell.area-cell {
+            position: relative;
+        }
+
+        .grid-cell.area-cell::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: currentColor;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .grid-cell.area-cell.visible::before {
+            opacity: 0.3;
+        }
+
+        .grid-cell.area-cell:hover::after {
+            content: attr(data-areas);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            z-index: 1000;
+        }
+
+        .area-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            transition: background-color 0.3s;
+        }
+
+        /* 區域控制按鈕 */
+        .area-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .visibility-toggle-btn {
+            flex: 1;
+            padding: 8px;
+            background: #607D8B;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .visibility-toggle-btn:hover {
+            background: #455A64;
+        }
+
+        /* 區域卡片網格布局 */
+        .area-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+            padding: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .area-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 10px;
+            transition: transform 0.2s;
+        }
+
+        .area-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .area-card-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .area-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+
+        .area-name {
+            flex: 1;
+            font-size: 14px;
+            font-weight: 500;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .visibility-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .visibility-btn:hover {
+            opacity: 1;
+        }
+
+        .visibility-btn.visible {
+            opacity: 1;
+        }
+
+        .area-card-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        .area-card-actions button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .area-card-actions button:hover {
+            background: rgba(0,0,0,0.05);
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <!-- Vue 应用将在此挂载 -->
+    </div>
+
+    <script>
+        new Vue({
+            el: '#game-container',
+            template: `
+                <div id="game-container">
+                    <!-- 控制區域背景 - 柔和漸變 -->
+                    <div class="controls-background"></div>
+                    
+                    <div class="game-area">
+                        <!-- User Status Indicator -->
+                        <div id="userStatus" class="user-status">
+                            <img id="userStatusAvatar" src="/images/a01girlmove.gif" alt="User">
+                            <span id="userStatusName" class="username">未登入</span>
+                        </div>
+                        <div class="grid-container">
+                            <div class="game-world-container">
+                                <!-- 網格背景 -->
+                                <div class="grid-background"></div>
+                                
+                                <!-- 玩家可移動區域邊界 -->
+                                <div class="player-boundary" :style="playerBoundaryStyle"></div>
+                                
+                                <div class="grid" :style="gridContainerStyle" @mousemove="handleGridMouseMove">
+                                    <div
+                                        v-for="(cell, index) in gridCells"
+                                        :key="index"
+                                        class="grid-cell"
+                                        :class="getCellClasses(index)"
+                                        :style="{ width: cellSize + 'px', height: cellSize + 'px' }"
+                                        :data-areas="getCellAreasText(index)"
+                                        @click="handleCellClick(index)"
+                                        @mousedown="startCellSelection(index)"
+                                        @mouseover="handleCellHover(index)"
+                                    >
+                                        <template v-if="getCellAreas(index).length > 0">
+                                            <div
+                                                v-for="(area, areaIndex) in getCellAreas(index).filter(a => a.visible)"
+                                                :key="'area-' + area.id + '-' + index"
+                                                class="area-overlay"
+                                                :style="{ 
+                                                    backgroundColor: addOpacity(area.color, getCellAreas(index).filter(a => a.visible).length > 1 ? 0.3 : 0.5),
+                                                    zIndex: 2 + areaIndex
+                                                }"
+                                            ></div>
+                                        </template>
+                                    </div>
+                                </div>
+                                <div class="player" :style="playerStyle">
+                                    {{ playerEmoji }}
+                                    <div class="speech-bubble" :style="bubbleStyle">{{ bubbleText }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 控制區域 - 絕對定位在底部 -->
+                        <div class="controls-area" ref="controlsArea">
+                            <!-- 虚拟摇杆 -->
+                            <div 
+                                class="joystick-container glass-effect" 
+                                ref="joystickContainer"
+                                @touchstart="startJoystick"
+                                @mousedown="startJoystick"
+                            >
+                                <div class="joystick-knob" ref="joystickKnob"></div>
+                                <div class="joystick-indicator" ref="joystickIndicator"></div>
+                            </div>
+                            
+                            <!-- 操作按钮 -->
+                            <div 
+                                class="action-button glass-effect"
+                                @touchstart="activateActionButton"
+                                @mousedown="activateActionButton"
+                            >
+                                🔪
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 可調整寬度的分隔條 -->
+                    <div class="resizer" ref="resizer" @mousedown="startResize"></div>
+                    
+                    <!-- 開發區面板 -->
+                    <div class="dev-panel" ref="devPanel">
+                        <h3>開發區</h3>
+                        
+                        <!-- 編輯模式開關 -->
+                        <div class="edit-mode-section">
+                            <button 
+                                class="mode-toggle-btn"
+                                :class="{ active: isEditMode }"
+                                @click="toggleEditMode"
+                            >
+                                {{ isEditMode ? '關閉編輯' : '開啟編輯' }}
+                            </button>
+                        </div>
+
+                        <!-- 區域編輯面板 (僅在編輯模式下顯示) -->
+                        <div v-if="isEditMode" class="area-edit-panel">
+                            <h4>區域編輯</h4>
+                            <div class="area-controls">
+                                <button 
+                                    class="area-mode-btn"
+                                    :class="{ active: isAreaSelectMode }"
+                                    @click="toggleAreaSelectMode"
+                                    :disabled="!isEditMode"
+                                >
+                                    {{ isAreaSelectMode ? '取消選擇' : '新增區域' }}
+                                </button>
+                                <button 
+                                    class="visibility-toggle-btn"
+                                    @click="toggleAllAreasVisibility"
+                                >
+                                    {{ allAreasVisible ? '全部隱藏' : '全部顯示' }}
+                                </button>
+                            </div>
+
+                            <!-- 區域表單 (僅在有選擇的單元格時顯示) -->
+                            <div v-if="selectedCells.length > 0" class="area-form">
+                                <div class="form-group">
+                                    <label>區域名稱</label>
+                                    <input type="text" v-model="newArea.name" placeholder="輸入區域名稱">
+                                </div>
+                                <div class="form-group">
+                                    <label>區域顏色</label>
+                                    <input type="color" v-model="newArea.color">
+                                </div>
+                                <button 
+                                    class="save-area-btn"
+                                    @click="saveArea"
+                                    :disabled="!newArea.name"
+                                >
+                                    儲存區域
+                                </button>
+                            </div>
+
+                            <!-- 已儲存區域列表 -->
+                            <div class="saved-areas">
+                                <h4>已儲存區域</h4>
+                                <div class="area-grid">
+                                    <div v-for="area in areas" :key="area.id" class="area-card">
+                                        <div class="area-card-header">
+                                            <div class="area-color" :style="{ backgroundColor: area.color }"></div>
+                                            <div class="area-name">{{ area.name }}</div>
+                                            <button 
+                                                class="visibility-btn"
+                                                :class="{ 'visible': area.visible }"
+                                                @click="toggleAreaVisibility(area)"
+                                            >
+                                                <span v-if="area.visible">👁️</span>
+                                                <span v-else>👁️‍🗨️</span>
+                                            </button>
+                                        </div>
+                                        <div class="area-card-actions">
+                                            <button @click="editArea(area)" title="編輯區域">✏️</button>
+                                            <button @click="deleteArea(area)" title="刪除區域">🗑️</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 原有的玩家座標信息等內容 -->
+                        <div class="dev-info-box">
+                            <h4>玩家座標</h4>
+                            <div class="dev-info-row">
+                                <span class="dev-info-label">X:</span>
+                                <span class="dev-info-value">{{ playerPosition.x.toFixed(2) }}</span>
+                            </div>
+                            <div class="dev-info-row">
+                                <span class="dev-info-label">Y:</span>
+                                <span class="dev-info-value">{{ playerPosition.y.toFixed(2) }}</span>
+                            </div>
+                            <div class="dev-info-row">
+                                <span class="dev-info-label">像素 X:</span>
+                                <span class="dev-info-value">{{ playerPixelPosition.x }}</span>
+                            </div>
+                            <div class="dev-info-row">
+                                <span class="dev-info-label">像素 Y:</span>
+                                <span class="dev-info-value">{{ playerPixelPosition.y }}</span>
+                            </div>
+                        </div>
+                        
+                        <!-- 網格位置信息 -->
+                        <div class="dev-info-box">
+                            <h4>網格位置</h4>
+                            <div class="dev-info-row">
+                                <span class="dev-info-label">列:</span>
+                                <span class="dev-info-value">{{ hoverCell.col }}</span>
+                            </div>
+                            <div class="dev-info-row">
+                                <span class="dev-info-label">行:</span>
+                                <span class="dev-info-value">{{ hoverCell.row }}</span>
+                            </div>
+                            <div class="dev-info-row">
+                                <span class="dev-info-label">索引:</span>
+                                <span class="dev-info-value">{{ hoverCell.index }}</span>
+                            </div>
+                        </div>
+                        
+                        <!-- 控制台輸出 -->
+                        <h4>Console:</h4>
+                        <div class="console-output" ref="consoleOutput">
+                            <div v-for="(log, index) in consoleLogs" :key="index">{{ log }}</div>
+                        </div>
+
+                        <!-- 雲端資料同步 -->
+                        <div class="cloud-sync">
+                            <h4>地圖資料載入</h4>
+                            <button @click="loadTemplatesFromDatabase" style="width:100%; padding: 8px; cursor: pointer;">
+                                <span v-if="isLoading.load" class="loading-spinner"></span>
+                                從資料庫重載列表
+                            </button>
+                            
+                            <div v-if="dbTemplates.length > 0" class="template-list">
+                                <div v-for="template in dbTemplates" :key="template.id" class="template-list-item">
+                                    <div class="template-name" :title="template.name">{{ template.name }}</div>
+                                    <button @click="loadTemplateFromDatabase(template.id)">載入</button>
+                                </div>
+                            </div>
+                             <div v-else-if="dbTemplatesLoaded" style="text-align: center; padding: 10px; font-size: 12px; color: #888;">
+                                資料庫中尚無模板。
+                            </div>
+                        </div>
+
+                        <!-- 已載入資料顯示 -->
+                        <div v-if="loadedMapData.name" class="data-display-section">
+                            <h4>已載入: {{ loadedMapData.name }}</h4>
+                            
+                            <!-- 顯示區域資料 -->
+                            <div class="data-display-section">
+                                <h5>區域 ({{ loadedMapData.areas.length }})</h5>
+                                <div class="data-list">
+                                    <div v-for="area in loadedMapData.areas" :key="area.id" class="data-list-item">
+                                        {{ area.name }} ({{ area.cells.length }}格)
+                                    </div>
+                                    <div v-if="loadedMapData.areas.length === 0" style="color: #888;">無區域資料</div>
+                                </div>
+                            </div>
+
+                            <!-- 顯示元件資料 -->
+                             <div class="data-display-section">
+                                <h5>元件 ({{ loadedMapData.components.length }})</h5>
+                                <div class="data-list">
+                                    <div v-for="comp in loadedMapData.components" :key="comp.id" class="data-list-item">
+                                        ID: {{ comp.component_id }} @ ({{ comp.grid_x }}, {{ comp.grid_y }})
+                                    </div>
+                                     <div v-if="loadedMapData.components.length === 0" style="color: #888;">無元件資料</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Template Manager -->
+                        <div class="template-manager">
+                            <h4>模板管理 (雲端)</h4>
+                            <div class="form-group">
+                                <label>模板名稱</label>
+                                <input type="text" v-model="currentTemplateName" placeholder="新模板名稱或選擇下方模板" style="width: 100%; padding: 5px; box-sizing: border-box;">
+                            </div>
+                            <div style="display: flex; gap: 5px; margin-top: 10px;">
+                                <button @click="saveTemplateToDatabase" :disabled="!currentTemplateName" style="flex:1; cursor:pointer;">保存/更新</button>
+                                <button @click="deleteTemplateFromDatabase" :disabled="!selectedTemplateId" style="flex:1; cursor:pointer;">刪除選取</button>
+                                <button @click="createNewScene" style="flex:1; cursor:pointer;">新場景</button>
+                            </div>
+                        </div>
+
+                        <!-- Cloud Sync (Load Area) -->
+                        <div class="cloud-sync">
+                             <button @click="loadTemplatesFromDatabase" style="width:100%; padding: 8px; cursor: pointer;">
+                                <span v-if="isLoading.load" class="loading-spinner"></span>
+                                從資料庫重載列表
+                            </button>
+                            <div v-if="dbTemplates.length > 0" class="template-list">
+                                <div v-for="template in dbTemplates" :key="template.id" class="template-list-item" @click="selectTemplateForEditing(template)">
+                                    <div class="template-name" :title="template.name" :style="{ fontWeight: template.id === selectedTemplateId ? 'bold' : 'normal' }">{{ template.name }}</div>
+                                </div>
+                            </div>
+                             <div v-else-if="dbTemplatesLoaded" class="empty-state">資料庫中尚無模板。</div>
+                        </div>
+
+                        <!-- Component Loader -->
+                        <div class="component-loader">
+                            <h4>元件載入器</h4>
+                            <textarea v-model="componentJsonInput" rows="5" placeholder="在此貼上元件 JSON" style="width: 100%; box-sizing: border-box;"></textarea>
+                            <button @click="loadComponentFromJson" style="width: 100%; margin-top: 5px; cursor: pointer;">加入元件</button>
+                        </div>
+                        
+                        <!-- Component Library -->
+                        <div class="component-library">
+                            <h4>元件庫 ({{ loadedComponents.length }})</h4>
+                            <div class="library-grid" v-if="loadedComponents.length > 0">
+                                <div v-for="component in loadedComponents" :key="component.id" class="library-item">
+                                    <img v-if="component.type === 'static' && component.fileType === 'gif'" :src="getSmartImageUrl(component.spritesheetUrl)" :alt="component.name">
+                                    <img v-else-if="component.type === 'static' && component.imageData" :src="component.imageData" :alt="component.name">
+                                    <canvas v-if="component.type === 'animation'" :ref="'anim-canvas-' + component.id" :width="component.width" :height="component.height"></canvas>
+                                    <div class="library-item-name">
+                                        <span>{{ component.name }}</span>
+                                        <button class="copy-component-button" @click.stop="copyComponentInfo(component)" title="複製元件資訊">📋</button>
+                                    </div>
+                                </div>
+                            </div>
+                             <div v-else class="empty-state">無元件資料。</div>
+                        </div>
+                    </div>
+
+                    <!-- Notification -->
+                    <div class="slide-in-notification" :class="{ show: notification.show, error: !notification.success }">
+                        {{ notification.message }}
+                    </div>
+                </div>
+            `,
+            data() {
+                return {
+                    // 网格配置
+                    gridCols: 10,
+                    gridRows: 20,  // 從24行改為20行
+                    cellSize: 32,  // 與map-editor.html保持一致
+                    
+                    // 玩家相关
+                    playerPosition: {
+                        x: 5, // 网格坐标x
+                        y: 7  // 网格坐标y
+                    },
+                    playerEmoji: '🧑‍🍳',
+                    
+                    // 对话气泡
+                    bubbleText: '',
+                    showBubble: false,
+                    bubbleTimer: null,
+                    
+                    // 摇杆状态
+                    joystickActive: false,
+                    joystickData: {
+                        centerX: 0,
+                        centerY: 0,
+                        knobX: 0,
+                        knobY: 0,
+                        containerRadius: 0,
+                        knobRadius: 0,
+                        touchStartX: 0, // 記錄觸摸開始的位置
+                        touchStartY: 0
+                    },
+                    moveDirection: {
+                        x: 0,
+                        y: 0
+                    },
+                    // 游戏循环
+                    gameLoopId: null,
+                    lastTimestamp: 0,
+                    moveSpeed: 5, // 每秒移动的格子数
+                    
+                    // 開發區數據
+                    hoverCell: {
+                        row: 0,
+                        col: 0,
+                        index: 0
+                    },
+                    consoleLogs: ['遊戲初始化...', '玩家已生成在位置 (5, 7)'],
+                    
+                    // 分隔條相關數據
+                    resizing: false,
+                    initialX: 0,
+                    initialDevPanelWidth: 250,
+
+                    // 地圖資料載入
+                    dbTemplates: [],
+                    dbTemplatesLoaded: false,
+                    isLoading: {
+                        load: false
+                    },
+                    loadedMapData: {
+                        name: '',
+                        areas: [],
+                        components: []
+                    },
+
+                    // --- Integrated from map-editor ---
+                    // Template Management
+                    currentTemplateName: '',
+                    selectedTemplateId: null,
+
+                    // Area and Component Data
+                    areas: [], // 區域數組，每個區域都有 visible 屬性
+                    loadedComponents: [], // This will hold component data
+
+                    // Component Library
+                    componentJsonInput: '',
+                    animationStates: {},
+                    spritesheetCache: {},
+
+                    // Notification
+                    notification: { show: false, message: '', success: true, timer: null },
+
+                    // 編輯模式相關數據
+                    isEditMode: false,
+                    isAreaSelectMode: false,
+                    selectedCells: [], // 用於儲存選擇的單元格索引
+                    selectionStart: null, // 用於記錄選擇開始的單元格索引
+                    isSelecting: false, // 是否正在進行選擇
+                    newArea: {
+                        name: '',
+                        color: '#FF0000' // 預設顏色
+                    },
+                    editingAreaId: null, // 正在編輯的區域 ID
+                };
+            },
+            computed: {
+                gridCells() {
+                    return Array(this.gridCols * this.gridRows).fill(null);
+                },
+                gridContainerStyle() {
+                    const gap = 1;  // 與map-editor.html一致的間隙
+                    const cellSize = this.cellSize; // 單元格大小
+                    const width = this.gridCols * cellSize + (this.gridCols - 1) * gap;
+                    const height = this.gridRows * cellSize + (this.gridRows - 1) * gap;
+                    return {
+                        gridTemplateColumns: `repeat(${this.gridCols}, ${cellSize}px)`,
+                        gridTemplateRows: `repeat(${this.gridRows}, ${cellSize}px)`,
+                        width: `${width}px`,
+                        height: `${height}px`,
+                        gridGap: `${gap}px`
+                    };
+                },
+                gridCellStyle() {
+                    return {
+                        width: `${this.cellSize}px`,
+                        height: `${this.cellSize}px`
+                    };
+                },
+                playerStyle() {
+                    // 計算玩家在屏幕上的像素位置
+                    // 使用與map-editor.html一致的計算方式
+                    const cellSize = this.cellSize;
+                    const gap = 1;
+                    
+                    // 考慮邊界計算：最左邊網格的左邊是邊界，右邊網格的右邊是邊界
+                    // 計算中心點位置
+                    const x = (this.playerPosition.x * (cellSize + gap)) + (cellSize / 2);
+                    const y = (this.playerPosition.y * (cellSize + gap)) + (cellSize / 2);
+                    
+                    return {
+                        left: `${x}px`,
+                        top: `${y}px`
+                    };
+                },
+                playerBoundaryStyle() {
+                    // 計算玩家可移動區域的邊界
+                    const gap = 1;  // 網格間隙
+                    const cellSize = this.cellSize; // 單元格大小
+                    
+                    // 計算邊界的左上角位置（第一個單元格的左上角）
+                    const left = 0;
+                    const top = 0;
+                    
+                    // 計算邊界的寬度和高度（整個網格的大小）
+                    const width = this.gridCols * cellSize + (this.gridCols - 1) * gap;
+                    const height = this.gridRows * cellSize + (this.gridRows - 1) * gap;
+                    
+                    return {
+                        left: `${left}px`,
+                        top: `${top}px`,
+                        width: `${width}px`,
+                        height: `${height}px`
+                    };
+                },
+                bubbleStyle() {
+                    return {
+                        opacity: this.showBubble ? 1 : 0
+                    };
+                },
+                playerPixelPosition() {
+                    // 計算玩家在屏幕上的像素位置
+                    const cellSize = this.cellSize;
+                    const gap = 1;
+                    
+                    const x = Math.round((this.playerPosition.x * (cellSize + gap)) + (cellSize / 2));
+                    const y = Math.round((this.playerPosition.y * (cellSize + gap)) + (cellSize / 2));
+                    
+                    return { x, y };
+                },
+                // 獲取單元格的樣式
+                getCellStyle() {
+                    return (index) => {
+                        const style = {
+                            width: `${this.cellSize}px`,
+                            height: `${this.cellSize}px`
+                        };
+                        return style;
+                    };
+                },
+                allAreasVisible() {
+                    return this.areas.length > 0 && this.areas.every(area => area.visible);
+                }
+            },
+            mounted() {
+                // 初始化虚拟摇杆中心位置
+                this.initJoystick();
+                
+                // 启动游戏循环
+                this.startGameLoop();
+                
+                // 防止页面上拉下拉刷新
+                document.body.addEventListener('touchmove', function(e) {
+                    e.preventDefault();
+                }, { passive: false });
+                
+                // 初始化時確保玩家在網格範圍內
+                this.constrainPlayerToGrid();
+                
+                // 添加窗口大小變化監聽
+                window.addEventListener('resize', this.handleResize);
+                
+                // 添加全局觸控事件處理
+                document.addEventListener('touchmove', this.handleGlobalTouchMove, { passive: false });
+                document.addEventListener('touchend', this.handleGlobalTouchEnd);
+                document.addEventListener('touchcancel', this.handleGlobalTouchEnd);
+                
+                // 添加全局鼠標事件處理 (用於分隔條調整)
+                document.addEventListener('mousemove', this.handleMouseMove);
+                document.addEventListener('mouseup', this.handleMouseUp);
+
+                // 載入資料庫模板列表
+                this.loadTemplatesFromDatabase();
+                
+                // Start animation loop for component library
+                this.mainAnimationLoop();
+            },
+            beforeDestroy() {
+                // 清除游戏循环
+                if (this.gameLoopId) {
+                    cancelAnimationFrame(this.gameLoopId);
+                }
+                
+                // 清除对话气泡定时器
+                if (this.bubbleTimer) {
+                    clearTimeout(this.bubbleTimer);
+                }
+                
+                // 移除窗口大小變化監聽
+                window.removeEventListener('resize', this.handleResize);
+                
+                // 移除全局觸控事件處理
+                document.removeEventListener('touchmove', this.handleGlobalTouchMove);
+                document.removeEventListener('touchend', this.handleGlobalTouchEnd);
+                document.removeEventListener('touchcancel', this.handleGlobalTouchEnd);
+                
+                // 移除全局鼠標事件處理 (用於分隔條調整)
+                document.removeEventListener('mousemove', this.handleMouseMove);
+                document.removeEventListener('mouseup', this.handleMouseUp);
+
+                if (this.animationLoopId) cancelAnimationFrame(this.animationLoopId);
+            },
+            methods: {
+                // 處理全局觸控移動
+                handleGlobalTouchMove(event) {
+                    if (this.joystickActive) {
+                        this.moveJoystick(event);
+                    }
+                },
+                
+                // 處理全局觸控結束
+                handleGlobalTouchEnd(event) {
+                    if (this.joystickActive) {
+                        this.endJoystick(event);
+                    }
+                },
+                // 處理窗口大小變化
+                handleResize() {
+                    // 重新初始化搖桿
+                    this.initJoystick();
+                    
+                    // 確保玩家在網格範圍內
+                    this.constrainPlayerToGrid();
+                },
+                // 初始化摇杆
+                initJoystick() {
+                    const container = this.$refs.joystickContainer;
+                    if (!container) return;
+                    
+                    const rect = container.getBoundingClientRect();
+                    const knobElem = this.$refs.joystickKnob;
+                    if (!knobElem) return;
+                    
+                    const knobRect = knobElem.getBoundingClientRect();
+                    
+                    this.joystickData.centerX = rect.width / 2;
+                    this.joystickData.centerY = rect.height / 2;
+                    this.joystickData.containerRadius = rect.width / 2;
+                    this.joystickData.knobRadius = knobRect.width / 2;
+                    
+                    this.resetJoystick();
+                },
+                
+                // 重置摇杆位置
+                resetJoystick() {
+                    this.joystickData.knobX = this.joystickData.centerX;
+                    this.joystickData.knobY = this.joystickData.centerY;
+                    if (this.$refs.joystickKnob) {
+                        this.$refs.joystickKnob.style.left = `${this.joystickData.centerX}px`;
+                        this.$refs.joystickKnob.style.top = `${this.joystickData.centerY}px`;
+                    }
+                    // 重置移动方向
+                    this.moveDirection = { x: 0, y: 0 };
+                },
+                
+                // 开始操作摇杆
+                startJoystick(event) {
+                    event.preventDefault();
+                    this.joystickActive = true;
+                    
+                    // 獲取搖桿容器位置
+                    const container = this.$refs.joystickContainer;
+                    const rect = container.getBoundingClientRect();
+                    
+                    // 記錄觸摸開始的位置
+                    if (event.type === 'touchstart') {
+                        const touch = event.touches[0];
+                        this.joystickData.touchStartX = touch.clientX;
+                        this.joystickData.touchStartY = touch.clientY;
+                        
+                        // 立即移動搖桿到觸摸位置
+                        this.moveJoystick(event);
+                    } else {
+                        // 鼠标事件
+                        this.joystickData.touchStartX = event.clientX;
+                        this.joystickData.touchStartY = event.clientY;
+                        
+                        // 立即移動搖桿到鼠標位置
+                        this.moveJoystick(event);
+                        
+                        // 添加全局鼠標事件監聽
+                        window.addEventListener('mousemove', this.moveJoystick);
+                        window.addEventListener('mouseup', this.endJoystick);
+                    }
+                },
+                
+                // 移动摇杆
+                moveJoystick(event) {
+                    if (!this.joystickActive) return;
+                    
+                    event.preventDefault();
+                    const container = this.$refs.joystickContainer;
+                    const rect = container.getBoundingClientRect();
+                    
+                    // 获取触摸或鼠标位置
+                    let clientX, clientY;
+                    if (event.type.startsWith('touch')) {
+                        clientX = event.touches[0].clientX;
+                        clientY = event.touches[0].clientY;
+                    } else {
+                        clientX = event.clientX;
+                        clientY = event.clientY;
+                    }
+                    
+                    // 計算相對於搖桿容器的坐標
+                    let relativeX = clientX - rect.left;
+                    let relativeY = clientY - rect.top;
+                    
+                    // 計算從中心點的距離和角度
+                    const deltaX = relativeX - this.joystickData.centerX;
+                    const deltaY = relativeY - this.joystickData.centerY;
+                    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                    const angle = Math.atan2(deltaY, deltaX);
+                    
+                    // 限制搖桿在容器內的顯示
+                    const maxKnobDistance = this.joystickData.containerRadius - this.joystickData.knobRadius;
+                    let knobX, knobY;
+                    
+                    if (distance <= maxKnobDistance) {
+                        // 如果在容器範圍內，直接使用計算的位置
+                        knobX = relativeX;
+                        knobY = relativeY;
+                    } else {
+                        // 如果超出範圍，限制搖桿顯示在容器邊緣
+                        knobX = this.joystickData.centerX + Math.cos(angle) * maxKnobDistance;
+                        knobY = this.joystickData.centerY + Math.sin(angle) * maxKnobDistance;
+                        
+                        // 顯示方向指示器（可選）
+                        this.showDirectionIndicator(clientX, clientY, angle);
+                    }
+                    
+                    // 更新搖桿位置
+                    this.joystickData.knobX = knobX;
+                    this.joystickData.knobY = knobY;
+                    if (this.$refs.joystickKnob) {
+                        this.$refs.joystickKnob.style.left = `${knobX}px`;
+                        this.$refs.joystickKnob.style.top = `${knobY}px`;
+                    }
+                    
+                    // 計算移動方向 - 無論手指是否超出容器，都使用實際方向
+                    const normalizedDeltaX = deltaX / (this.joystickData.containerRadius);
+                    const normalizedDeltaY = deltaY / (this.joystickData.containerRadius);
+                    
+                    // 計算移動方向的強度 (0-1之間)
+                    // 如果超出容器範圍，強度始終為1（最大速度）
+                    const directionMagnitude = distance > this.joystickData.containerRadius ? 
+                                              1 : distance / this.joystickData.containerRadius;
+                    
+                    // 應用死區
+                    const deadzone = 0.1;
+                    if (directionMagnitude > deadzone) {
+                        // 計算最終的移動方向，考慮角度和強度
+                        this.moveDirection.x = normalizedDeltaX * (directionMagnitude / 1);
+                        this.moveDirection.y = normalizedDeltaY * (directionMagnitude / 1);
+                    } else {
+                        this.moveDirection = { x: 0, y: 0 };
+                    }
+                },
+                
+                // 顯示方向指示器（可選功能）
+                showDirectionIndicator(clientX, clientY, angle) {
+                    const indicator = this.$refs.joystickIndicator;
+                    if (!indicator) return;
+                    
+                    // 設置指示器位置
+                    indicator.style.left = `${clientX - this.$refs.controlsArea.getBoundingClientRect().left}px`;
+                    indicator.style.top = `${clientY - this.$refs.controlsArea.getBoundingClientRect().top}px`;
+                    indicator.style.opacity = '1';
+                    
+                    // 3秒後隱藏指示器
+                    setTimeout(() => {
+                        indicator.style.opacity = '0';
+                    }, 3000);
+                },
+                
+                // 结束摇杆操作
+                endJoystick(event) {
+                    if (event) {
+                        event.preventDefault();
+                    }
+                    this.joystickActive = false;
+                    this.resetJoystick();
+                    
+                    // 隱藏方向指示器
+                    const indicator = this.$refs.joystickIndicator;
+                    if (indicator) {
+                        indicator.style.opacity = '0';
+                    }
+                    
+                    // 移除鼠标事件监听器
+                    window.removeEventListener('mousemove', this.moveJoystick);
+                    window.removeEventListener('mouseup', this.endJoystick);
+                },
+                
+                // 激活动作按钮
+                activateActionButton(event) {
+                    event.preventDefault();
+                    this.showSpeechBubble('🔪');
+                },
+                
+                // 显示对话气泡
+                showSpeechBubble(text, duration = 2000) {
+                    // 清除之前的定时器
+                    if (this.bubbleTimer) {
+                        clearTimeout(this.bubbleTimer);
+                    }
+                    
+                    // 设置气泡文本并显示
+                    this.bubbleText = text;
+                    this.showBubble = true;
+                    
+                    // 设置自动隐藏定时器
+                    this.bubbleTimer = setTimeout(() => {
+                        this.showBubble = false;
+                    }, duration);
+                },
+                
+                // 移动玩家
+                movePlayer(deltaTime) {
+                    if (this.moveDirection.x === 0 && this.moveDirection.y === 0) return;
+                    
+                    // 计算这一帧要移动的距离
+                    const moveAmount = this.moveSpeed * (deltaTime / 1000);
+                    
+                    // 储存原始位置以便需要时回退
+                    const originalPosition = {
+                        x: this.playerPosition.x,
+                        y: this.playerPosition.y
+                    };
+                    
+                    // 同時處理水平和垂直移動，實現斜向移動
+                    const newX = this.playerPosition.x + this.moveDirection.x * moveAmount;
+                    const newY = this.playerPosition.y + this.moveDirection.y * moveAmount;
+                    
+                    // 修正邊界檢查邏輯，考慮網格單元格大小和間隙
+                    const cellSize = this.cellSize;
+                    const gap = 1; // 網格間隙
+                    
+                    // 計算實際的邊界值（考慮到玩家是中心點定位）
+                    const minX = 0;
+                    const maxX = this.gridCols - 1;
+                    const minY = 0;
+                    const maxY = this.gridRows - 1;
+                    
+                    // 分別處理X和Y坐標，確保不超出邊界
+                    if (newX >= minX && newX <= maxX) {
+                        this.playerPosition.x = newX;
+                    } else if (newX < minX) {
+                        this.playerPosition.x = minX;
+                    } else if (newX > maxX) {
+                        this.playerPosition.x = maxX;
+                    }
+                    
+                    if (newY >= minY && newY <= maxY) {
+                        this.playerPosition.y = newY;
+                    } else if (newY < minY) {
+                        this.playerPosition.y = minY;
+                    } else if (newY > maxY) {
+                        this.playerPosition.y = maxY;
+                    }
+                    
+                    // 記錄位置變化到控制台
+                    if (Math.abs(this.playerPosition.x - originalPosition.x) > 0.01 || 
+                        Math.abs(this.playerPosition.y - originalPosition.y) > 0.01) {
+                        this.logToConsole(`玩家移動到: (${this.playerPosition.x.toFixed(2)}, ${this.playerPosition.y.toFixed(2)})`);
+                    }
+                },
+                
+                // 確保玩家始終在網格內
+                constrainPlayerToGrid() {
+                    // 修正邊界檢查邏輯
+                    const minX = 0;
+                    const maxX = this.gridCols - 1;
+                    const minY = 0;
+                    const maxY = this.gridRows - 1;
+                    
+                    // 限制X坐標
+                    if (this.playerPosition.x < minX) {
+                        this.playerPosition.x = minX;
+                    } else if (this.playerPosition.x > maxX) {
+                        this.playerPosition.x = maxX;
+                    }
+                    
+                    // 限制Y坐標
+                    if (this.playerPosition.y < minY) {
+                        this.playerPosition.y = minY;
+                    } else if (this.playerPosition.y > maxY) {
+                        this.playerPosition.y = maxY;
+                    }
+                },
+                
+                // 游戏主循环
+                gameLoop(timestamp) {
+                    // 计算帧间时间差
+                    if (!this.lastTimestamp) this.lastTimestamp = timestamp;
+                    const deltaTime = timestamp - this.lastTimestamp;
+                    this.lastTimestamp = timestamp;
+                    
+                    // 更新玩家位置
+                    this.movePlayer(deltaTime);
+                    
+                    // 继续下一帧
+                    this.gameLoopId = requestAnimationFrame(this.gameLoop);
+                },
+                
+                // 启动游戏循环
+                startGameLoop() {
+                    this.gameLoopId = requestAnimationFrame(this.gameLoop);
+                },
+                
+                // 處理網格單元格懸停
+                handleCellHover(index) {
+                    const row = Math.floor(index / this.gridCols);
+                    const col = index % this.gridCols;
+                    
+                    this.hoverCell = {
+                        row: row,
+                        col: col,
+                        index: index
+                    };
+                },
+                
+                // 處理網格單元格點擊
+                handleCellClick(index) {
+                    if (this.isAreaSelectMode) {
+                        // 如果是區域選擇模式，切換單元格的選擇狀態
+                        const cellIndex = this.selectedCells.indexOf(index);
+                        if (cellIndex === -1) {
+                            this.selectedCells.push(index);
+                        } else {
+                            this.selectedCells.splice(cellIndex, 1);
+                        }
+                    } else {
+                        // 原有的點擊處理邏輯
+                        const row = Math.floor(index / this.gridCols);
+                        const col = index % this.gridCols;
+                        
+                        this.hoverCell = {
+                            row: row,
+                            col: col,
+                            index: index
+                        };
+                        
+                        this.logToConsole(`點擊網格: 行=${row}, 列=${col}, 索引=${index}`);
+                    }
+                },
+                
+                // 處理網格鼠標移動
+                handleGridMouseMove(event) {
+                    const gridRect = event.currentTarget.getBoundingClientRect();
+                    const x = event.clientX - gridRect.left;
+                    const y = event.clientY - gridRect.top;
+                    
+                    // 記錄到控制台 (移除這裡的記錄，改為只在點擊時記錄)
+                    // this.logToConsole(`滑鼠位置: (${Math.round(x)}, ${Math.round(y)})`);
+                },
+                
+                // 添加日誌到控制台
+                logToConsole(message) {
+                    // 限制日誌數量，保留最新的20條
+                    if (this.consoleLogs.length >= 20) {
+                        this.consoleLogs.shift();
+                    }
+                    
+                    this.consoleLogs.push(message);
+                    
+                    // 滾動到底部
+                    this.$nextTick(() => {
+                        if (this.$refs.consoleOutput) {
+                            this.$refs.consoleOutput.scrollTop = this.$refs.consoleOutput.scrollHeight;
+                        }
+                    });
+                },
+                
+                // 開始調整分隔條
+                startResize(event) {
+                    this.resizing = true;
+                    this.initialX = event.clientX;
+                    this.initialDevPanelWidth = this.$refs.devPanel.offsetWidth;
+                    
+                    // 添加活動狀態類
+                    this.$refs.resizer.classList.add('active');
+                },
+                
+                // 處理鼠標移動 (用於分隔條調整)
+                handleMouseMove(event) {
+                    if (!this.resizing) return;
+                    
+                    const deltaX = this.initialX - event.clientX;
+                    const newWidth = this.initialDevPanelWidth + deltaX;
+                    
+                    // 獲取整個容器的寬度
+                    const containerWidth = this.$el.offsetWidth;
+                    
+                    // 計算新的開發區寬度後，遊戲區域的寬度
+                    const gameAreaWidth = containerWidth - newWidth;
+                    
+                    // 確保遊戲區域寬度在320px到350px之間
+                    if (gameAreaWidth >= 350 && gameAreaWidth <= 370) {
+                        this.$refs.devPanel.style.width = `${newWidth}px`;
+                    } else if (gameAreaWidth < 350) {
+                        // 如果遊戲區域太窄，則設置開發區域寬度，使遊戲區域正好為320px
+                        this.$refs.devPanel.style.width = `${containerWidth - 350}px`;
+                    } else if (gameAreaWidth > 370) {
+                        // 如果遊戲區域太寬，則設置開發區域寬度，使遊戲區域正好為350px
+                        this.$refs.devPanel.style.width = `${containerWidth - 370}px`;
+                    }
+                },
+                
+                // 處理鼠標釋放 (結束分隔條調整)
+                handleMouseUp() {
+                    if (this.resizing) {
+                        this.resizing = false;
+                        // 移除活動狀態類
+                        this.$refs.resizer.classList.remove('active');
+                    }
+                },
+
+                // --- 新增地圖資料庫方法 ---
+                loadTemplatesFromDatabase() {
+                    this.isLoading.load = true;
+                    this.logToConsole('正在從資料庫載入模板列表...');
+
+                    fetch('/api/vue-game/map-templates'/*, { headers: this.getAuthHeaders() } */) // No longer need auth for GET
+                        .then(res => {
+                            if (!res.ok) {
+                                return res.json().then(err => Promise.reject(err.error || `HTTP ${res.status}`));
+                            }
+                            return res.json();
+                        })
+                        .then(data => {
+                            this.dbTemplates = data || [];
+                            this.dbTemplatesLoaded = true;
+                            this.logToConsole(`成功載入 ${this.dbTemplates.length} 個模板。`);
+                        })
+                        .catch(err => {
+                            this.logToConsole(`錯誤: ${err}`);
+                            this.showNotification('載入列表失敗: ' + err, false);
+                        })
+                        .finally(() => {
+                            this.isLoading.load = false;
+                        });
+                },
+
+                loadTemplateFromDatabase(templateId) {
+                    this.isLoading.load = true;
+                    this.logToConsole(`正在載入模板 ID: ${templateId}...`);
+
+                    fetch(`/api/vue-game/map-templates/${templateId}`/*, { headers: this.getAuthHeaders() } */) // No longer need auth for GET
+                        .then(res => res.ok ? res.json() : Promise.reject('載入模板失敗'))
+                        .then(data => {
+                            this.loadedMapData.name = data.name;
+                            this.loadedMapData.areas = data.areas || [];
+                            this.loadedMapData.components = data.components ? data.components.map(c => ({ id: c.component_id, grid_x: c.grid_x, grid_y: c.grid_y, name: `CompID ${c.component_id}` })) : [];
+                            this.showNotification(`模板 '${data.name}' 資料已載入預覽。`);
+                        })
+                        .catch(err => this.showNotification('載入模板失敗: ' + err, false))
+                        .finally(() => this.isLoading.load = false);
+                },
+                
+                // --- Component Library Methods ---
+                loadComponentFromJson() {
+                    try {
+                        const component = JSON.parse(this.componentJsonInput);
+                        if (!component.id || !component.name || !component.type) {
+                            throw new Error('JSON無效或缺少 id, name, type');
+                        }
+                        if (this.loadedComponents.some(c => c.id === component.id)) {
+                             this.showNotification('此ID的元件已存在元件庫。', false);
+                             return;
+                        }
+                        
+                        if (component.type === 'static') {
+                            this.rehydrateStaticComponent(component);
+                        }
+                        this.loadedComponents.push(component);
+                        this.componentJsonInput = '';
+                        this.showNotification(`元件 '${component.name}' 已加入。`);
+                    } catch (e) {
+                        this.showNotification('解析 JSON 失敗: ' + e.message, false);
+                    }
+                },
+                
+                getSmartImageUrl(url) {
+                    if (!url) return '';
+                    if (url.startsWith('http://localhost') || url.startsWith('http://127.0.0.1')) return url;
+                    return `/proxy-image?url=${encodeURIComponent(url)}`;
+                },
+
+                rehydrateStaticComponent(component) {
+                    if (!component.spritesheetUrl || !component.sourceRect) return;
+                    const url = this.getSmartImageUrl(component.spritesheetUrl);
+                    const { x, y, w, h } = component.sourceRect;
+                    const spritesheet = new Image();
+                    spritesheet.crossOrigin = 'Anonymous';
+                    spritesheet.src = url;
+                    spritesheet.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = w; canvas.height = h;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(spritesheet, x, y, w, h, 0, 0, w, h);
+                        this.$set(component, 'imageData', canvas.toDataURL());
+                    };
+                },
+
+                addOpacity(color, opacity) {
+                    if (!color) return `rgba(255, 255, 255, ${opacity})`;
+
+                    if (color.startsWith('#')) {
+                        const r = parseInt(color.slice(1, 3), 16);
+                        const g = parseInt(color.slice(3, 5), 16);
+                        const b = parseInt(color.slice(5, 7), 16);
+                        return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+                    }
+                    if (color.startsWith('rgba')) {
+                        return color.replace(/, [0-9\.]+?\)/, `, ${opacity})`);
+                    }
+                    if (color.startsWith('rgb')) {
+                        return color.replace('rgb', 'rgba').replace(')', `, ${opacity})`);
+                    }
+                    return color;
+                },
+
+                mainAnimationLoop(currentTime) {
+                    Object.values(this.animationStates).forEach(state => {
+                        const { componentRef, canvasName } = state;
+                        if (!componentRef || !componentRef.animation) return;
+                        
+                        let sourceImage = this.spritesheetCache[componentRef.animation.spritesheetUrl];
+                        if (!sourceImage) {
+                            const img = new Image();
+                            img.crossOrigin = "Anonymous";
+                            img.src = this.getSmartImageUrl(componentRef.animation.spritesheetUrl);
+                            this.$set(this.spritesheetCache, componentRef.animation.spritesheetUrl, img);
+                            return;
+                        }
+
+                        if (!sourceImage.complete || sourceImage.naturalHeight === 0) return;
+
+                        if (currentTime - state.lastTime > (componentRef.animation.speed || 100)) {
+                            state.lastTime = currentTime;
+                            state.currentFrame = (state.currentFrame + 1) % componentRef.animation.frames.length;
+                            
+                            const frameInfo = componentRef.animation.frames[state.currentFrame];
+                            const canvasRef = this.$refs[canvasName];
+                            if (canvasRef && canvasRef[0]) {
+                                const canvas = canvasRef[0];
+                                const ctx = canvas.getContext('2d');
+                                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                                ctx.drawImage(sourceImage, frameInfo.x, frameInfo.y, frameInfo.w, frameInfo.h, 0, 0, canvas.width, canvas.height);
+                            }
+                        }
+                    });
+                    this.animationLoopId = requestAnimationFrame(this.mainAnimationLoop);
+                },
+                
+                showNotification(message, success = true) {
+                    this.notification.message = message;
+                    this.notification.success = success;
+                    this.notification.show = true;
+                    if (this.notification.timer) {
+                        clearTimeout(this.notification.timer);
+                    }
+                    this.notification.timer = setTimeout(() => {
+                        this.notification.show = false;
+                    }, 3000);
+                },
+
+                copyComponentInfo(component) {
+                    const info = JSON.stringify(component, null, 2);
+                    navigator.clipboard.writeText(info).then(() => {
+                        this.showNotification(`元件 "${component.name}" 的 JSON 已複製！`);
+                    }, () => {
+                        this.showNotification('複製失敗！', false);
+                    });
+                },
+
+                // --- Auth Helper ---
+                getAuthHeaders() {
+                    const savedUserId = localStorage.getItem('boxCurrentUserId');
+                    const token = localStorage.getItem(`boxUserToken_${savedUserId}`);
+                    const headers = {
+                        'Content-Type': 'application/json',
+                    };
+                    if (savedUserId && token) {
+                        headers['Authorization'] = `Bearer ${token}`;
+                    }
+                    return headers;
+                },
+
+                // --- Template Management Methods ---
+                saveTemplateToDatabase() {
+                    if (!this.currentTemplateName) {
+                        this.showNotification('請輸入模板名稱', false);
+                        return;
+                    }
+
+                    this.isLoading.save = true;
+                    
+                    // 準備要發送的數據
+                    const templateData = {
+                        name: this.currentTemplateName,
+                        grid_cols: this.gridCols,
+                        grid_rows: this.gridRows,
+                        areas: this.areas.map(area => ({
+                            name: area.name,
+                            color: area.color,
+                            showName: area.showName || true,
+                            cells: area.cells
+                        })),
+                        components: this.loadedComponents.map(c => ({
+                            component_id: c.id,
+                            grid_x: c.grid_x || 0,
+                            grid_y: c.grid_y || 0
+                        }))
+                    };
+
+                    try {
+                        // 發送到後端 API
+                        const response = await fetch('/api/vue-game/map-templates', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                ...this.getAuthHeaders()
+                            },
+                            body: JSON.stringify(templateData)
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(await response.text());
+                        }
+
+                        const result = await response.json();
+                        this.showNotification(`模板 '${this.currentTemplateName}' 已成功保存到資料庫！`);
+                        
+                        // 重新載入模板列表
+                        await this.loadTemplatesFromDatabase();
+                        
+                        // 如果是新模板，更新選中的模板ID
+                        if (result.id && !this.selectedTemplateId) {
+                            this.selectedTemplateId = result.id;
+                        }
+                    } catch (error) {
+                        console.error('保存模板失敗:', error);
+                        this.showNotification('保存失敗: ' + error.message, false);
+                    } finally {
+                        this.isLoading.save = false;
+                    }
+                },
+
+                deleteTemplateFromDatabase() {
+                    if (!this.selectedTemplateId) {
+                        this.showNotification('請先選擇一個模板', false);
+                        return;
+                    }
+                    if (!confirm(`確定要從資料庫刪除模板 '${this.currentTemplateName}' 嗎？此操作無法復原。`)) return;
+
+                    this.isLoading.delete = true;
+                    fetch(`/api/vue-game/map-templates/${this.selectedTemplateId}`, { 
+                        method: 'DELETE',
+                        headers: this.getAuthHeaders()
+                    })
+                        .then(res => res.ok ? res.json() : Promise.reject('刪除失敗'))
+                        .then(() => {
+                            this.showNotification('模板已從資料庫刪除。');
+                            this.createNewScene();
+                            this.loadTemplatesFromDatabase();
+                        })
+                        .catch(err => this.showNotification('刪除失敗: ' + err, false))
+                        .finally(() => this.isLoading.delete = false);
+                },
+
+                createNewScene() {
+                    this.currentTemplateName = '';
+                    this.selectedTemplateId = null;
+                    this.areas = [];
+                    this.loadedComponents = [];
+                    this.showNotification('已建立新場景。');
+                },
+
+                selectTemplateForEditing(template) {
+                    this.currentTemplateName = template.name;
+                    this.selectedTemplateId = template.id;
+                    this.applyTemplateToEditor(template.id);
+                },
+
+                // 編輯模式相關方法
+                toggleEditMode() {
+                    this.isEditMode = !this.isEditMode;
+                    this.isAreaSelectMode = false; // 切換編輯模式時重置區域選擇模式
+                    this.selectedCells = []; // 切換編輯模式時清空選擇的單元格
+                    this.newArea = { name: '', color: '#FF0000' }; // 重置新區域資訊
+                },
+
+                toggleAreaSelectMode() {
+                    this.isAreaSelectMode = !this.isAreaSelectMode;
+                    this.selectedCells = []; // 切換區域選擇模式時清空選擇的單元格
+                    this.newArea = { name: '', color: '#FF0000' }; // 重置新區域資訊
+                    if (!this.isAreaSelectMode) {
+                        this.editingAreaId = null; // 取消選擇時，重置正在編輯的ID
+                    }
+                },
+
+                saveArea() {
+                    if (!this.newArea.name || this.selectedCells.length === 0) {
+                        this.showNotification('請選擇單元格並輸入區域名稱', false);
+                        return;
+                    }
+
+                    // 檢查名稱是否重複
+                    const existingAreaByName = this.areas.find(a => a.name === this.newArea.name && a.id !== this.editingAreaId);
+                    if (existingAreaByName) {
+                        this.showNotification(`區域名稱 '${this.newArea.name}' 已存在。`, false);
+                        return;
+                    }
+
+                    if (this.editingAreaId) {
+                        // 更新現有區域
+                        const areaIndex = this.areas.findIndex(a => a.id === this.editingAreaId);
+                        if (areaIndex !== -1) {
+                            const updatedArea = {
+                                ...this.areas[areaIndex],
+                                name: this.newArea.name,
+                                color: this.newArea.color,
+                                cells: [...this.selectedCells]
+                            };
+                            this.$set(this.areas, areaIndex, updatedArea);
+                            this.showNotification(`區域 '${updatedArea.name}' 已更新。`);
+                        }
+                    } else {
+                        // 添加新區域
+                        const newArea = {
+                            id: Date.now(),
+                            name: this.newArea.name,
+                            color: this.newArea.color,
+                            showName: true,
+                            cells: [...this.selectedCells],
+                            visible: true
+                        };
+                        this.areas.push(newArea);
+                        this.showNotification(`區域 '${newArea.name}' 已添加。`);
+                    }
+
+                    // 重置狀態
+                    this.selectedCells = [];
+                    this.newArea = { name: '', color: '#FF0000' };
+                    this.editingAreaId = null;
+                    this.isAreaSelectMode = false; // 儲存後自動退出選擇模式
+
+                    this.saveTemplateToDatabase(); // 自動保存到雲端
+                },
+
+                editArea(area) {
+                    this.isAreaSelectMode = true; // 切換到區域選擇模式
+                    this.selectedCells = [...area.cells]; // 設置選擇的單元格
+                    this.newArea = { name: area.name, color: area.color }; // 設置編輯的區域資訊
+                    this.editingAreaId = area.id; // 記錄正在編輯的區域ID
+                    this.showNotification(`正在編輯區域 '${area.name}'。您可以修改選取範圍和資訊。`);
+                },
+
+                deleteArea(area) {
+                    if (!confirm(`確定要刪除區域 '${area.name}' 嗎？此變更將在保存模板後生效。`)) return;
+
+                    const index = this.areas.findIndex(a => a.id === area.id);
+                    if (index !== -1) {
+                        this.areas.splice(index, 1);
+
+                        // If deleting the area currently being edited, reset the form
+                        if (this.editingAreaId === area.id) {
+                            this.selectedCells = [];
+                            this.newArea = { name: '', color: '#FF0000' };
+                            this.editingAreaId = null;
+                            this.isAreaSelectMode = false;
+                        }
+
+                        this.showNotification(`區域 '${area.name}' 已刪除。`);
+                        this.saveTemplateToDatabase(); // 自動保存刪除操作
+                    } else {
+                        this.showNotification('找不到該區域。', false);
+                    }
+                },
+
+                // 獲取單元格所屬的區域
+                getCellAreas(index) {
+                    return this.areas.filter(area => area.cells.includes(index));
+                },
+
+                // 獲取單元格的區域文字說明
+                getCellAreasText(index) {
+                    const areas = this.getCellAreas(index).filter(area => area.visible);
+                    return areas.length > 0 ? areas.map(area => area.name).join(', ') : '';
+                },
+
+                // 開始單元格選擇
+                startCellSelection(index) {
+                    if (!this.isAreaSelectMode) return;
+                    
+                    this.selectionStart = index;
+                    this.isSelecting = true;
+                    
+                    // 添加滑鼠事件監聽
+                    window.addEventListener('mousemove', this.handleSelectionMove);
+                    window.addEventListener('mouseup', this.endCellSelection);
+                    
+                    // 更新選擇的單元格
+                    this.updateSelectedCells(index);
+                },
+
+                // 處理選擇移動
+                handleSelectionMove(event) {
+                    if (!this.isSelecting) return;
+                    
+                    const gridRect = this.$el.querySelector('.grid').getBoundingClientRect();
+                    const x = event.clientX - gridRect.left;
+                    const y = event.clientY - gridRect.top;
+                    
+                    // 計算滑鼠所在的單元格索引
+                    const col = Math.floor(x / (this.cellSize + 1));
+                    const row = Math.floor(y / (this.cellSize + 1));
+                    const index = row * this.gridCols + col;
+                    
+                    // 更新選擇的單元格
+                    this.updateSelectedCells(index);
+                },
+
+                // 結束單元格選擇
+                endCellSelection() {
+                    this.isSelecting = false;
+                    window.removeEventListener('mousemove', this.handleSelectionMove);
+                    window.removeEventListener('mouseup', this.endCellSelection);
+                },
+
+                // 更新選擇的單元格
+                updateSelectedCells(currentIndex) {
+                    if (!this.isAreaSelectMode) return;
+                    
+                    const startRow = Math.floor(this.selectionStart / this.gridCols);
+                    const startCol = this.selectionStart % this.gridCols;
+                    const currentRow = Math.floor(currentIndex / this.gridCols);
+                    const currentCol = currentIndex % this.gridCols;
+                    
+                    // 計算選擇範圍
+                    const minRow = Math.min(startRow, currentRow);
+                    const maxRow = Math.max(startRow, currentRow);
+                    const minCol = Math.min(startCol, currentCol);
+                    const maxCol = Math.max(startCol, currentCol);
+                    
+                    // 清空之前的選擇
+                    this.selectedCells = [];
+                    
+                    // 添加範圍內的所有單元格
+                    for (let row = minRow; row <= maxRow; row++) {
+                        for (let col = minCol; col <= maxCol; col++) {
+                            const index = row * this.gridCols + col;
+                            if (index >= 0 && index < this.gridCells.length) {
+                                this.selectedCells.push(index);
+                            }
+                        }
+                    }
+                },
+
+                toggleAllAreasVisibility() {
+                    const newVisibility = !this.allAreasVisible;
+                    this.areas.forEach(area => {
+                        this.$set(area, 'visible', newVisibility);
+                    });
+                },
+
+                toggleAreaVisibility(area) {
+                    this.$set(area, 'visible', !area.visible);
+                },
+
+                // allAreasVisible: {
+                //     get() {
+                //         return this.areas.every(area => area.visible);
+                //     },
+                //     set(value) {
+                //         this.areas.forEach(area => {
+                //             this.$set(area, 'visible', value);
+                //         });
+                //     }
+                // },
+
+                // 獲取單元格的類名
+                getCellClasses(index) {
+                    const classes = [];
+                    
+                    // 如果是編輯模式且區域選擇模式開啟
+                    if (this.isEditMode && this.isAreaSelectMode) {
+                        classes.push('selectable');
+                        
+                        // 如果單元格被選中
+                        if (this.selectedCells.includes(index)) {
+                            classes.push('selected');
+                        }
+                    }
+                    
+                    // 如果單元格屬於某個區域
+                    const cellAreas = this.getCellAreas(index);
+                    if (cellAreas.length > 0) {
+                        classes.push('area-cell');
+                        // 如果有可見的區域
+                        if (cellAreas.some(area => area.visible)) {
+                            classes.push('visible');
+                        }
+                    }
+                    
+                    return classes;
+                },
+
+                // 將模板應用到編輯器
+                async applyTemplateToEditor(templateId) {
+                    this.isLoading.load = true;
+                    this.logToConsole(`正在應用模板 ID: ${templateId} 到編輯器...`);
+
+                    try {
+                        const response = await fetch(`/api/vue-game/map-templates/${templateId}`);
+                        if (!response.ok) {
+                            throw new Error('應用模板失敗');
+                        }
+
+                        const data = await response.json() || {};
+                        
+                        // 更新模板基本信息
+                        this.currentTemplateName = data.name || '未命名模板';
+                        this.gridCols = data.grid_cols || this.gridCols;
+                        this.gridRows = data.grid_rows || this.gridRows;
+                        
+                        // 更新區域信息，添加可見性屬性
+                        this.areas = (data.areas || []).map(area => ({
+                            id: area.id,
+                            name: area.name,
+                            color: area.color,
+                            showName: area.show_name,
+                            cells: area.cells || [],
+                            visible: true // 載入時預設為可見
+                        }));
+
+                        // 更新組件信息
+                        this.loadedComponents = (data.components || []).map(c => ({
+                            id: c.component_id,
+                            grid_x: c.grid_x,
+                            grid_y: c.grid_y,
+                            name: `CompID ${c.component_id}`
+                        }));
+
+                        this.showNotification(`模板 '${this.currentTemplateName}' 已載入編輯器。`);
+                    } catch (error) {
+                        this.showNotification('應用模板失敗: ' + error.message, false);
+                    } finally {
+                        this.isLoading.load = false;
+                    }
+                }
+            }
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // User status elements
+            const userStatusAvatar = document.getElementById('userStatusAvatar');
+            const userStatusName = document.getElementById('userStatusName');
+            const userStatus = document.getElementById('userStatus');
+
+            function updateUserStatus() {
+                // 檢查是否有已保存的登入信息
+                const savedUserId = localStorage.getItem('boxCurrentUserId');
+                if (!savedUserId) {
+                    userStatusAvatar.src = '/images/a01girlmove.gif';
+                    userStatusName.textContent = '未登入';
+                    userStatus.onclick = () => {
+                        window.location.href = `/member-login.html?redirect=${encodeURIComponent(window.location.href)}`;
+                    };
+                    return;
+                }
+                
+                const savedUserToken = localStorage.getItem(`boxUserToken_${savedUserId}`);
+                const savedUserAvatarUrl = localStorage.getItem('boxCurrentUserAvatar');
+                const savedUserName = localStorage.getItem('boxCurrentUsername');
+                const savedDisplayName = localStorage.getItem('boxCurrentDisplayName') || savedUserName;
+
+                // Update the user status indicator
+                if (savedUserToken && savedUserName) {
+                    userStatusAvatar.src = savedUserAvatarUrl || '/images/a01girlmove.gif';
+                    userStatusName.textContent = savedDisplayName;
+                    
+                    userStatus.onclick = () => {
+                        window.location.href = `/member-editor.html?userId=${savedUserId}`;
+                    };
+                } else {
+                    userStatusAvatar.src = '/images/a01girlmove.gif';
+                    userStatusName.textContent = '未登入';
+                    userStatus.onclick = () => {
+                        window.location.href = `/member-login.html?redirect=${encodeURIComponent(window.location.href)}`;
+                    };
+                }
+            }
+
+            // Initial check
+            updateUserStatus();
+
+            // Listen for storage changes to update status in real-time if needed
+            window.addEventListener('storage', (event) => {
+                if (event.key === 'boxCurrentUserId' || event.key.startsWith('boxUserToken_')) {
+                    updateUserStatus();
+                }
+            });
+        });
+    </script>
+</body>
+</html> 

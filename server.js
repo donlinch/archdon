@@ -40,6 +40,7 @@ const PORT = process.env.PORT || 3000;
 const unboxingAiRouter = express.Router();
 const boxRoutes = require('./boxRoutes');
 const youtubeLotteryRouter = express.Router();
+const initializeVueGameApi = require('./vue-game.js');
 
  
  
@@ -163,7 +164,9 @@ const cookGameApp = initializeCookGame(pool); // 调用函数获取 Express 路�
 const server = http.createServer(app);
 
 // 將廚房遊戲的 Express 路由掛載到 /cook-api
-app.use('/cook-api', cookGameApp); // <-- 使用从函式返回的 cookGameApp
+app.use('/cook-api', cookGameApp);
+
+initializeVueGameApi(app, pool);  
 
 // 創建兩個使用 noServer: true 的 WebSocket 服務器實例
 const wssSimpleWalker = new WebSocket.Server({ noServer: true });
