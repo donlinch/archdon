@@ -31,7 +31,7 @@ const app = express();
  if (process.env.NODE_ENV !== 'production') {
     console.log('[CORS] 開發模式下，啟用 CORS 並允許 http://localhost:5173 和 http://localhost:3000');
     app.use(cors({
-        origin: ['http://localhost:5173', 'http://localhost:3000'], // 允許來自 Vite 和本機伺服器的請求
+        origin: ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:9000'], // <-- 把 9000 加進來
         credentials: true // 允許傳遞 cookie 等憑證
     }));
 }
@@ -148,6 +148,23 @@ app.use(session({
 
 
  
+
+
+
+// --- API for Pet Game  QUASAR ---
+app.get('/api/pet/initial-state', (req, res) => {
+    console.log('[API] /api/pet/initial-state 被呼叫了！');
+    
+    const petData = {
+      name: '後端來的寶寶',
+      hunger: 0.7, // 70%
+      mood: 0.4,   // 40%
+    };
+    
+    res.json(petData); // 用 JSON 格式回傳資料
+  });
+
+
 
 
 
