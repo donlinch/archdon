@@ -67,11 +67,20 @@ function initializeVueGameApi(app, pool) {
             }
             const template = templateRes.rows[0];
 
-            // Fetch associated areas and components
+            // Fetch associated areas
             const areasRes = await pool.query('SELECT * FROM unit_map_areas WHERE template_id = $1', [id]);
+            const areas = areasRes.rows;
+
+            // For each area, fetch its cells
+            await Promise.all(areas.map(async (area) => {
+                const cellsRes = await pool.query('SELECT cell_index FROM unit_map_area_cells WHERE area_id = $1', [area.id]);
+                area.cells = cellsRes.rows.map(r => r.cell_index);
+            }));
+
+            // Fetch associated components
             const componentsRes = await pool.query('SELECT * FROM unit_map_components WHERE template_id = $1', [id]);
 
-            template.areas = areasRes.rows;
+            template.areas = areas;
             template.components = componentsRes.rows;
 
             res.json(template);
@@ -98,6 +107,15 @@ function initializeVueGameApi(app, pool) {
             if (templateRes.rows.length > 0) { // Template exists, so update it
                 templateId = templateRes.rows[0].id;
                 await client.query('UPDATE unit_map_templates SET grid_cols = $1, grid_rows = $2, updated_at = NOW() WHERE id = $3', [grid_cols, grid_rows, templateId]);
+                
+                // --- FIX START ---
+                // Manually delete cells from child table before deleting from the parent table
+                await client.query(`
+                    DELETE FROM unit_map_area_cells 
+                    WHERE area_id IN (SELECT id FROM unit_map_areas WHERE template_id = $1)
+                `, [templateId]);
+                // --- FIX END ---
+                
                 // Clear old associated data
                 await client.query('DELETE FROM unit_map_areas WHERE template_id = $1', [templateId]);
                 await client.query('DELETE FROM unit_map_components WHERE template_id = $1', [templateId]);
@@ -126,7 +144,7 @@ function initializeVueGameApi(app, pool) {
             // Insert new components
             if (components && components.length > 0) {
                 for (const comp of components) {
-                    await client.query('INSERT INTO unit_map_components (template_id, component_id, grid_x, grid_y) VALUES ($1, $2, $3, $4)', [templateId, comp.component_id, comp.grid_x, comp.grid_y]);
+                    await client.query('INSERT INTO unit_map_components (template_id, component_id, position_x, position_y) VALUES ($1, $2, $3, $4)', [templateId, comp.component_id, comp.grid_x, comp.grid_y]);
                 }
             }
 
@@ -134,7 +152,7 @@ function initializeVueGameApi(app, pool) {
             res.status(201).json({ message: 'Template saved successfully.', id: templateId, name });
         } catch (error) {
             await client.query('ROLLBACK');
-            console.error('[vue-game-api] Error saving map template:', error);
+            console.error('[vue-game-api] Error saving map template. Transaction rolled back.', error);
             res.status(500).json({ error: 'Failed to save template.' });
         } finally {
             client.release();

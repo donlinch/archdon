@@ -223,6 +223,8 @@ new Vue({
                 const result = await response.json();
                 if (result.success) {
                     console.log('已成功儲存所有元件到資料庫。');
+                    // 關鍵修復：儲存成功後，立即重新載入以獲取正確的 ID
+                    await this.loadFromDatabase(); 
                 } else {
                     throw new Error(result.error || '未知的儲存錯誤');
                 }
@@ -544,7 +546,7 @@ new Vue({
         },
         
         // ===== Component Creation and Management =====
-        saveComponent() {
+        async saveComponent() {
             if (!this.componentImageData) return;
             
             // 檢測檔案類型
@@ -576,13 +578,13 @@ new Vue({
             }
             
             this.savedComponents.push(newComponent);
-            this.saveToDatabase().then(success => {
-                if (success) {
-                    this.clearSelection();
-                    // 只清空子分類，保留元件名稱
-                    this.componentSubcategory = '';
-                }
-            });
+            
+            const success = await this.saveToDatabase();
+            if (success) {
+                this.clearSelection();
+                // 只清空子分類，保留元件名稱
+                this.componentSubcategory = '';
+            }
         },
         addFrameToAnimation() {
             if (!this.componentImageData) return;
@@ -608,7 +610,7 @@ new Vue({
             this.hasSelection = false; 
             this.componentImageData = null;
         },
-        saveAnimationComponent() {
+        async saveAnimationComponent() {
             if (this.multiSelectionFrames.length === 0) return;
 
             const firstFrame = this.multiSelectionFrames[0];
@@ -632,13 +634,13 @@ new Vue({
             };
             
             this.savedComponents.push(newAnimationComponent);
-            this.saveToDatabase().then(success => {
-                if (success) {
-                    this.clearAnimationFrames();
-                    // 只清空子分類，保留元件名稱
-                    this.componentSubcategory = '';
-                }
-            });
+
+            const success = await this.saveToDatabase();
+            if (success) {
+                this.clearAnimationFrames();
+                // 只清空子分類，保留元件名稱
+                this.componentSubcategory = '';
+            }
         },
         clearAnimationFrames() {
             this.multiSelectionFrames = [];

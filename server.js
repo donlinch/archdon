@@ -205,14 +205,26 @@ function broadcastToAll(message) {
 // =================================================================
 
 // 管理後台專用認證中介軟體 (Admin - Session-based)
-const isAdminAuthenticated = (req, res, next) => {  
-    if (req.session && req.session.isAdmin) {       
+ 
+
+const isAdminAuthenticated = (req, res, next) => {
+    // ★★★ 新增的白名單邏輯 ★★★
+    // 如果是開箱文相關的 API，直接跳過管理員檢查，交給後續的專用中介軟體處理
+    if (req.path.startsWith('/api/unboxing-ai') || req.path.startsWith('/api/generate-unboxing-post')) {
         return next();
     }
-    if (req.xhr || (req.headers.accept && req.headers.accept.includes('application/json'))) {
-        return res.status(401).json({ error: '未授權：請先登入。', loginUrl: '/admin-login.html' });
+
+    // --- 原有的管理員檢查邏輯 ---
+    if (req.session.isAdmin) {
+        next();
     } else {
-        req.session.returnTo = req.originalUrl;
+        if (req.xhr || (req.headers.accept && req.headers.accept.includes('json'))) {
+             // 如果是 API 請求 (AJAX/XHR)，返回 JSON 錯誤
+             console.warn(`[Admin Auth] Unauthorized API access attempt to: ${req.path}`);
+             return res.status(401).json({ error: '未授權：請先登入。', loginUrl: '/admin-login.html' });
+        }
+        // 如果是普通頁面請求，重新導向到管理員登入頁
+        console.warn(`[Admin Auth] Unauthorized page access attempt to: ${req.path}, redirecting.`);
         return res.redirect('/admin-login.html');
     }
 };
@@ -275,7 +287,106 @@ const authenticateBoxUser = (req, res, next) => {
 
 
 
- 
+const requireVipOrAdmin = async (req, res, next) => {
+    // 這個中介軟體必須在 authenticateBoxUser 之後執行
+    console.log(`[AuthZ] 開始檢查用戶 VIP/管理員權限...`);
+    
+    if (!req.boxUser || !req.boxUser.user_id) {
+        // 理論上這個情況會先被 authenticateBoxUser 攔截
+        console.error(`[AuthZ] 錯誤：找不到用戶會話資訊！`);
+        return res.status(401).json({ error: '未經授權：找不到用戶會話。' });
+    }
+
+    const userId = req.boxUser.user_id;
+    console.log(`[AuthZ] 檢查用戶 ID: ${userId} 的角色權限`);
+
+    try {
+        const query = `
+            SELECT r.role_id, r.role_name
+            FROM user_role_assignments ura
+            JOIN user_roles r ON ura.role_id = r.role_id
+            WHERE ura.user_id = $1 AND ura.is_active = TRUE;
+        `;
+        console.log(`[AuthZ] 執行資料庫查詢: ${query.replace(/\s+/g, ' ')}`);
+        console.log(`[AuthZ] 查詢參數: userId = ${userId}`);
+        
+        const { rows } = await pool.query(query, [userId]);
+        console.log(`[AuthZ] 查詢結果: 找到 ${rows.length} 個角色`);
+        
+        if (rows.length === 0) {
+            console.warn(`[AuthZ] 用戶 ${userId} 沒有任何有效角色`);
+            return res.status(403).json({ error: '禁止訪問：您沒有任何已分配的角色。' });
+        }
+
+        // 詳細記錄每個角色
+        rows.forEach((row, index) => {
+            console.log(`[AuthZ] 角色 #${index + 1}: role_id = ${row.role_id}, role_name = ${row.role_name || '未知'}`);
+        });
+
+        // 檢查使用者是否有任何一個角色的 role_id >= 2
+        const hasVipOrAdminRole = rows.some(row => parseInt(row.role_id, 10) >= 2);
+        console.log(`[AuthZ] 權限檢查結果: hasVipOrAdminRole = ${hasVipOrAdminRole}`);
+
+        // 找出最高角色等級，用於日誌
+        const highestRoleId = Math.max(...rows.map(row => parseInt(row.role_id, 10)));
+        console.log(`[AuthZ] 用戶 ${userId} 的最高角色等級: ${highestRoleId}`);
+
+        if (hasVipOrAdminRole) {
+            console.log(`[AuthZ] 用戶 ${userId} 通過權限檢查，允許訪問`);
+            return next(); // 使用者擁有權限，繼續執行
+        } else {
+            console.log(`[AuthZ] 用戶 ${userId} 權限不足，拒絕訪問。最高角色等級 ${highestRoleId} < 2`);
+            return res.status(403).json({ error: '禁止訪問：此功能需要 VIP 或更高等級的角色。' });
+        }
+    } catch (err) {
+        console.error(`[AuthZ] 檢查用戶 ${userId} 角色時發生錯誤:`, err);
+        console.error(`[AuthZ] 錯誤詳情:`, err.stack || '無堆疊追蹤');
+        return res.status(500).json({ error: '伺服器內部錯誤：授權檢查失敗。' });
+    }
+};
+
+
+const authenticateGeneralUser = (req, res, next) => {
+    console.log(`[General Auth] 開始處理請求: ${req.method} ${req.originalUrl}`);
+    const authHeader = req.headers.authorization;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.substring(7); // "Bearer " is 7 chars long
+        console.log(`[General Auth] 發現 Bearer token, 準備驗證...`);
+        jwt.verify(token, process.env.BOX_JWT_SECRET, (err, decoded) => {
+            if (err) {
+                // Token 無效或過期，導向到會員登入頁面
+                console.warn('[General Auth] Token verification failed, redirecting. Error:', err.message);
+                const redirectUrl = `/member-login.html?redirect=${encodeURIComponent(req.originalUrl)}`;
+                return res.redirect(redirectUrl);
+            }
+
+            // 檢查 token 內容是否有效
+            if (!decoded || (typeof decoded.user_id === 'undefined' && typeof decoded.userId === 'undefined')) {
+                console.error('[General Auth] Invalid token payload, redirecting.');
+                const redirectUrl = `/member-login.html?redirect=${encodeURIComponent(req.originalUrl)}`;
+                return res.redirect(redirectUrl);
+            }
+
+            // 統一 user ID 格式
+            if (decoded.userId && !decoded.user_id) {
+                decoded.user_id = decoded.userId;
+            }
+
+            // 將使用者資訊附加到請求中，供後續的中介軟體 (如 requireVipOrAdmin) 使用
+            req.boxUser = decoded;
+            console.log(`[General Auth] 成功驗證用戶 ID: ${decoded.user_id}, 用戶名: ${decoded.username || '未知'}`);
+            console.log(`[General Auth] Token 包含的完整用戶資訊:`, JSON.stringify(decoded, null, 2));
+            next();
+        });
+    } else {
+        // 如果請求中沒有 token，將使用者導向到會員登入頁面
+        console.warn('[General Auth] No token provided, redirecting to member login.');
+        const redirectUrl = `/member-login.html?redirect=${encodeURIComponent(req.originalUrl)}`;
+        res.redirect(redirectUrl);
+    }
+};
+
 
 
 
@@ -486,8 +597,8 @@ const sessionProtectedAdminPages = [
     '/file-admin.html',
     '/admin-nav-manager.html',
     '/store/report/report-admin.html',
-    '/unboxing.html',
-    '/unboxing-ai-admin.html',
+   
+   
     '/guestbook-admin.html',
     '/advertisement.html',
     '/product-views.html',
@@ -6304,10 +6415,7 @@ unboxingAiRouter.delete('/schemes/:id', async (req, res) => {
 });
 
 // 將新的路由掛載到主應用程式
-app.use('/api/unboxing-ai', unboxingAiRouter); // 你可以選擇是否要加上 isAdminAuthenticated 來保護這些管理 API
-// 如果需要保護，可以是： app.use('/api/unboxing-ai', basicAuthMiddleware, unboxingAiRouter);
-
-// --- END OF Unboxing AI Prompt Schemes API ---
+app.use('/api/ai-assistant', authenticateGeneralUser, requireVipOrAdmin, unboxingAiRouter);// --- END OF Unboxing AI Prompt Schemes API ---
 
 
 
@@ -6318,10 +6426,7 @@ app.use('/api/unboxing-ai', unboxingAiRouter); // 你可以選擇是否要加上
 
 
 // --- 新的 API 端點：產生開箱文或識別圖片內容 ---
-app.post('/api/generate-unboxing-post', unboxingUpload.array('images', 3), async (req, res) => {
-    // 'images' 是前端 input file 元素的 name 屬性，3 是最大檔案數
-
-
+app.post('/api/generate-ai-post', authenticateGeneralUser, requireVipOrAdmin, unboxingUpload.array('images', 3), async (req, res) => {
     // Removed: console.log(`[DEBUG /api/generate-unboxing-post] Received request. Intent: ${req.body.scheme_intent_key}, Files: ${req.files ? req.files.length : 0}`);
     
     if (!visionClient || !geminiModel) {

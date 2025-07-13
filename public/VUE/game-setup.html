@@ -1,3 +1,5 @@
+/* 此為遊戲頁面設計 樣板 */
+
 <!DOCTYPE html>
 <!DOCTYPE html>
 <html lang="zh-TW">
@@ -1259,9 +1261,6 @@
                                         @mousemove="handleCellHover(index)"
                                         @mouseup="endCellSelection"
                                     >
-                                        <img v-if="floorTileComponent && floorTileComponent.imageData && isFloorTile(index)" 
-                                             :src="floorTileComponent.imageData" 
-                                             style="position: absolute; width: 100%; height: 100%; object-fit: cover;">
                                         <template>
                                             <div
                                                 v-if="isEditMode && getCellAreas(index).some(a => a.visible)"
@@ -1275,17 +1274,10 @@
                                             ></div>
                                         </template>
                                     </div>
-                                    <!-- Rendered Map Components -->
-                                    <div v-for="comp in positionedComponents" :key="'map-comp-' + comp.id" :style="getComponentStyle(comp.grid_x, comp.grid_y)">
-                                        <img v-if="comp.imageData" :src="comp.imageData" :alt="comp.name" style="width: 100%; height: 100%; object-fit: contain;">
-                                    </div>
-                                    <div class="player" :style="playerStyle">
-                                        <img v-if="playerComponent && playerComponent.imageData" 
-                                             :src="playerComponent.imageData" 
-                                             :alt="playerComponent.name" 
-                                             style="width: 100%; height: 100%; object-fit: contain; z-index: 1;">
-                                        <div class="speech-bubble" :style="bubbleStyle">{{ bubbleText }}</div>
-                                    </div>
+                                </div>
+                                <div class="player" :style="playerStyle">
+                                    {{ playerEmoji }}
+                                    <div class="speech-bubble" :style="bubbleStyle">{{ bubbleText }}</div>
                                 </div>
                             </div>
                         </div>
@@ -1441,18 +1433,6 @@
                             </div>
                         </div>
 
-                        <!-- Rendered Layer Info -->
-                        <div class="dev-info-box">
-                            <h4>渲染中圖層</h4>
-                            <div v-if="renderedLayerInfo.length > 0" class="data-list" style="max-height: 150px;">
-                                <div v-for="(item, index) in renderedLayerInfo" :key="index" class="dev-info-row">
-                                    <span class="dev-info-label" :title="item.name">{{ item.name }}</span>
-                                    <span class="dev-info-value">z: {{ item.layer }}</span>
-                                </div>
-                            </div>
-                            <div v-else class="empty-state" style="padding: 5px;">無渲染物件</div>
-                        </div>
-
                         <!-- 地圖管理 (合併後) -->
                         <div class="template-manager">
                             <div class="template-manager-header">
@@ -1489,6 +1469,9 @@
                         <!-- 已載入資料顯示 -->
                         <div v-if="loadedMapData.name" class="data-display-section">
                             <h4>已載入: {{ loadedMapData.name }}</h4>
+                            <div v-if="selectedTemplateId" class="data-list-item" style="padding: 4px; font-size: 12px; font-family: monospace; color: #333;">
+                                unit_map_templates id = {{ selectedTemplateId }}
+                            </div>
                             
                             <!-- 顯示區域資料 -->
                             <div class="data-display-section">
@@ -1605,7 +1588,7 @@
                         x: 5, // 网格坐标x
                         y: 7  // 网格坐标y
                     },
-                    playerComponent: null,
+                    playerEmoji: '🧑‍🍳',
                     
                     // 对话气泡
                     bubbleText: '',
@@ -1634,9 +1617,6 @@
                     moveSpeed: 5, // 每秒移动的格子数
                     pressedKeys: new Set(), // 新增：追蹤按下的按鍵
                     
-                    // 地板元件
-                    floorTileComponent: null,
-
                     // 開發區數據
                     hoverCell: {
                         row: 0,
@@ -1729,9 +1709,7 @@
                     
                     return {
                         left: `${x}px`,
-                        top: `${y}px`,
-                        width: `${this.cellSize}px`,
-                        height: `${this.cellSize}px`
+                        top: `${y}px`
                     };
                 },
                 playerBoundaryStyle() {
@@ -1781,42 +1759,6 @@
                 },
                 allAreasVisible() {
                     return this.areas.length > 0 && this.areas.every(area => area.visible);
-                },
-                positionedComponents() {
-                    if (!this.loadedMapData || !this.loadedMapData.components) return [];
-                    return this.loadedMapData.components.map(mapComp => {
-                        const fullComp = this.loadedComponents.find(lc => lc.id === mapComp.component_id);
-                        if (!fullComp) return null;
-
-                        // 新增：檢查元件是否在網格邊界內
-                        const isInsideGrid = mapComp.grid_x >= 0 && mapComp.grid_x < this.gridCols &&
-                                           mapComp.grid_y >= 0 && mapComp.grid_y < this.gridRows;
-                        
-                        if (!isInsideGrid) return null; // 如果不在網格內，則不渲染
-
-                        return {
-                            ...fullComp, // Full component data (name, imageData, etc.)
-                            grid_x: mapComp.grid_x,
-                            grid_y: mapComp.grid_y,
-                        };
-                    }).filter(c => c !== null);
-                },
-                renderedLayerInfo() {
-                    const layers = [];
-                    
-                    if (this.floorTileComponent) {
-                        layers.push({ name: `${this.floorTileComponent.name}`, layer: '0 (背景)' });
-                    }
-
-                    this.positionedComponents.forEach(comp => {
-                        layers.push({ name: comp.name, layer: '2 (物件)' });
-                    });
-
-                    if (this.playerComponent) {
-                        layers.push({ name: `${this.playerComponent.name} (玩家)`, layer: '10 (玩家)' });
-                    }
-                    
-                    return layers;
                 }
             },
             mounted() {
@@ -1852,15 +1794,6 @@
 
                 // 載入資料庫模板列表
                 this.loadTemplatesFromDatabase();
-                
-                // 載入地板元件
-                this.loadFloorTileComponent();
-
-                // 載入玩家元件
-                this.loadPlayerComponent();
-
-                // 載入預設地圖 (ID=1)
-                this.applyTemplateToEditor(1);
                 
                 // Start animation loop for component library
                 this.mainAnimationLoop();
@@ -2665,7 +2598,6 @@
                     this.selectedTemplateId = null;
                     this.areas = [];
                     this.loadedComponents = [];
-                    this.loadedMapData = { name: '', areas: [], components: [] };
                     this.showNotification('已建立新場景。');
                 },
 
@@ -2917,6 +2849,11 @@
 
                         const effectiveData = data || {};
                         
+                        // 更新已載入地圖的預覽資料
+                        this.loadedMapData.name = effectiveData.name || '未命名模板';
+                        this.loadedMapData.areas = (effectiveData.areas || []).map(area => ({ ...area, cells: area.cells || [] }));
+                        this.loadedMapData.components = effectiveData.components || [];
+
                         // 更新模板基本信息
                         this.currentTemplateName = effectiveData.name || '未命名模板';
                         this.gridCols = effectiveData.grid_cols || this.gridCols;
@@ -2932,9 +2869,6 @@
                             visible: true // 載入時預設為可見
                         }));
                         console.log('--- [DEBUG] Processed areas data set in component state: ---', JSON.parse(JSON.stringify(this.areas)));
-
-                        // 將地圖的元件資訊存起來以供渲染
-                        this.loadedMapData.components = effectiveData.components || [];
 
                         // 清空現有元件庫
                         this.loadedComponents = [];
@@ -3098,114 +3032,6 @@
 
                     this.showNotification(`區域 "${area.name}" 已刪除。`);
                     this.saveTemplateToDatabase(); // 自動保存刪除操作
-                },
-
-                // 新增：載入地板元件
-                async loadFloorTileComponent() {
-                    this.logToConsole('正在載入地板元件...');
-                    try {
-                        const response = await fetch('/api/units/all');
-                        if (!response.ok) throw new Error('無法獲取元件列表');
-                        
-                        const allUnitsData = await response.json();
-                        const componentData = (allUnitsData.savedComponents || []).find(c => c.id === 1730);
-
-                        if (componentData) {
-                            if (componentData.type === 'static' && componentData.spritesheetUrl) {
-                                const url = this.getSmartImageUrl(componentData.spritesheetUrl);
-                                const { x, y, w, h } = componentData.sourceRect;
-                                const spritesheet = new Image();
-                                spritesheet.crossOrigin = 'Anonymous';
-                                spritesheet.src = url;
-                                spritesheet.onload = () => {
-                                    const canvas = document.createElement('canvas');
-                                    canvas.width = w;
-                                    canvas.height = h;
-                                    const ctx = canvas.getContext('2d');
-                                    ctx.drawImage(spritesheet, x, y, w, h, 0, 0, w, h);
-                                    this.$set(componentData, 'imageData', canvas.toDataURL());
-                                    this.floorTileComponent = componentData;
-                                    this.logToConsole(`地板元件 '${componentData.name}' 已成功載入。`);
-                                };
-                                spritesheet.onerror = () => this.logToConsole('地板元件圖片載入失敗。', false);
-                            } else {
-                                this.logToConsole('地板元件資料不完整或類型不符。', false);
-                            }
-                        } else {
-                            this.logToConsole('在資料庫中找不到 ID=1730 的地板元件。', false);
-                        }
-                    } catch (error) {
-                        this.logToConsole(`載入地板元件時發生錯誤: ${error.message}`, false);
-                    }
-                },
-
-                // 檢查是否為地板單元格
-                isFloorTile(index) {
-                    const row = Math.floor(index / this.gridCols) + 1; // 1-based row
-                    const col = (index % this.gridCols) + 1; // 1-based col
-                    return row >= 1 && row <= 19 && col >= 1 && col <= 9;
-                },
-
-                // 新增：載入玩家元件
-                async loadPlayerComponent() {
-                    this.logToConsole('正在載入玩家元件...');
-                    try {
-                        const response = await fetch('/api/units/all');
-                        if (!response.ok) throw new Error('無法獲取元件列表');
-                        
-                        const allUnitsData = await response.json();
-                        const componentData = (allUnitsData.savedComponents || []).find(c => c.id === 1703);
-
-                        if (componentData) {
-                            if (componentData.type === 'static' && componentData.spritesheetUrl) {
-                                const url = this.getSmartImageUrl(componentData.spritesheetUrl);
-                                const { x, y, w, h } = componentData.sourceRect;
-                                const spritesheet = new Image();
-                                spritesheet.crossOrigin = 'Anonymous';
-                                spritesheet.src = url;
-                                spritesheet.onload = () => {
-                                    const canvas = document.createElement('canvas');
-                                    canvas.width = w;
-                                    canvas.height = h;
-                                    const ctx = canvas.getContext('2d');
-                                    ctx.drawImage(spritesheet, x, y, w, h, 0, 0, w, h);
-                                    this.$set(componentData, 'imageData', canvas.toDataURL());
-                                    this.playerComponent = componentData;
-                                    this.logToConsole(`玩家元件 '${componentData.name}' 已成功載入。`);
-                                };
-                                spritesheet.onerror = () => {
-                                    this.logToConsole('玩家元件圖片載入失敗。', false);
-                                    this.showNotification('玩家元件(ID:1703)圖片載入失敗', false);
-                                };
-                            } else {
-                                this.logToConsole('玩家元件資料不完整或類型不符。', false);
-                                this.showNotification('玩家元件(ID:1703)資料不完整', false);
-                            }
-                        } else {
-                            this.logToConsole('在資料庫中找不到 ID=1703 的玩家元件。', false);
-                            this.showNotification('找不到玩家元件(ID:1703)', false);
-                        }
-                    } catch (error) {
-                        this.logToConsole(`載入玩家元件時發生錯誤: ${error.message}`, false);
-                        this.showNotification(`載入玩家元件出錯: ${error.message}`, false);
-                    }
-                },
-
-                getComponentStyle(gridX, gridY) {
-                    const cellSize = this.cellSize;
-                    const gap = 1;
-                    const x = (gridX * (cellSize + gap)) + (cellSize / 2);
-                    const y = (gridY * (cellSize + gap)) + (cellSize / 2);
-
-                    return {
-                        position: 'absolute',
-                        left: `${x}px`,
-                        top: `${y}px`,
-                        width: `${this.cellSize}px`,
-                        height: `${this.cellSize}px`,
-                        transform: 'translate(-50%, -50%)',
-                        zIndex: 2 // Above floor, below player
-                    };
                 },
             }
         });

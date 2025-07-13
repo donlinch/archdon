@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
@@ -159,6 +159,81 @@
             font-weight: 600;
         }
         
+        /* --- User Status Indicator --- */
+        .user-status {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 1001;
+            display: flex;
+            align-items: center;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 5px 10px;
+            border-radius: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .user-status:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .user-status img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid #FF9800;
+            object-fit: cover;
+        }
+
+        .user-status .username {
+            margin-left: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+            max-width: 120px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        /* --- Notification --- */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: var(--border-radius);
+            color: var(--white);
+            z-index: 2000;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            transform: translateX(120%);
+            transition: transform 0.5s ease-in-out;
+            font-weight: 600;
+        }
+
+        .notification.visible {
+            transform: translateX(0);
+        }
+
+        .notification.error {
+            background-color: #e74c3c; /* Red */
+        }
+
+        .notification.success {
+            background-color: #2ecc71; /* Green */
+        }
+        
+        @media (max-width: 767px) {
+            .user-status {
+                padding: 3px;
+            }
+            
+            .user-status .username {
+                display: none;
+            }
+        }
 
 
         /* AI 方案 TAB 樣式 */
@@ -242,6 +317,12 @@
 </head>
 
 <body> 
+    <div id="notification" class="notification"></div>
+    <div id="userStatus" class="user-status">
+        <img id="userStatusAvatar" src="/images/a01girlmove.gif" alt="User">
+        <span id="userStatusName" class="username">未登入</span>
+        <span id="vipBadge" style="margin-left: 5px; background-color: #FF9800; color: white; padding: 2px 5px; border-radius: 10px; font-size: 0.8em; font-weight: bold; display: none;">VIP專用</span>
+    </div>
     <div class="container">
         <h1>AI 內容助手</h1>
         <form id="contentForm">
@@ -329,6 +410,48 @@
 
    // 頁面載入時初始化
         document.addEventListener('DOMContentLoaded', async () => {
+            // --- User Status Logic ---
+            const userStatusAvatar = document.getElementById('userStatusAvatar');
+            const userStatusName = document.getElementById('userStatusName');
+            const userStatus = document.getElementById('userStatus');
+            const vipBadge = document.getElementById('vipBadge');
+
+            const savedUserId = localStorage.getItem('boxCurrentUserId');
+            const savedUserToken = localStorage.getItem(`boxUserToken_${savedUserId}`);
+            const savedUserAvatarUrl = localStorage.getItem('boxCurrentUserAvatar');
+            const savedUserName = localStorage.getItem('boxCurrentUsername');
+            const savedDisplayName = localStorage.getItem('boxCurrentDisplayName') || savedUserName;
+            const savedUserRoleId = localStorage.getItem('boxCurrentUserRoleId');
+
+            if (savedUserId && savedUserToken && savedUserName) {
+                userStatusAvatar.src = savedUserAvatarUrl || '/images/a01girlmove.gif';
+                userStatusName.textContent = savedDisplayName;
+                
+                // 顯示 VIP 標記並根據角色 ID 顯示不同信息
+                vipBadge.style.display = 'inline';
+                if (savedUserRoleId && parseInt(savedUserRoleId) >= 2) {
+                    vipBadge.textContent = 'VIP會員';
+                    vipBadge.style.backgroundColor = '#FF9800'; // 橙色
+                } else {
+                    vipBadge.textContent = '需VIP權限';
+                    vipBadge.style.backgroundColor = '#F44336'; // 紅色
+                }
+                
+                userStatus.addEventListener('click', () => {
+                    window.location.href = `/member-editor.html?userId=${savedUserId}`;
+                });
+            } else {
+                userStatusAvatar.src = '/images/a01girlmove.gif';
+                userStatusName.textContent = '未登入';
+                vipBadge.style.display = 'inline';
+                vipBadge.textContent = 'VIP專用';
+                vipBadge.style.backgroundColor = '#F44336'; // 紅色
+                userStatus.addEventListener('click', () => {
+                    window.location.href = `/member-login.html?redirect=${encodeURIComponent(window.location.href)}`;
+                });
+            }
+            // --- End of User Status Logic ---
+            
             await loadAISchemes();
             generateContentButton.addEventListener('click', handleGeneration);
         });
@@ -336,8 +459,25 @@
         async function loadAISchemes() {
             try {
                 aiSchemeTabsContainer.innerHTML = '<p>正在載入 AI 方案...</p>';
-                const response = await fetch('/api/unboxing-ai/schemes');
+                
+                // 獲取保存的用戶 token
+                const savedUserId = localStorage.getItem('boxCurrentUserId');
+                const savedUserToken = localStorage.getItem(`boxUserToken_${savedUserId}`);
+                
+                const response = await fetch('/api/ai-assistant/schemes', {
+                    headers: {
+                        'Authorization': `Bearer ${savedUserToken}`
+                    }
+                });
+                
                 if (!response.ok) {
+                    if (response.status === 403) {
+                        showNotification('權限不足，VIP會員才能使用此功能');
+                        aiSchemeTabsContainer.innerHTML = `<p style="color: red;">權限不足，即將返回首頁...</p>`;
+                        generateContentButton.disabled = true;
+                        setTimeout(() => { window.location.href = '/index.html'; }, 3000);
+                        return;
+                    }
                     throw new Error(`無法獲取 AI 方案: ${response.statusText}`);
                 }
                 const schemes = await response.json();
@@ -428,17 +568,26 @@
 
 
             try {
-                // --- 移除了管理員密碼提示和 formData.append('adminPassword', adminPassword); ---
-
+                // 獲取保存的用戶 token
+                const savedUserId = localStorage.getItem('boxCurrentUserId');
+                const savedUserToken = localStorage.getItem(`boxUserToken_${savedUserId}`);
+                
                 // 發送請求
-                const response = await fetch('/api/generate-unboxing-post', {
+                const response = await fetch('/api/generate-ai-post', {
                     method: 'POST',
                     body: formData,
-                    // 如果後端需要通過 header 驗證，可以在這裡添加，但目前是移除客戶端密碼處理
-                    // headers: { 'X-Admin-Password': somePasswordVariableIfAvailable }
+                    headers: {
+                        'Authorization': `Bearer ${savedUserToken}`
+                    }
                 });
 
                 if (!response.ok) {
+                    if (response.status === 403) {
+                        showNotification('權限不足，VIP會員才能使用此功能');
+                        resultDiv.textContent = '權限不足，即將返回首頁...';
+                        setTimeout(() => { window.location.href = '/index.html'; }, 3000);
+                        return; // return to let finally block run for UI reset
+                    }
                     let errorMessage = `伺服器錯誤: ${response.status}`;
                     try {
                         const errorData = await response.json();
@@ -463,6 +612,21 @@
         }
 
         
+        
+        function showNotification(message, type = 'error') {
+            const notification = document.getElementById('notification');
+            if (!notification) return;
+
+            notification.textContent = message;
+            notification.className = 'notification'; // Reset classes
+            notification.classList.add(type);
+            notification.classList.add('visible');
+
+            // Hide after 4 seconds
+            setTimeout(() => {
+                notification.classList.remove('visible');
+            }, 4000);
+        }
         
         function resetUI() {
              generateContentButton.disabled = false;
