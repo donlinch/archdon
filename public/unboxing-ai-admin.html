@@ -69,9 +69,62 @@
         #form-message.error { color: var(--danger-color); background-color: #f8d7da; border: 1px solid #f5c6cb;}
         .back-link { display: inline-block; margin-bottom: 20px; color: var(--primary-color); text-decoration: none; font-weight: bold;}
         .back-link:hover { text-decoration: underline; }
+
+        /* --- User Status Indicator (Copied from unboxing.html) --- */
+        .user-status {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 1001;
+            display: flex;
+            align-items: center;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 5px 10px;
+            border-radius: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .user-status:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .user-status img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid #FF9800;
+            object-fit: cover;
+        }
+
+        .user-status .username {
+            margin-left: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+            max-width: 120px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+         @media (max-width: 767px) {
+            .user-status {
+                padding: 3px;
+            }
+            
+            .user-status .username {
+                display: none;
+            }
+        }
+
     </style>
 </head>
 <body>
+    <div id="userStatus" class="user-status">
+        <img id="userStatusAvatar" src="/images/a01girlmove.gif" alt="User">
+        <span id="userStatusName" class="username">未登入</span>
+    </div>
     <div class="container">
         <a href="/unboxing.html" class="back-link">&larr; 返回 AI 內容助手</a>
         <h1>AI 提示詞方案管理</h1>
@@ -146,7 +199,7 @@
         const schemeDescriptionInput = document.getElementById('scheme-description');
         const schemeIsActiveInput = document.getElementById('scheme-is-active');
 
-        const API_BASE_URL = '/api/unboxing-ai/schemes';
+        const API_BASE_URL = '/api/ai-assistant/schemes';
 
         // 顯示表單訊息
         function showFormMessage(message, isError = false) {
@@ -164,11 +217,23 @@
             loadingSchemesDiv.style.display = 'block';
             schemesTableBody.innerHTML = '';
             try {
+                const savedUserId = localStorage.getItem('boxCurrentUserId');
+                const savedUserToken = localStorage.getItem(`boxUserToken_${savedUserId}`);
+                
                 // 注意：管理頁面可能需要獲取所有方案，包括非 active 的
                 // 如果後端 GET /schemes 只返回 active=true 的，你可能需要一個新的後端端點或參數
                 // 這裡假設 GET /schemes 返回所有方案，或者你需要調整後端
-                const response = await fetch(API_BASE_URL); // 假設這個API會返回所有方案，包括非active的
-                if (!response.ok) throw new Error(`無法獲取方案: ${response.statusText}`);
+                const response = await fetch(API_BASE_URL, {
+                     headers: {
+                        'Authorization': `Bearer ${savedUserToken}`
+                    }
+                }); // 假設這個API會返回所有方案，包括非active的
+                if (!response.ok) {
+                    if (response.status === 401 || response.status === 403) {
+                        throw new Error('權限不足或未登入。');
+                    }
+                    throw new Error(`無法獲取方案: ${response.statusText}`);
+                }
                 const schemes = await response.json();
 
                 if (schemes.length === 0) {
@@ -190,7 +255,25 @@
                 }
             } catch (error) {
                 console.error('載入方案失敗:', error);
-                schemesTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:red;">載入方案失敗: ${error.message}</td></tr>`;
+
+                // Check if the error is likely due to an expired token (receiving HTML instead of JSON)
+                if (error instanceof SyntaxError && error.message.toLowerCase().includes('json')) {
+                    const savedUserId = localStorage.getItem('boxCurrentUserId');
+                    localStorage.removeItem(`boxUserToken_${savedUserId}`);
+                    localStorage.removeItem('boxCurrentUserId');
+                    localStorage.removeItem('boxCurrentUserAvatar');
+                    localStorage.removeItem('boxCurrentUsername');
+                    localStorage.removeItem('boxCurrentDisplayName');
+                    
+                    const userStatusAvatar = document.getElementById('userStatusAvatar');
+                    const userStatusName = document.getElementById('userStatusName');
+                    if(userStatusAvatar) userStatusAvatar.src = '/images/a01girlmove.gif';
+                    if(userStatusName) userStatusName.textContent = '登入已過期';
+
+                    schemesTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:red;">您的登入已過期，請點擊左上角頭像重新登入。</td></tr>`;
+                } else {
+                    schemesTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:red;">載入方案失敗: ${error.message}</td></tr>`;
+                }
             } finally {
                 loadingSchemesDiv.style.display = 'none';
             }
@@ -234,7 +317,13 @@
                 // 你可能需要一個 GET /api/unboxing-ai/schemes/:id 的端點，如果列表API不返回完整模板
                 // 暫時假設列表API返回了足夠的數據，或者我們從已載入的數據中查找
                 // 更穩健的做法是單獨請求該方案的詳情
-                const response = await fetch(`${API_BASE_URL}`); // 重新獲取列表來找
+                const savedUserId = localStorage.getItem('boxCurrentUserId');
+                const savedUserToken = localStorage.getItem(`boxUserToken_${savedUserId}`);
+                const response = await fetch(`${API_BASE_URL}`, { // 重新獲取列表來找
+                    headers: {
+                        'Authorization': `Bearer ${savedUserToken}`
+                    }
+                }); 
                 if (!response.ok) throw new Error('無法獲取方案詳情');
                 const schemes = await response.json();
                 const scheme = schemes.find(s => s.id === id);
@@ -289,6 +378,8 @@
             const url = id ? `${API_BASE_URL}/${id}` : API_BASE_URL;
 
             try {
+                 const savedUserId = localStorage.getItem('boxCurrentUserId');
+                const savedUserToken = localStorage.getItem(`boxUserToken_${savedUserId}`);
                 // --- 移除了管理員密碼提示 ---
                 // const adminPassword = prompt(`請輸入管理員密碼以${id ? '更新' : '新增'}方案：`);
                 // if (!adminPassword) {
@@ -298,7 +389,8 @@
                 const response = await fetch(url, {
                     method: method,
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${savedUserToken}`
                         // --- 移除了 'X-Admin-Password': adminPassword ---
                         // 如果後端需要通過 header 驗證，且你有其他方式獲取密碼，可以在此處添加
                     },
@@ -336,6 +428,8 @@
             }
 
             try {
+                const savedUserId = localStorage.getItem('boxCurrentUserId');
+                const savedUserToken = localStorage.getItem(`boxUserToken_${savedUserId}`);
                 // --- 移除了管理員密碼提示 ---
                 // const adminPassword = prompt("請輸入管理員密碼以刪除方案：");
                 // if (!adminPassword) {
@@ -345,6 +439,7 @@
                 const response = await fetch(`${API_BASE_URL}/${id}`, {
                     method: 'DELETE',
                     headers: {
+                        'Authorization': `Bearer ${savedUserToken}`
                         // --- 移除了 'X-Admin-Password': adminPassword ---
                         // 如果後端需要通過 header 驗證，且你有其他方式獲取密碼，可以在此處添加
                     }
@@ -375,7 +470,39 @@
         };
 
         // 初始載入
-        document.addEventListener('DOMContentLoaded', loadSchemes);
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- User Status Logic (Copied from unboxing.html) ---
+            const userStatusAvatar = document.getElementById('userStatusAvatar');
+            const userStatusName = document.getElementById('userStatusName');
+            const userStatus = document.getElementById('userStatus');
+
+            const savedUserId = localStorage.getItem('boxCurrentUserId');
+            const savedUserToken = localStorage.getItem(`boxUserToken_${savedUserId}`);
+            const savedUserAvatarUrl = localStorage.getItem('boxCurrentUserAvatar');
+            const savedUserName = localStorage.getItem('boxCurrentUsername');
+            const savedDisplayName = localStorage.getItem('boxCurrentDisplayName') || savedUserName;
+
+            if (savedUserId && savedUserToken && savedUserName) {
+                userStatusAvatar.src = savedUserAvatarUrl || '/images/a01girlmove.gif';
+                userStatusName.textContent = savedDisplayName;
+                userStatus.addEventListener('click', () => {
+                    window.location.href = `/member-editor.html?userId=${savedUserId}`;
+                });
+                // Since user is detected, proceed to load schemes
+                loadSchemes();
+            } else {
+                userStatusAvatar.src = '/images/a01girlmove.gif';
+                userStatusName.textContent = '未登入';
+                userStatus.addEventListener('click', () => {
+                    window.location.href = `/member-login.html?redirect=${encodeURIComponent(window.location.href)}`;
+                });
+                // Display error and stop if not logged in
+                loadingSchemesDiv.innerHTML = '<p style="color:red;">權限不足或未登入，無法載入管理頁面。請點擊左上角頭像登入。</p>';
+                loadingSchemesDiv.style.display = 'block';
+                schemesTableBody.innerHTML = '';
+            }
+            // --- End of User Status Logic ---
+        });
     </script>
 </body>
 </html>

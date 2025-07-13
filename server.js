@@ -6415,7 +6415,7 @@ unboxingAiRouter.delete('/schemes/:id', async (req, res) => {
 });
 
 // 將新的路由掛載到主應用程式
-app.use('/api/ai-assistant', authenticateGeneralUser, requireVipOrAdmin, unboxingAiRouter);// --- END OF Unboxing AI Prompt Schemes API ---
+app.use('/api/ai-assistant', authenticateGeneralUser, unboxingAiRouter);// --- END OF Unboxing AI Prompt Schemes API ---
 
 
 
@@ -6426,7 +6426,7 @@ app.use('/api/ai-assistant', authenticateGeneralUser, requireVipOrAdmin, unboxin
 
 
 // --- 新的 API 端點：產生開箱文或識別圖片內容 ---
-app.post('/api/generate-ai-post', authenticateGeneralUser, requireVipOrAdmin, unboxingUpload.array('images', 3), async (req, res) => {
+app.post('/api/generate-ai-post', authenticateGeneralUser, unboxingUpload.array('images', 3), async (req, res) => {
     // Removed: console.log(`[DEBUG /api/generate-unboxing-post] Received request. Intent: ${req.body.scheme_intent_key}, Files: ${req.files ? req.files.length : 0}`);
     
     if (!visionClient || !geminiModel) {

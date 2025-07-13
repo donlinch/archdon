@@ -321,7 +321,6 @@
     <div id="userStatus" class="user-status">
         <img id="userStatusAvatar" src="/images/a01girlmove.gif" alt="User">
         <span id="userStatusName" class="username">未登入</span>
-        <span id="vipBadge" style="margin-left: 5px; background-color: #FF9800; color: white; padding: 2px 5px; border-radius: 10px; font-size: 0.8em; font-weight: bold; display: none;">VIP專用</span>
     </div>
     <div class="container">
         <h1>AI 內容助手</h1>
@@ -414,38 +413,22 @@
             const userStatusAvatar = document.getElementById('userStatusAvatar');
             const userStatusName = document.getElementById('userStatusName');
             const userStatus = document.getElementById('userStatus');
-            const vipBadge = document.getElementById('vipBadge');
 
             const savedUserId = localStorage.getItem('boxCurrentUserId');
             const savedUserToken = localStorage.getItem(`boxUserToken_${savedUserId}`);
             const savedUserAvatarUrl = localStorage.getItem('boxCurrentUserAvatar');
             const savedUserName = localStorage.getItem('boxCurrentUsername');
             const savedDisplayName = localStorage.getItem('boxCurrentDisplayName') || savedUserName;
-            const savedUserRoleId = localStorage.getItem('boxCurrentUserRoleId');
 
             if (savedUserId && savedUserToken && savedUserName) {
                 userStatusAvatar.src = savedUserAvatarUrl || '/images/a01girlmove.gif';
                 userStatusName.textContent = savedDisplayName;
-                
-                // 顯示 VIP 標記並根據角色 ID 顯示不同信息
-                vipBadge.style.display = 'inline';
-                if (savedUserRoleId && parseInt(savedUserRoleId) >= 2) {
-                    vipBadge.textContent = 'VIP會員';
-                    vipBadge.style.backgroundColor = '#FF9800'; // 橙色
-                } else {
-                    vipBadge.textContent = '需VIP權限';
-                    vipBadge.style.backgroundColor = '#F44336'; // 紅色
-                }
-                
                 userStatus.addEventListener('click', () => {
                     window.location.href = `/member-editor.html?userId=${savedUserId}`;
                 });
             } else {
                 userStatusAvatar.src = '/images/a01girlmove.gif';
                 userStatusName.textContent = '未登入';
-                vipBadge.style.display = 'inline';
-                vipBadge.textContent = 'VIP專用';
-                vipBadge.style.backgroundColor = '#F44336'; // 紅色
                 userStatus.addEventListener('click', () => {
                     window.location.href = `/member-login.html?redirect=${encodeURIComponent(window.location.href)}`;
                 });
@@ -493,7 +476,21 @@
                 }
             } catch (error) {
                 console.error("初始化 AI 方案失敗:", error);
-                aiSchemeTabsContainer.innerHTML = `<p style="color: red;">載入 AI 方案失敗: ${error.message}</p>`;
+                if (error instanceof SyntaxError && error.message.toLowerCase().includes('json')) {
+                    const savedUserId = localStorage.getItem('boxCurrentUserId');
+                    localStorage.removeItem(`boxUserToken_${savedUserId}`);
+                    localStorage.removeItem('boxCurrentUserId');
+                    localStorage.removeItem('boxCurrentUserAvatar');
+                    localStorage.removeItem('boxCurrentUsername');
+                    localStorage.removeItem('boxCurrentDisplayName');
+                    
+                    document.getElementById('userStatusAvatar').src = '/images/a01girlmove.gif';
+                    document.getElementById('userStatusName').textContent = '登入已過期';
+
+                    aiSchemeTabsContainer.innerHTML = `<p style="color: red;">您的登入已過期，請點擊左上角頭像重新登入。</p>`;
+                } else {
+                    aiSchemeTabsContainer.innerHTML = `<p style="color: red;">載入 AI 方案失敗: ${error.message}</p>`;
+                }
                 generateContentButton.disabled = true; // 出錯時也禁用
             }
         }
@@ -605,7 +602,21 @@
 
             } catch (error) {
                 console.error('內容產生失敗:', error);
-                resultDiv.textContent = `發生錯誤: ${error.message}`;
+                 if (error instanceof SyntaxError && error.message.toLowerCase().includes('json')) {
+                     const savedUserId = localStorage.getItem('boxCurrentUserId');
+                    localStorage.removeItem(`boxUserToken_${savedUserId}`);
+                    localStorage.removeItem('boxCurrentUserId');
+                    localStorage.removeItem('boxCurrentUserAvatar');
+                    localStorage.removeItem('boxCurrentUsername');
+                    localStorage.removeItem('boxCurrentDisplayName');
+                    
+                    document.getElementById('userStatusAvatar').src = '/images/a01girlmove.gif';
+                    document.getElementById('userStatusName').textContent = '登入已過期';
+
+                    resultDiv.textContent = '您的登入已過期，請點擊左上角頭像重新登入後再試一次。';
+                } else {
+                    resultDiv.textContent = `發生錯誤: ${error.message}`;
+                }
             } finally {
                 resetUI();
             }
