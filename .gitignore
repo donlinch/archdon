@@ -1,5 +1,6 @@
 # 依賴目錄
 /node_modules
+/pet-game
 
 # 環境變數
 .env
