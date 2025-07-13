@@ -489,7 +489,7 @@
 
                     aiSchemeTabsContainer.innerHTML = `<p style="color: red;">您的登入已過期，請點擊左上角頭像重新登入。</p>`;
                 } else {
-                    aiSchemeTabsContainer.innerHTML = `<p style="color: red;">載入 AI 方案失敗: ${error.message}</p>`;
+                aiSchemeTabsContainer.innerHTML = `<p style="color: red;">載入 AI 方案失敗: ${error.message}</p>`;
                 }
                 generateContentButton.disabled = true; // 出錯時也禁用
             }
@@ -615,7 +615,7 @@
 
                     resultDiv.textContent = '您的登入已過期，請點擊左上角頭像重新登入後再試一次。';
                 } else {
-                    resultDiv.textContent = `發生錯誤: ${error.message}`;
+                resultDiv.textContent = `發生錯誤: ${error.message}`;
                 }
             } finally {
                 resetUI();

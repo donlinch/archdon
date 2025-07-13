@@ -516,53 +516,66 @@
             const urlParams = new URLSearchParams(window.location.search);
             const redirect = urlParams.get('redirect') || referrer;
 
-            // 檢查是否有已保存的登入信息
+            const handleInvalidLogin = () => {
+                const savedUserId = localStorage.getItem('boxCurrentUserId');
+                if (savedUserId) {
+                    localStorage.removeItem(`boxUserToken_${savedUserId}`);
+                }
+                localStorage.removeItem('boxCurrentUserId');
+                localStorage.removeItem('boxCurrentUserAvatar');
+                localStorage.removeItem('boxCurrentUsername');
+                localStorage.removeItem('boxCurrentDisplayName');
+
+                quickLoginContainer.style.display = 'none';
+                loginFormContainer.style.display = 'block';
+                userStatusAvatar.src = '/images/a01girlmove.gif';
+                userStatusName.textContent = '未登入';
+                
+                const loginFormErrorMessage = document.getElementById('login-form-error-message');
+                if (loginFormErrorMessage) {
+                    loginFormErrorMessage.textContent = '您的登入已過期，請重新登入。';
+                    loginFormErrorMessage.style.display = 'block';
+                }
+            };
+
+            const verifyTokenAndProceed = async () => {
             const savedUserId = localStorage.getItem('boxCurrentUserId');
             const savedUserToken = localStorage.getItem(`boxUserToken_${savedUserId}`);
             const savedUserAvatarUrl = localStorage.getItem('boxCurrentUserAvatar');
             const savedUserName = localStorage.getItem('boxCurrentUsername');
             const savedDisplayName = localStorage.getItem('boxCurrentDisplayName') || savedUserName;
 
-            // Update the user status indicator
-            if (savedUserId && savedUserToken && savedUserName) {
+                if (!savedUserId || !savedUserToken || !savedUserName) {
+                    userStatusAvatar.src = '/images/a01girlmove.gif';
+                    userStatusName.textContent = '未登入';
+                    return;
+                }
+
                 userStatusAvatar.src = savedUserAvatarUrl || '/images/a01girlmove.gif';
                 userStatusName.textContent = savedDisplayName;
                 
-                // If user is already logged in, redirect back
-                window.location.href = redirect;
-            } else {
-                userStatusAvatar.src = '/images/a01girlmove.gif';
-                userStatusName.textContent = '未登入';
-            }
+                try {
+                    const response = await fetch('/api/ai-assistant/schemes', {
+                        headers: { 'Authorization': `Bearer ${savedUserToken}` }
+                    });
 
-            // 如果有保存的登入信息，顯示快速登入區域
-            if (savedUserId && savedUserToken && savedUserName) {
-                savedUserAvatar.src = savedUserAvatarUrl || '/images/a01girlmove.gif';
-                savedUsername.textContent = savedDisplayName;
-                quickLoginContainer.style.display = 'block';
-                loginFormContainer.style.display = 'none';
-            }
-
-            // 快速登入按鈕點擊事件
-            if (quickLoginBtn) {
-                quickLoginBtn.addEventListener('click', () => {
-                    if (savedUserId && savedUserToken) {
-                        // 登入成功後返回上一頁
+                    if (response.ok) {
                         window.location.href = redirect;
                     } else {
-                        // 登入信息不完整，顯示登入表單
-                        quickLoginContainer.style.display = 'none';
-                        loginFormContainer.style.display = 'block';
-                        alert('登入信息已失效，請重新登入');
+                        handleInvalidLogin();
                     }
-                });
+                } catch (error) {
+                    console.error('Token verification request failed:', error);
+                    handleInvalidLogin();
             }
+            };
+
+            verifyTokenAndProceed();
 
             // 切換帳號按鈕點擊事件
             if (switchUserBtn) {
                 switchUserBtn.addEventListener('click', () => {
-                    quickLoginContainer.style.display = 'none';
-                    loginFormContainer.style.display = 'block';
+                    handleInvalidLogin(); // Clear old login and show form
                 });
             }
 

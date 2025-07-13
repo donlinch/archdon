@@ -272,7 +272,7 @@
 
                     schemesTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:red;">您的登入已過期，請點擊左上角頭像重新登入。</td></tr>`;
                 } else {
-                    schemesTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:red;">載入方案失敗: ${error.message}</td></tr>`;
+                schemesTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:red;">載入方案失敗: ${error.message}</td></tr>`;
                 }
             } finally {
                 loadingSchemesDiv.style.display = 'none';
