@@ -1983,21 +1983,20 @@
         // +++++ 結束新增的輔助函數 +++++
 
         async function initializePage() {
-            const params = new URLSearchParams(window.location.search);
-            const urlUserId = params.get('userId');
+            // New logic based on unboxing.html for better security and convenience
+            const savedUserId = localStorage.getItem('boxCurrentUserId');
 
-            if (!urlUserId) {
-                alert('URL 中缺少 userId 參數，請從正確的入口進入此頁面。');
+            if (!savedUserId) {
+                alert('找不到用戶登入資訊，將引導您至登入頁面。');
                 window.location.href = 'box.html';
                 return;
             }
 
-            // 不比較 urlUserId 和 storedUserId 是否相同，只檢查 token 是否存在
-            currentUserId = urlUserId;
+            currentUserId = savedUserId;
             authToken = localStorage.getItem(`boxUserToken_${currentUserId}`);
             
             if (!authToken) {
-                alert('未找到有效的登入憑證，將跳轉回登入頁面。');
+                alert('您的登入憑證已過期或無效，請重新登入。');
                 window.location.href = 'box.html';
                 return;
             }
@@ -2480,7 +2479,7 @@
                         gridCard.dataset.boxId = box.box_id;
                         // **重要**: 確保 onclick 中的 currentSelectedWarehouseId 是正確的（當前選中倉庫的ID）
                         gridCard.innerHTML = `
-                            <img src="${box.cover_image_url || '/images/box_item.png'}" alt="${escapeHtml(box.box_name)}" class="box-cover-preview" onclick="window.location.href = 'box-open.html?userId=${currentUserId}&warehouseId=${currentSelectedWarehouseId}&boxId=${box.box_id}'" onerror="this.src='/images/box_item.png'">
+                            <img src="${box.cover_image_url || '/images/box_item.png'}" alt="${escapeHtml(box.box_name)}" class="box-cover-preview" onclick="window.location.href = 'box-open.html?warehouseId=${currentSelectedWarehouseId}&boxId=${box.box_id}'" onerror="this.src='/images/box_item.png'">
                             <div class="box-number">編號: ${escapeHtml(box.box_number)}</div>
                             <div class="box-name">${escapeHtml(box.box_name)}</div>
                             <div class="item-count">物品: ${box.item_count || 0} 件</div>
@@ -3090,7 +3089,7 @@
                     const { warehouseId, boxId } = e.target.dataset;
 
                     if (warehouseId && boxId) {
-                        const targetUrl = `box-open.html?userId=${encodeURIComponent(currentUserId)}&warehouseId=${encodeURIComponent(warehouseId)}&boxId=${encodeURIComponent(boxId)}`;
+                        const targetUrl = `box-open.html?warehouseId=${encodeURIComponent(warehouseId)}&boxId=${encodeURIComponent(boxId)}`;
                         window.location.href = targetUrl;
                     } else {
                         console.error("查看詳情按鈕缺少 warehouseId 或 boxId:", e.target.dataset);

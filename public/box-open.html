@@ -457,32 +457,35 @@
         let authToken = null;
         let currentWarehouseId = null;
         let itemFormAiKeywordsDiv;
+        let currentUserId = null; // 新增：用於儲存當前用戶的 ID
 
         document.addEventListener('DOMContentLoaded', async () => {
-            // 從 URL 獲取必要參數
+            // 從 URL 只獲取內容相關參數
             const urlParams = new URLSearchParams(window.location.search);
             currentWarehouseId = urlParams.get('warehouseId');
             currentBoxId = urlParams.get('boxId');
-            const userId = urlParams.get('userId');
             
-            // 從 localStorage 只獲取 token
-            authToken = localStorage.getItem(`boxUserToken_${userId}`);
+            // 新的驗證邏輯：從 localStorage 獲取用戶資訊
+            currentUserId = localStorage.getItem('boxCurrentUserId');
 
-            if (!userId) {
-                alert('缺少用戶ID，將返回登入頁面');
+            if (!currentUserId) {
+                alert('找不到用戶登入資訊，將引導您至登入頁面。');
                 window.location.href = 'box.html';
                 return;
             }
+            
+            // 從 localStorage 獲取 token
+            authToken = localStorage.getItem(`boxUserToken_${currentUserId}`);
 
             if (!currentWarehouseId) {
                 alert('缺少倉庫ID，將返回我的倉庫頁面');
-                window.location.href = `box-my.html?userId=${userId}`;
+                window.location.href = 'box-my.html';
                 return;
             }
 
             if (!currentBoxId) {
                 alert('缺少紙箱ID，將返回我的倉庫頁面');
-                window.location.href = `box-my.html?userId=${userId}`;
+                window.location.href = 'box-my.html';
                 return;
             }
 
@@ -498,7 +501,7 @@
             } catch (error) {
                 console.error('載入紙箱內容失敗:', error);
                 alert(`無法載入紙箱內容：${error.message}`);
-                window.location.href = `box-my.html?userId=${userId}`;
+                window.location.href = 'box-my.html';
             }
         });
 
@@ -888,13 +891,11 @@
 
             // 返回按鈕
             document.getElementById('backButton').addEventListener('click', () => {
-                const urlParams = new URLSearchParams(window.location.search);
-                const userId = urlParams.get('userId');
                 if (currentWarehouseId) {
                     localStorage.setItem('lastOpenedWarehouseId', currentWarehouseId);
                     localStorage.setItem('autoOpenBoxManagement', 'true');
                 }
-                window.location.href = `box-my.html?userId=${userId}`;
+                window.location.href = `box-my.html`;
             });
 
             // 圖片上傳預覽
