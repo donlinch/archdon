@@ -164,6 +164,20 @@ app.get('/api/pet/initial-state', (req, res) => {
     res.json(petData); // 用 JSON 格式回傳資料
   });
 
+  app.get('/api/pet/states', async (req, res) => {
+    console.log('[API] /api/pet/states 被呼叫了！');
+    try {
+      // 從 'cook_cooking_states' 資料表中查詢所有狀態
+      const { rows } = await pool.query('SELECT id, state_name, state_symbol FROM cook_cooking_states ORDER BY id');
+      
+      // 把資料庫回傳的資料直接以 JSON 格式送給前端
+      res.json(rows);
+      
+    } catch (error) {
+      console.error('[API Error] 獲取寵物狀態列表失敗:', error);
+      res.status(500).json({ error: '無法從資料庫獲取狀態列表' });
+    }
+  });
 
 
 
