@@ -406,9 +406,7 @@ const authenticateGeneralUser = (req, res, next) => {
 
             // 將使用者資訊附加到請求中，供後續的中介軟體 (如 requireVipOrAdmin) 使用
             req.boxUser = decoded;
-            console.log(`[General Auth] 成功驗證用戶 ID: ${decoded.user_id}, 用戶名: ${decoded.username || '未知'}`);
-            console.log(`[General Auth] Token 包含的完整用戶資訊:`, JSON.stringify(decoded, null, 2));
-            next();
+             next();
         });
     } else {
         // 如果請求中沒有 token，將使用者導向到會員登入頁面
