@@ -224,7 +224,24 @@ module.exports = function(dependencies) {
             return res.status(400).json({ error: '請提供用戶名和密碼。' });
         }
         try {
-            const result = await pool.query('SELECT user_id, username, password_hash, user_profile_image_url, display_name FROM BOX_Users WHERE LOWER(username) = LOWER($1)', [username]);
+            // 1. 修改查詢語句，使用 LEFT JOIN 連接 user_role_assignments 和 user_roles
+            const query = `
+                SELECT 
+                    u.user_id, 
+                    u.username, 
+                    u.password_hash, 
+                    u.user_profile_image_url, 
+                    u.display_name,
+                    r.role_name
+                FROM BOX_Users u
+                LEFT JOIN user_role_assignments ura ON u.user_id = ura.user_id AND ura.is_active = TRUE
+                LEFT JOIN user_roles r ON ura.role_id = r.role_id
+                WHERE LOWER(u.username) = LOWER($1)
+                ORDER BY r.role_id DESC -- 如果一個使用者有多個角色，優先選擇等級最高的
+                LIMIT 1; -- 確保只返回一條記錄
+            `;
+            const result = await pool.query(query, [username]);
+
             if (result.rows.length === 0) {
                 return res.status(401).json({ error: '用戶名或密碼錯誤。' });
             }
@@ -244,7 +261,13 @@ module.exports = function(dependencies) {
 
             res.json({
                 success: true, message: '登入成功', token: token,
-                user: { userId: user.user_id, username: user.username, profileImageUrl: user.user_profile_image_url, displayName: user.display_name }
+                user: { 
+                    userId: user.user_id, 
+                    username: user.username, 
+                    profileImageUrl: user.user_profile_image_url, 
+                    displayName: user.display_name,
+                    roleName: user.role_name // 2. 新增 roleName 到返回的 user 物件中
+                }
             });
         } catch (err) {
             console.error('[API POST /box/users/login] Error:', err);
