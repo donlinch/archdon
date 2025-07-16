@@ -42,6 +42,78 @@ function initializeVueGameApi(app, pool) {
     const authMiddleware = authenticateGameUser(pool);
 
     /**
+     * --- Food Running Game Routes ---
+     */
+
+    // GET /food-running/templates - Fetch all map template names and IDs
+    router.get('/food-running/templates', async (req, res) => {
+        try {
+            const result = await pool.query('SELECT id, name FROM food_running_map_templates ORDER BY name ASC');
+            res.json(result.rows);
+        } catch (error) {
+            console.error('[vue-game-api] Error fetching food running templates:', error);
+            res.status(500).json({ error: 'Failed to fetch map templates.' });
+        }
+    });
+
+    // GET /food-running/templates/:id - Fetch a single, detailed map template
+    router.get('/food-running/templates/:id', async (req, res) => {
+        const { id } = req.params;
+        try {
+            const result = await pool.query('SELECT id, name, obstacles, background_image_url FROM food_running_map_templates WHERE id = $1', [id]);
+            if (result.rows.length === 0) {
+                return res.status(404).json({ error: 'Template not found.' });
+            }
+            res.json(result.rows[0]);
+        } catch (error) {
+            console.error(`[vue-game-api] Error fetching food running template ${id}:`, error);
+            res.status(500).json({ error: 'Failed to fetch template details.' });
+        }
+    });
+
+    // POST /food-running/templates - Create or Update a map template (Protected)
+    router.post('/food-running/templates', authMiddleware, async (req, res) => {
+        const { name, obstacles, background_image_url } = req.body;
+        if (!name || !obstacles) {
+            return res.status(400).json({ error: 'Template name and obstacles data are required.' });
+        }
+
+        try {
+            // Using ON CONFLICT to handle both insert and update (upsert)
+            const query = `
+                INSERT INTO food_running_map_templates (name, obstacles, background_image_url)
+                VALUES ($1, $2, $3)
+                ON CONFLICT (name)
+                DO UPDATE SET
+                    obstacles = EXCLUDED.obstacles,
+                    background_image_url = EXCLUDED.background_image_url,
+                    updated_at = NOW()
+                RETURNING id, name;
+            `;
+            const result = await pool.query(query, [name, JSON.stringify(obstacles), background_image_url]);
+            res.status(201).json({ message: 'Template saved successfully.', template: result.rows[0] });
+        } catch (error) {
+            console.error('[vue-game-api] Error saving food running template:', error);
+            res.status(500).json({ error: 'Failed to save template.' });
+        }
+    });
+
+    // DELETE /food-running/templates/:id - Delete a map template (Protected)
+    router.delete('/food-running/templates/:id', authMiddleware, async (req, res) => {
+        const { id } = req.params;
+        try {
+            const result = await pool.query('DELETE FROM food_running_map_templates WHERE id = $1', [id]);
+            if (result.rowCount === 0) {
+                return res.status(404).json({ error: 'Template not found.' });
+            }
+            res.status(200).json({ message: 'Template deleted successfully.' });
+        } catch (error) {
+            console.error(`[vue-game-api] Error deleting food running template ${id}:`, error);
+            res.status(500).json({ error: 'Failed to delete template.' });
+        }
+    });
+
+    /**
      * --- Map Template Routes ---
      * Manages loading and saving of map layouts.
      */

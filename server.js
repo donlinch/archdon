@@ -452,7 +452,26 @@ app.get('/api/admin/password-reset-requests/pending-count', isAdminAuthenticated
     }
 });
 
+// DELETE /api/admin/password-reset-requests/:id - 刪除一個指定的密碼重設請求
+app.delete('/api/admin/password-reset-requests/:id', isAdminAuthenticated, async (req, res) => {
+    const { id } = req.params;
 
+    try {
+        const result = await pool.query('DELETE FROM password_reset_requests WHERE id = $1', [id]);
+        
+        if (result.rowCount === 0) {
+            // 如果沒有行被刪除，可能是因為該 ID 不存在
+            return res.status(404).json({ error: '找不到指定的請求' });
+        }
+        
+        // 成功刪除
+        res.status(204).send(); // 204 No Content 是成功的刪除操作的標準回應
+
+    } catch (err) {
+        console.error(`[API DELETE /api/admin/password-reset-requests/${id}] Error:`, err);
+        res.status(500).json({ error: '刪除請求失敗' });
+    }
+});
 
 // Example of a protected admin route
 app.get('/admin/dashboard', isAdminAuthenticated, (req, res) => { // ★★★ 使用新的中介軟體
