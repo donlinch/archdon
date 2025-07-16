@@ -165,7 +165,7 @@ function connectWebSocket() {
     
     // 確定WebSocket URL (支援HTTPS)
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws?clientType=controller&roomId=${roomId}&playerName=${encodeURIComponent(playerName)}`;    
+    const wsUrl = `${protocol}//${window.location.host}/simple-walker?clientType=controller&roomId=${roomId}&playerName=${encodeURIComponent(playerName)}`;    
     // ★★★ 在這裡加上這行來創建 WebSocket 物件 ★★★
     ws = new WebSocket(wsUrl);
     

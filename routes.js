@@ -35,7 +35,7 @@ router.get('/api/news', async (req, res) => {
 router.use(['/api/admin', '/api/analytics'], isAdminAuthenticated);
 
 // --- 3. 受保護的管理員 API ---
-router.use('/api/admin', adminRouter);
+// router.use('/api/admin', adminRouter);
 router.use('/api/admin/walk_map', walkMapAdminRouter);
 
 // 分析相關
