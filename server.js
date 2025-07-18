@@ -22,9 +22,22 @@ const dbClient = require('./dbclient');
 const createReportRateLimiter = require('./report-ip-limiter');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
 
 const adminRouter = express.Router();
 const app = express();
+
+// --- 留言板 API 速率限制 ---
+const guestbookLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 分鐘
+    max: 100, // 每個 IP 在 15 分鐘內最多 100 個請求
+    standardHeaders: true, // 返回 RateLimit-* 標頭
+    legacyHeaders: false, // 禁用 X-RateLimit-* 標頭
+    message: '來自此 IP 的請求過於頻繁，請稍後再試',
+    keyGenerator: (req, res) => {
+        return req.ip; // 使用 IP 作為識別
+    }
+});
 // --- CORS (Cross-Origin Resource Sharing) Setup ---
 const cors = require('cors');
 
@@ -6072,7 +6085,7 @@ app.post('/api/games/:id/play', async (req, res) => {
 
 
 // GET /api/guestbook - 獲取留言列表 (分頁, 最新活動排序)
-app.get('/api/guestbook', async (req, res) => {
+// app.get('/api/guestbook', async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
@@ -6171,7 +6184,7 @@ app.get('/api/guestbook/message/:id', async (req, res) => {
     } catch (err) { console.error(`[API GET /guestbook/message/${id}] Error:`, err); res.status(500).json({ error: '無法獲取留言詳情' }); } finally { client.release(); }
 });
 // POST /api/guestbook - 新增主留言 (已修正)
-app.post('/api/guestbook', async (req, res) => {
+app.post('/api/guestbook', guestbookLimiter, async (req, res) => {
     const { author_name, content, edit_password, image_url } = req.body;
 
     // 1. 驗證最重要的 'content' 欄位
@@ -6209,7 +6222,7 @@ app.post('/api/guestbook', async (req, res) => {
     }
 });
 // POST /api/guestbook/replies - 新增公開回覆
-app.post('/api/guestbook/replies', async (req, res) => {
+app.post('/api/guestbook/replies', guestbookLimiter, async (req, res) => {
     const { message_id, parent_reply_id, author_name, content, edit_password, image_url } = req.body; // 新增 image_url
     const messageIdInt = parseInt(message_id, 10);
     const parentIdInt = parent_reply_id ? parseInt(parent_reply_id, 10) : null;
