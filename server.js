@@ -1882,8 +1882,13 @@ function handleChatError(ws, error) {
             ws.on('error', (error) => handleChatError(ws, error));
 
         } catch (error) {
-            console.error(`[WS Chat Room] 連接設定過程中發生錯誤: ${error.message}`);
-            ws.close(4000, "連接設定失敗");
+            if (error.name === 'TokenExpiredError') {
+                console.warn(`[WS Chat Room] 連接被拒絕: Token 已過期。`);
+                ws.close(4001, 'Token expired'); // 使用自訂代碼
+            } else {
+                console.error(`[WS Chat Room] 連接設定過程中發生 JWT 驗證錯誤: ${error.message}`);
+                ws.close(1008, "認證失敗");
+            }
         }
     });
 
@@ -6165,29 +6170,44 @@ app.get('/api/guestbook/message/:id', async (req, res) => {
         });
     } catch (err) { console.error(`[API GET /guestbook/message/${id}] Error:`, err); res.status(500).json({ error: '無法獲取留言詳情' }); } finally { client.release(); }
 });
-
-// POST /api/guestbook - 新增主留言
+// POST /api/guestbook - 新增主留言 (已修正)
 app.post('/api/guestbook', async (req, res) => {
-    const { author_name, content, edit_password, image_url } = req.body; // 新增 image_url
+    const { author_name, content, edit_password, image_url } = req.body;
 
-    let authorNameToSave = '匿名';
-    if (author_name && author_name.trim() !== '') { authorNameToSave = author_name.trim().substring(0, 100); }
-    if (!content || content.trim() === '') return res.status(400).json({ error: '留言內容不能為空' });
+    // 1. 驗證最重要的 'content' 欄位
+    //    先檢查 content 是否為字串，再進行 trim()，避免 TypeError 崩潰
+    if (typeof content !== 'string' || content.trim() === '') {
+        return res.status(400).json({ error: '留言內容不能為空或格式不正確' });
+    }
     const trimmedContent = content.trim();
-    const editPasswordToSave = edit_password && edit_password.trim() !== '' ? edit_password.trim() : null; // 處理 edit_password
-    const imageUrlToSave = image_url && image_url.trim() !== '' ? image_url.trim() : null; // 處理 image_url
+
+    // 2. 使用更安全的方式處理可選欄位
+    //    同樣先檢查型別，再處理，避免潛在的 crash
+    const authorNameToSave = (typeof author_name === 'string' && author_name.trim() !== '')
+        ? author_name.trim().substring(0, 100)
+        : '匿名';
+
+    const editPasswordToSave = (typeof edit_password === 'string' && edit_password.trim() !== '')
+        ? edit_password.trim()
+        : null;
+
+    const imageUrlToSave = (typeof image_url === 'string' && image_url.trim() !== '')
+        ? image_url.trim()
+        : null;
 
     try {
         const result = await pool.query(
             `INSERT INTO guestbook_messages (author_name, content, edit_password, image_url, last_activity_at, is_visible, like_count, view_count)
              VALUES ($1, $2, $3, $4, NOW(), TRUE, 0, 0)
              RETURNING id, author_name, substring(content for 80) || (CASE WHEN length(content) > 80 THEN '...' ELSE '' END) AS content_preview, reply_count, last_activity_at, like_count, view_count, (edit_password IS NOT NULL) AS has_edit_password, image_url`,
-            [authorNameToSave, trimmedContent, editPasswordToSave, imageUrlToSave] // 新增 imageUrlToSave
+            [authorNameToSave, trimmedContent, editPasswordToSave, imageUrlToSave]
         );
         res.status(201).json(result.rows[0]);
-    } catch (err) { console.error('[API POST /guestbook] Error:', err); res.status(500).json({ error: '無法新增留言' }); }
+    } catch (err) {
+        console.error('[API POST /guestbook] Error:', err);
+        res.status(500).json({ error: '無法新增留言，伺服器內部錯誤' });
+    }
 });
-
 // POST /api/guestbook/replies - 新增公開回覆
 app.post('/api/guestbook/replies', async (req, res) => {
     const { message_id, parent_reply_id, author_name, content, edit_password, image_url } = req.body; // 新增 image_url
@@ -8464,13 +8484,14 @@ adminRouter.get('/news-categories/:id', async (req, res) => {
         console.error(`[受保護 API 錯誤] 獲取管理分類 ID ${id} 時出錯:`, err.stack || err);
         res.status(500).json({ error: '伺服器內部錯誤，無法獲取分類詳情' });
     }
+
+
+
+
+
+
+
 });
-
-
-
-
-
-
 
 // --- 新增: 管理員發表新留言 API (已更新處理 image_url) ---
 adminRouter.post('/guestbook/messages', async (req, res) => {
@@ -8600,7 +8621,7 @@ adminRouter.get('/guestbook/message/:id', async (req, res) => {
 
 adminRouter.post('/guestbook/replies', async (req, res) => {
     // 從請求 body 中獲取 image_url
-    const { message_id, parent_reply_id, content, admin_identity_id, image_url } = req.body;
+    const { message_id, parent_reply_id, content, admin_identity_id, image_url } = req.body; 
     const messageIdInt = parseInt(message_id, 10);
     const identityIdInt = parseInt(admin_identity_id, 10);
     const parentIdInt = parent_reply_id ? parseInt(parent_reply_id, 10) : null;
@@ -8614,14 +8635,14 @@ adminRouter.post('/guestbook/replies', async (req, res) => {
         return res.status(400).json({ error: '回覆內容不能為空' });
     }
 
-    const client = await pool.connect();
-    try {
+    const client = await pool.connect(); 
+    try { 
         await client.query('BEGIN');
         // 獲取管理員身份的名稱，用於 author_name
         const identityCheck = await client.query('SELECT name FROM admin_identities WHERE id = $1', [identityIdInt]);
-        if (identityCheck.rowCount === 0) {
-            await client.query('ROLLBACK');
-            return res.status(400).json({ error: '無效的管理員身份' });
+        if (identityCheck.rowCount === 0) { 
+            await client.query('ROLLBACK'); 
+            return res.status(400).json({ error: '無效的管理員身份' }); 
         }
         const adminAuthorName = identityCheck.rows[0].name; // 使用管理員身份的名稱作為作者
 
@@ -8632,30 +8653,30 @@ adminRouter.post('/guestbook/replies', async (req, res) => {
              RETURNING *, (SELECT name FROM admin_identities WHERE id = $5) AS admin_identity_name, image_url`, // 確保返回 image_url
             [messageIdInt, parentIdInt, adminAuthorName, content.trim(), identityIdInt, imageUrlToSave] // 傳入 adminAuthorName 和 imageUrlToSave
         );
-
+        
         // 更新主留言的 reply_count 和 last_activity_at
         await client.query(
             'UPDATE guestbook_messages SET last_activity_at = NOW(), reply_count = reply_count + 1 WHERE id = $1',
             [messageIdInt]
         );
 
-        await client.query('COMMIT');
+        await client.query('COMMIT'); 
         res.status(201).json(replyResult.rows[0]); // 返回新增的回覆
-    } catch (err) {
-        await client.query('ROLLBACK');
-        console.error('[API POST /admin/guestbook/replies] Error:', err);
+    } catch (err) { 
+        await client.query('ROLLBACK'); 
+        console.error('[API POST /admin/guestbook/replies] Error:', err); 
         // 更細緻的錯誤判斷
         if (err.code === '23503') { // 外鍵約束失敗
             if (err.constraint && (err.constraint.includes('message_id_fkey') || err.constraint.includes('parent_reply_id_fkey'))) {
-                return res.status(404).json({ error: '找不到要回覆的留言或父回覆。' });
+                 return res.status(404).json({ error: '找不到要回覆的留言或父回覆。' });
             }
             if (err.constraint && err.constraint.includes('admin_identity_id_fkey')) {
-                return res.status(400).json({ error: '指定的管理員身份無效。' });
+                return res.status(400).json({ error: '指定的管理員身份無效。'});
             }
         }
-        res.status(500).json({ error: '無法新增管理員回覆' });
-    } finally {
-        client.release();
+        res.status(500).json({ error: '無法新增管理員回覆' }); 
+    } finally { 
+        client.release(); 
     }
 });
 
@@ -8664,26 +8685,22 @@ adminRouter.post('/guestbook/replies', async (req, res) => {
 
 adminRouter.put('/guestbook/messages/:id/visibility', async (req, res) => {
     const { id } = req.params; const messageId = parseInt(id, 10); const { is_visible } = req.body; if (isNaN(messageId) || typeof is_visible !== 'boolean') return res.status(400).json({ error: '無效的請求參數' });
-    try {
-        const result = await pool.query('UPDATE guestbook_messages SET is_visible = $1 WHERE id = $2 RETURNING id, is_visible', [is_visible, messageId]); if (result.rowCount === 0) return res.status(404).json({ error: '找不到留言' }); res.json(result.rows[0]);
+    try { const result = await pool.query('UPDATE guestbook_messages SET is_visible = $1 WHERE id = $2 RETURNING id, is_visible', [is_visible, messageId]); if (result.rowCount === 0) return res.status(404).json({ error: '找不到留言' }); res.json(result.rows[0]);
     } catch (err) { console.error(`[API PUT /admin/guestbook/messages/${id}/visibility] Error:`, err); res.status(500).json({ error: '無法更新留言狀態' }); }
 });
 adminRouter.put('/guestbook/replies/:id/visibility', async (req, res) => {
     const { id } = req.params; const replyId = parseInt(id, 10); const { is_visible } = req.body; if (isNaN(replyId) || typeof is_visible !== 'boolean') return res.status(400).json({ error: '無效的請求參數' });
-    try {
-        const result = await pool.query('UPDATE guestbook_replies SET is_visible = $1 WHERE id = $2 RETURNING id, is_visible', [is_visible, replyId]); if (result.rowCount === 0) return res.status(404).json({ error: '找不到回覆' }); res.json(result.rows[0]);
+    try { const result = await pool.query('UPDATE guestbook_replies SET is_visible = $1 WHERE id = $2 RETURNING id, is_visible', [is_visible, replyId]); if (result.rowCount === 0) return res.status(404).json({ error: '找不到回覆' }); res.json(result.rows[0]);
     } catch (err) { console.error(`[API PUT /admin/guestbook/replies/${id}/visibility] Error:`, err); res.status(500).json({ error: '無法更新回覆狀態' }); }
 });
 adminRouter.delete('/guestbook/messages/:id', async (req, res) => {
     const { id } = req.params; const messageId = parseInt(id, 10); if (isNaN(messageId)) return res.status(400).json({ error: '無效的 ID' });
-    try {
-        const result = await pool.query('DELETE FROM guestbook_messages WHERE id = $1', [messageId]); if (result.rowCount === 0) return res.status(404).json({ error: '找不到要刪除的留言' }); res.status(204).send();
+    try { const result = await pool.query('DELETE FROM guestbook_messages WHERE id = $1', [messageId]); if (result.rowCount === 0) return res.status(404).json({ error: '找不到要刪除的留言' }); res.status(204).send();
     } catch (err) { console.error(`[API DELETE /admin/guestbook/messages/${id}] Error:`, err); res.status(500).json({ error: '無法刪除留言' }); }
 });
 adminRouter.delete('/guestbook/replies/:id', async (req, res) => {
     const { id } = req.params; const replyId = parseInt(id, 10); if (isNaN(replyId)) return res.status(400).json({ error: '無效的 ID' });
-    const client = await pool.connect(); try {
-        await client.query('BEGIN'); const deleteResult = await client.query('DELETE FROM guestbook_replies WHERE id = $1', [replyId]); if (deleteResult.rowCount === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: '找不到要刪除的回覆' }); } await client.query('COMMIT'); res.status(204).send();
+    const client = await pool.connect(); try { await client.query('BEGIN'); const deleteResult = await client.query('DELETE FROM guestbook_replies WHERE id = $1', [replyId]); if (deleteResult.rowCount === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: '找不到要刪除的回覆' }); } await client.query('COMMIT'); res.status(204).send();
     } catch (err) { await client.query('ROLLBACK'); console.error(`[API DELETE /admin/guestbook/replies/${id}] Error:`, err); res.status(500).json({ error: '無法刪除回覆' }); } finally { client.release(); }
 });
 
@@ -8819,7 +8836,7 @@ adminRouter.put('/guestbook/replies/:id/status', async (req, res) => {
     if (updateFields.length === 0) {
         return res.status(400).json({ error: '沒有提供要更新的狀態欄位' });
     }
-
+    
     updateFields.push(`updated_at = NOW()`); // 總是更新 updated_at
     queryParams.push(replyId); // 最後一個參數是 ID
 
@@ -8833,7 +8850,7 @@ adminRouter.put('/guestbook/replies/:id/status', async (req, res) => {
             await client.query('ROLLBACK');
             return res.status(404).json({ error: '找不到要更新的回覆' });
         }
-
+        
         // 如果回覆狀態改變，也更新主留言的 last_activity_at
         const messageIdResult = await client.query('SELECT message_id FROM guestbook_replies WHERE id = $1', [replyId]);
         if (messageIdResult.rowCount > 0) {
@@ -8885,11 +8902,11 @@ adminRouter.get('/news/:id', async (req, res) => {
 });
 adminRouter.post('/news', async (req, res) => {
     const { title, event_date, summary, content, thumbnail_url, image_url, category_id } = req.body;
-
-    if (!title || title.trim() === '') {
-        return res.status(400).json({ error: '消息標題為必填項。' });
+    
+    if (!title || title.trim() === '') { 
+        return res.status(400).json({ error: '消息標題為必填項。' }); 
     }
-
+    
     try {
         // 如果提供了category_id，檢查該分類是否存在
         if (category_id) {
@@ -8898,21 +8915,21 @@ adminRouter.post('/news', async (req, res) => {
                 return res.status(400).json({ error: '所選分類不存在。' });
             }
         }
-
+        
         const result = await pool.query(`
             INSERT INTO news (title, event_date, summary, content, thumbnail_url, image_url, category_id, created_at, updated_at)
             VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
             RETURNING *
-        `, [
-            title.trim(),
-            event_date || null,
-            summary ? summary.trim() : null,
-            content ? content.trim() : null,
-            thumbnail_url ? thumbnail_url.trim() : null,
+        `, [ 
+            title.trim(), 
+            event_date || null, 
+            summary ? summary.trim() : null, 
+            content ? content.trim() : null, 
+            thumbnail_url ? thumbnail_url.trim() : null, 
             image_url ? image_url.trim() : null,
             category_id || null
         ]);
-
+        
         res.status(201).json(result.rows[0]);
     } catch (err) {
         console.error('[受保護 API 錯誤] 新增消息時出錯:', err.stack || err);
@@ -8922,16 +8939,16 @@ adminRouter.post('/news', async (req, res) => {
 adminRouter.put('/news/:id', async (req, res) => {
     const { id } = req.params;
     const newsId = parseInt(id);
-    if (isNaN(newsId)) {
-        return res.status(400).json({ error: '無效的消息 ID 格式。' });
+    if (isNaN(newsId)) { 
+        return res.status(400).json({ error: '無效的消息 ID 格式。' }); 
     }
-
+    
     const { title, event_date, summary, content, thumbnail_url, image_url, category_id } = req.body;
-
-    if (!title || title.trim() === '') {
-        return res.status(400).json({ error: '消息標題為必填項。' });
+    
+    if (!title || title.trim() === '') { 
+        return res.status(400).json({ error: '消息標題為必填項。' }); 
     }
-
+    
     try {
         // 如果提供了category_id，檢查該分類是否存在
         if (category_id) {
@@ -8940,28 +8957,28 @@ adminRouter.put('/news/:id', async (req, res) => {
                 return res.status(400).json({ error: '所選分類不存在。' });
             }
         }
-
+        
         const result = await pool.query(`
             UPDATE news
             SET title = $1, event_date = $2, summary = $3, content = $4, 
                 thumbnail_url = $5, image_url = $6, category_id = $7, updated_at = NOW()
             WHERE id = $8
             RETURNING *
-        `, [
-            title.trim(),
-            event_date || null,
-            summary ? summary.trim() : null,
-            content ? content.trim() : null,
-            thumbnail_url ? thumbnail_url.trim() : null,
+        `, [ 
+            title.trim(), 
+            event_date || null, 
+            summary ? summary.trim() : null, 
+            content ? content.trim() : null, 
+            thumbnail_url ? thumbnail_url.trim() : null, 
             image_url ? image_url.trim() : null,
             category_id || null,
-            newsId
+            newsId 
         ]);
-
-        if (result.rowCount === 0) {
-            return res.status(404).json({ error: '找不到要更新的消息。' });
+        
+        if (result.rowCount === 0) { 
+            return res.status(404).json({ error: '找不到要更新的消息。' }); 
         }
-
+        
         res.status(200).json(result.rows[0]);
     } catch (err) {
         console.error(`[受保護 API 錯誤] 更新消息 ID ${id} 時出錯:`, err.stack || err);
@@ -9259,15 +9276,15 @@ adminRouter.delete('/disk-files/:filename', isAdminAuthenticated, async (req, re
 
     // 安全性：再次確認解析後的路徑是否仍在 uploadDir 之下
     if (!filePath.startsWith(path.resolve(uploadDir) + path.sep)) {
-        console.error(`[API DELETE /admin/disk-files] 嘗試刪除 uploadDir 之外的檔案: ${filePath}`);
-        return res.status(400).json({ error: '試圖存取無效的檔案路徑。' });
+         console.error(`[API DELETE /admin/disk-files] 嘗試刪除 uploadDir 之外的檔案: ${filePath}`);
+         return res.status(400).json({ error: '試圖存取無效的檔案路徑。' });
     }
 
     try {
         if (fs.existsSync(filePath)) {
             await fs.promises.unlink(filePath); // 使用異步 unlink
             console.log(`[API DELETE /admin/disk-files] 實體檔案已刪除: ${filePath}`);
-
+            
             // 可選：如果此檔案也存在於 uploaded_files 資料庫中，也一併刪除記錄
             // 這需要根據檔名（或相對路徑 /uploads/filename）去查詢資料庫
             // 例如: const dbFilePath = '/uploads/' + filename;
@@ -9290,28 +9307,28 @@ app.use('/api/admin', adminRouter); // 將 adminRouter 掛載到 /api/admin 路�
 
 // --- 流量分析 API ---
 app.get('/api/analytics/traffic', async (req, res) => {
-    const daysToFetch = 30; const startDate = new Date(); startDate.setDate(startDate.getDate() - daysToFetch); const startDateString = startDate.toISOString().split('T')[0];
-    try {
-        const queryText = `SELECT view_date, SUM(view_count)::bigint AS count FROM page_views WHERE view_date >= $1 GROUP BY view_date ORDER BY view_date ASC`;
-        const result = await pool.query(queryText, [startDateString]);
-        const trafficData = result.rows.map(row => ({ date: new Date(row.view_date).toISOString().split('T')[0], count: parseInt(row.count) }));
-        res.status(200).json(trafficData);
-    } catch (err) { console.error('獲取流量數據時發生嚴重錯誤:', err); res.status(500).json({ error: '伺服器內部錯誤，無法獲取流量數據。' }); }
+  const daysToFetch = 30; const startDate = new Date(); startDate.setDate(startDate.getDate() - daysToFetch); const startDateString = startDate.toISOString().split('T')[0];
+  try {
+      const queryText = `SELECT view_date, SUM(view_count)::bigint AS count FROM page_views WHERE view_date >= $1 GROUP BY view_date ORDER BY view_date ASC`;
+      const result = await pool.query(queryText, [startDateString]);
+      const trafficData = result.rows.map(row => ({ date: new Date(row.view_date).toISOString().split('T')[0], count: parseInt(row.count) }));
+      res.status(200).json(trafficData);
+  } catch (err) { console.error('獲取流量數據時發生嚴重錯誤:', err); res.status(500).json({ error: '伺服器內部錯誤，無法獲取流量數據。' }); }
 });
 app.get('/api/analytics/monthly-traffic', async (req, res) => {
-    const targetYear = req.query.year ? parseInt(req.query.year) : null;
-    let queryText = `SELECT to_char(date_trunc('month', view_date), 'YYYY-MM') AS view_month, SUM(view_count)::bigint AS count FROM page_views`;
-    const queryParams = [];
-    if (targetYear && !isNaN(targetYear)) {
-        queryText += ` WHERE date_part('year', view_date) = $1`;
-        queryParams.push(targetYear);
-    }
-    queryText += ` GROUP BY view_month ORDER BY view_month ASC`;
-    try {
-        const result = await pool.query(queryText, queryParams);
-        const monthlyTrafficData = result.rows.map(row => ({ month: row.view_month, count: parseInt(row.count) }));
-        res.status(200).json(monthlyTrafficData);
-    } catch (err) { console.error('獲取月度流量數據時發生嚴重錯誤:', err); res.status(500).json({ error: '伺服器內部錯誤，無法獲取月度流量數據。' }); }
+  const targetYear = req.query.year ? parseInt(req.query.year) : null;
+  let queryText = `SELECT to_char(date_trunc('month', view_date), 'YYYY-MM') AS view_month, SUM(view_count)::bigint AS count FROM page_views`;
+  const queryParams = [];
+  if (targetYear && !isNaN(targetYear)) {
+      queryText += ` WHERE date_part('year', view_date) = $1`;
+      queryParams.push(targetYear);
+  }
+  queryText += ` GROUP BY view_month ORDER BY view_month ASC`;
+  try {
+      const result = await pool.query(queryText, queryParams);
+      const monthlyTrafficData = result.rows.map(row => ({ month: row.view_month, count: parseInt(row.count) }));
+      res.status(200).json(monthlyTrafficData);
+  } catch (err) { console.error('獲取月度流量數據時發生嚴重錯誤:', err); res.status(500).json({ error: '伺服器內部錯誤，無法獲取月度流量數據。' }); }
 });
 
 
@@ -9319,19 +9336,19 @@ app.get('/api/analytics/monthly-traffic', async (req, res) => {
 // 添加到server.js
 app.get('/api/analytics/page-views/ranking', async (req, res) => {
     try {
-        const query = `
+      const query = `
         SELECT page, SUM(view_count)::int AS total_count 
         FROM page_views 
         GROUP BY page 
         ORDER BY total_count DESC
       `;
-        const result = await pool.query(query);
-        res.json(result.rows);
+      const result = await pool.query(query);
+      res.json(result.rows);
     } catch (err) {
-        console.error('获取页面排名数据失败:', err);
-        res.status(500).json({ error: '服务器内部错误' });
+      console.error('获取页面排名数据失败:', err);
+      res.status(500).json({ error: '服务器内部错误' });
     }
-});
+  });
 
 
 
@@ -9339,20 +9356,20 @@ app.get('/api/analytics/page-views/ranking', async (req, res) => {
 app.get('/api/analytics/page-views', async (req, res) => {
     const { startDate, endDate } = req.query;
     try {
-        const query = `
+      const query = `
         SELECT page, view_date, SUM(view_count)::int AS count 
         FROM page_views 
         WHERE view_date BETWEEN $1 AND $2
         GROUP BY page, view_date 
         ORDER BY view_date ASC, page ASC
       `;
-        const result = await pool.query(query, [startDate || '2023-01-01', endDate || 'CURRENT_DATE']);
-        res.json(result.rows);
+      const result = await pool.query(query, [startDate || '2023-01-01', endDate || 'CURRENT_DATE']);
+      res.json(result.rows);
     } catch (err) {
-        console.error('获取页面访问数据失败:', err);
-        res.status(500).json({ error: '服务器内部错误' });
+      console.error('获取页面访问数据失败:', err);
+      res.status(500).json({ error: '服务器内部错误' });
     }
-});
+  });
 
 
 
@@ -9377,8 +9394,8 @@ app.get('/api/admin/banners/:id', async (req, res) => {
 });
 app.post('/api/admin/banners', async (req, res) => {
     const { image_url, link_url, display_order, alt_text, page_location } = req.body;
-    if (!image_url) return res.status(400).json({ error: '圖片網址不能為空。' }); if (!page_location) return res.status(400).json({ error: '必須指定顯示頁面。' });
-    const order = (display_order !== undefined && display_order !== null) ? parseInt(display_order) : 0; if (isNaN(order)) return res.status(400).json({ error: '排序必須是數字。' });
+    if (!image_url) return res.status(400).json({ error: '圖片網址不能為空。'}); if (!page_location) return res.status(400).json({ error: '必須指定顯示頁面。'});
+    const order = (display_order !== undefined && display_order !== null) ? parseInt(display_order) : 0; if (isNaN(order)) return res.status(400).json({ error: '排序必須是數字。'});
     try {
         const result = await pool.query(`INSERT INTO banners (image_url, link_url, display_order, alt_text, page_location, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) RETURNING *`, [image_url.trim(), link_url ? link_url.trim() : null, order, alt_text ? alt_text.trim() : null, page_location]);
         res.status(201).json(result.rows[0]);
@@ -9386,8 +9403,8 @@ app.post('/api/admin/banners', async (req, res) => {
 });
 app.put('/api/admin/banners/:id', async (req, res) => {
     const { id } = req.params; if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的 Banner ID 格式。' }); }
-    const { image_url, link_url, display_order, alt_text, page_location } = req.body; if (!image_url) return res.status(400).json({ error: '圖片網址不能為空。' }); if (!page_location) return res.status(400).json({ error: '必須指定顯示頁面。' });
-    const order = (display_order !== undefined && display_order !== null) ? parseInt(display_order) : 0; if (isNaN(order)) return res.status(400).json({ error: '排序必須是數字。' });
+    const { image_url, link_url, display_order, alt_text, page_location } = req.body; if (!image_url) return res.status(400).json({ error: '圖片網址不能為空。'}); if (!page_location) return res.status(400).json({ error: '必須指定顯示頁面。'});
+    const order = (display_order !== undefined && display_order !== null) ? parseInt(display_order) : 0; if (isNaN(order)) return res.status(400).json({ error: '排序必須是數字。'});
     try {
         const result = await pool.query(`UPDATE banners SET image_url = $1, link_url = $2, display_order = $3, alt_text = $4, page_location = $5, updated_at = NOW() WHERE id = $6 RETURNING *`, [image_url.trim(), link_url ? link_url.trim() : null, order, alt_text ? alt_text.trim() : null, page_location, id]);
         if (result.rowCount === 0) { return res.status(404).json({ error: '找不到 Banner，無法更新。' }); }
@@ -9406,7 +9423,337 @@ app.delete('/api/admin/banners/:id', async (req, res) => {
 
 
 
-// ... rest of the code ...
+// --- 分類管理 API (需要身份驗證) ---
+adminRouter.get('/news-categories', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT id, name, slug, description, display_order, is_active, created_at, updated_at
+            FROM news_categories 
+            ORDER BY display_order ASC, name ASC
+        `);
+        res.status(200).json(result.rows);
+    } catch (err) {
+        console.error('[受保護 API 錯誤] 獲取管理新聞分類時出錯:', err.stack || err);
+        res.status(500).json({ error: '伺服器內部錯誤，無法獲取分類列表' });
+    }
+});
+
+adminRouter.post('/news-categories', async (req, res) => {
+    const { name, slug, description, display_order, is_active } = req.body;
+    
+    // 必填驗證
+    if (!name || name.trim() === '') {
+        return res.status(400).json({ error: '分類名稱為必填項。' });
+    }
+    if (!slug || slug.trim() === '') {
+        return res.status(400).json({ error: '分類標識符為必填項。' });
+    }
+    
+    try {
+        const result = await pool.query(`
+            INSERT INTO news_categories (name, slug, description, display_order, is_active, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+            RETURNING *
+        `, [name.trim(), slug.trim(), description ? description.trim() : null, 
+            display_order || 0, is_active !== false]);
+        
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error('[受保護 API 錯誤] 新增分類時出錯:', err.stack || err);
+        if (err.code === '23505') { // 唯一約束衝突
+            return res.status(400).json({ error: '該分類標識符已存在，請使用其他標識符。' });
+        }
+        res.status(500).json({ error: '伺服器內部錯誤，無法新增分類。' });
+    }
+});
+
+adminRouter.put('/news-categories/:id', async (req, res) => {
+    const { id } = req.params;
+    const categoryId = parseInt(id);
+    if (isNaN(categoryId)) {
+        return res.status(400).json({ error: '無效的分類 ID 格式。' });
+    }
+    
+    const { name, slug, description, display_order, is_active } = req.body;
+    
+    // 必填驗證
+    if (!name || name.trim() === '') {
+        return res.status(400).json({ error: '分類名稱為必填項。' });
+    }
+    if (!slug || slug.trim() === '') {
+        return res.status(400).json({ error: '分類標識符為必填項。' });
+    }
+    
+    try {
+        const result = await pool.query(`
+            UPDATE news_categories
+            SET name = $1, slug = $2, description = $3, display_order = $4, is_active = $5, updated_at = NOW()
+            WHERE id = $6
+            RETURNING *
+        `, [name.trim(), slug.trim(), description ? description.trim() : null, 
+            display_order || 0, is_active !== false, categoryId]);
+        
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到要更新的分類。' });
+        }
+        
+        res.status(200).json(result.rows[0]);
+    } catch (err) {
+        console.error(`[受保護 API 錯誤] 更新分類 ID ${id} 時出錯:`, err.stack || err);
+        if (err.code === '23505') { // 唯一約束衝突
+            return res.status(400).json({ error: '該分類標識符已存在，請使用其他標識符。' });
+        }
+        res.status(500).json({ error: '伺服器內部錯誤，無法更新分類。' });
+    }
+});
+
+adminRouter.delete('/news-categories/:id', async (req, res) => {
+    const { id } = req.params;
+    const categoryId = parseInt(id);
+    if (isNaN(categoryId)) {
+        return res.status(400).json({ error: '無效的分類 ID 格式。' });
+    }
+    
+    try {
+        // 首先檢查該分類是否有關聯的新聞
+        const checkResult = await pool.query('SELECT COUNT(*) FROM news WHERE category_id = $1', [categoryId]);
+        if (parseInt(checkResult.rows[0].count) > 0) {
+            return res.status(400).json({ 
+                error: '無法刪除此分類，因為有新聞正在使用它。請先變更這些新聞的分類，或考慮停用而非刪除該分類。' 
+            });
+        }
+        
+        const result = await pool.query('DELETE FROM news_categories WHERE id = $1', [categoryId]);
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到要刪除的分類。' });
+        }
+        
+        res.status(204).send();
+    } catch (err) {
+        console.error(`[受保護 API 錯誤] 刪除分類 ID ${id} 時出錯:`, err.stack || err);
+        res.status(500).json({ error: '伺服器內部錯誤，無法刪除分類。' });
+    }
+});
+
+// --- 銷售報告 API (受保護) ---
+app.get('/api/analytics/sales-report', async (req, res) => {
+    const { startDate, endDate } = req.query;
+    let queryStartDate = startDate ? new Date(startDate) : null;
+    let queryEndDate = endDate ? new Date(endDate) : null;
+    if (!queryStartDate || !queryEndDate || isNaN(queryStartDate) || isNaN(queryEndDate)) {
+        queryEndDate = new Date();
+        queryStartDate = new Date();
+        queryStartDate.setDate(queryEndDate.getDate() - 30);
+    } else {
+         queryEndDate.setHours(23, 59, 59, 999);
+    }
+    const startDateISO = queryStartDate.toISOString();
+    const endDateISO = queryEndDate.toISOString();
+
+    const client = await pool.connect();
+    try {
+        const totalItemsResult = await client.query(`SELECT COALESCE(SUM(quantity_sold), 0)::integer AS total_items FROM sales_log WHERE sale_timestamp BETWEEN $1 AND $2`, [startDateISO, endDateISO]);
+        const totalItemsSold = totalItemsResult.rows[0].total_items;
+
+        const trendResult = await client.query(`SELECT DATE(sale_timestamp AT TIME ZONE 'Asia/Taipei') AS sale_date, SUM(quantity_sold)::integer AS daily_quantity FROM sales_log WHERE sale_timestamp BETWEEN $1 AND $2 GROUP BY sale_date ORDER BY sale_date ASC`, [startDateISO, endDateISO]);
+        const salesTrend = trendResult.rows.map(row => ({ date: row.sale_date.toISOString().split('T')[0], quantity: row.daily_quantity }));
+
+        const topProductsResult = await client.query(`SELECT f.name AS figure_name, fv.name AS variation_name, SUM(sl.quantity_sold)::integer AS total_quantity FROM sales_log sl JOIN figure_variations fv ON sl.figure_variation_id = fv.id JOIN figures f ON fv.figure_id = f.id WHERE sl.sale_timestamp BETWEEN $1 AND $2 GROUP BY f.name, fv.name ORDER BY total_quantity DESC LIMIT 10`, [startDateISO, endDateISO]);
+        const topSellingProducts = topProductsResult.rows;
+
+        const detailedLogResult = await client.query(`SELECT sl.sale_timestamp, f.name AS figure_name, fv.name AS variation_name, sl.quantity_sold FROM sales_log sl JOIN figure_variations fv ON sl.figure_variation_id = fv.id JOIN figures f ON fv.figure_id = f.id WHERE sl.sale_timestamp BETWEEN $1 AND $2 ORDER BY sl.sale_timestamp DESC`, [startDateISO, endDateISO]);
+        const detailedLog = detailedLogResult.rows.map(row => ({ timestamp: row.sale_timestamp, figureName: row.figure_name, variationName: row.variation_name, quantity: row.quantity_sold }));
+
+        res.status(200).json({
+            summary: { totalItemsSold, startDate: startDateISO.split('T')[0], endDate: endDateISO.split('T')[0] },
+            trend: salesTrend,
+            topProducts: topSellingProducts,
+            details: detailedLog
+        });
+    } catch (err) {
+        console.error('[Sales Report API Error] 獲取銷售報告數據時出錯:', err.stack || err);
+        res.status(500).json({ error: '獲取銷售報告數據時發生伺服器內部錯誤' });
+    } finally {
+        client.release();
+    }
+});
+
+
+// --- 公仔庫存管理 API (受保護) ---
+app.get('/api/admin/figures', async (req, res) => {
+    try {
+        const queryText = ` SELECT f.id, f.name, f.image_url, f.purchase_price, f.selling_price, f.ordering_method, f.created_at, f.updated_at, COALESCE( (SELECT json_agg( json_build_object( 'id', v.id, 'name', v.name, 'quantity', v.quantity ) ORDER BY v.name ASC ) FROM figure_variations v WHERE v.figure_id = f.id), '[]'::json ) AS variations FROM figures f ORDER BY f.created_at DESC; `;
+        const result = await pool.query(queryText);
+        res.json(result.rows);
+    } catch (err) { console.error('[Admin API Error] 獲取公仔列表時出錯:', err.stack || err); res.status(500).json({ error: '獲取公仔列表時發生伺服器內部錯誤' }); }
+});
+app.post('/api/admin/figures', async (req, res) => {
+    const { name, image_url, purchase_price, selling_price, ordering_method, variations } = req.body;
+    if (!name) { return res.status(400).json({ error: '公仔名稱為必填項。' }); }
+    if (variations && !Array.isArray(variations)) { return res.status(400).json({ error: '規格資料格式必須是陣列。' }); }
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        const figureInsertQuery = ` INSERT INTO figures (name, image_url, purchase_price, selling_price, ordering_method) VALUES ($1, $2, $3, $4, $5) RETURNING *; `;
+        const figureResult = await client.query(figureInsertQuery, [ name, image_url || null, purchase_price || 0, selling_price || 0, ordering_method || null ]);
+        const newFigure = figureResult.rows[0]; const newFigureId = newFigure.id;
+        let insertedVariations = [];
+        if (variations && variations.length > 0) {
+            const variationInsertQuery = ` INSERT INTO figure_variations (figure_id, name, quantity) VALUES ($1, $2, $3) RETURNING *; `;
+            for (const variation of variations) {
+                if (!variation.name || variation.quantity === undefined || variation.quantity === null) { throw new Error(`規格 "${variation.name || '未命名'}" 缺少名稱或數量。`); }
+                const quantity = parseInt(variation.quantity); if (isNaN(quantity) || quantity < 0) { throw new Error(`規格 "${variation.name}" 的數量必須是非負整數。`); }
+                const variationResult = await client.query(variationInsertQuery, [ newFigureId, variation.name.trim(), quantity ]);
+                insertedVariations.push(variationResult.rows[0]);
+            }
+        }
+        await client.query('COMMIT'); newFigure.variations = insertedVariations; res.status(201).json(newFigure);
+    } catch (err) {
+        await client.query('ROLLBACK'); console.error('[Admin API Error] 新增公仔及其規格時出錯:', err.stack || err);
+        if (err.code === '23505' && err.constraint === 'figure_variations_figure_id_name_key') { res.status(409).json({ error: `新增失敗：同一個公仔下不能有重複的規格名稱。錯誤詳情: ${err.detail}` }); }
+        else { res.status(500).json({ error: `新增公仔過程中發生錯誤: ${err.message}` }); }
+    } finally { client.release(); }
+});
+app.put('/api/admin/figures/:id', async (req, res) => {
+    const { id } = req.params; const { name, image_url, purchase_price, selling_price, ordering_method, variations } = req.body;
+    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的公仔 ID 格式。' }); }
+    if (!name) { return res.status(400).json({ error: '公仔名稱為必填項。' }); }
+    if (variations && !Array.isArray(variations)) { return res.status(400).json({ error: '規格資料格式必須是陣列。' }); }
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        const figureUpdateQuery = ` UPDATE figures SET name = $1, image_url = $2, purchase_price = $3, selling_price = $4, ordering_method = $5, updated_at = NOW() WHERE id = $6 RETURNING *; `;
+        const figureResult = await client.query(figureUpdateQuery, [ name, image_url || null, purchase_price || 0, selling_price || 0, ordering_method || null, id ]);
+        if (figureResult.rowCount === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: '找不到要更新的公仔。' }); }
+        const updatedFigure = figureResult.rows[0];
+        const variationsToProcess = variations || []; const incomingVariationIds = new Set(variationsToProcess.filter(v => v.id).map(v => parseInt(v.id)));
+        const existingVariationsResult = await client.query('SELECT id FROM figure_variations WHERE figure_id = $1', [id]); const existingVariationIds = new Set(existingVariationsResult.rows.map(r => r.id));
+        const variationIdsToDelete = [...existingVariationIds].filter(existingId => !incomingVariationIds.has(existingId));
+        if (variationIdsToDelete.length > 0) { const deleteQuery = `DELETE FROM figure_variations WHERE id = ANY($1::int[])`; await client.query(deleteQuery, [variationIdsToDelete]); }
+        const variationUpdateQuery = `UPDATE figure_variations SET name = $1, quantity = $2, updated_at = NOW() WHERE id = $3 AND figure_id = $4`;
+        const variationInsertQuery = `INSERT INTO figure_variations (figure_id, name, quantity) VALUES ($1, $2, $3) RETURNING *`;
+        let finalVariations = [];
+        for (const variation of variationsToProcess) {
+            if (!variation.name || variation.quantity === undefined || variation.quantity === null) { throw new Error(`規格 "${variation.name || '未提供'}" 缺少名稱或數量。`); }
+            const quantity = parseInt(variation.quantity); if (isNaN(quantity) || quantity < 0) { throw new Error(`規格 "${variation.name}" 的數量必須是非負整數。`); }
+            const variationId = variation.id ? parseInt(variation.id) : null;
+            if (variationId && existingVariationIds.has(variationId)) { await client.query(variationUpdateQuery, [variation.name.trim(), quantity, variationId, id]); finalVariations.push({ id: variationId, name: variation.name.trim(), quantity: quantity }); }
+            else { const insertResult = await client.query(variationInsertQuery, [id, variation.name.trim(), quantity]); finalVariations.push(insertResult.rows[0]); }
+        }
+        await client.query('COMMIT'); updatedFigure.variations = finalVariations.sort((a, b) => a.name.localeCompare(b.name)); res.status(200).json(updatedFigure);
+    } catch (err) {
+        await client.query('ROLLBACK'); console.error(`[Admin API Error] 更新公仔 ID ${id} 時出錯:`, err.stack || err);
+        if (err.code === '23505' && err.constraint === 'figure_variations_figure_id_name_key') { res.status(409).json({ error: `更新失敗：同一個公仔下不能有重複的規格名稱。錯誤詳情: ${err.detail}` }); }
+        else { res.status(500).json({ error: `更新公仔過程中發生錯誤: ${err.message}` }); }
+    } finally { client.release(); }
+});
+app.delete('/api/admin/figures/:id', async (req, res) => {
+    const { id } = req.params; if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的公仔 ID 格式。' }); }
+    try {
+        const result = await pool.query('DELETE FROM figures WHERE id = $1', [id]);
+        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到要刪除的公仔。' }); }
+        res.status(204).send();
+    } catch (err) { console.error(`[Admin API Error] 刪除公仔 ID ${id} 時出錯:`, err.stack || err); res.status(500).json({ error: '刪除公仔過程中發生伺服器內部錯誤。' }); }
+});
+
+
+
+
+
+// GET /api/admin/sales - 獲取銷售紀錄 (您已有的，確保它在 app 上，而不是 adminRouter，如果其他 API 也是這樣)
+app.get('/api/admin/sales', async (req, res) => {
+    const { startDate, endDate, productName } = req.query;
+    // 確保您的查詢能正確處理 product_name，如果您的 sales_log 依賴 figure_variation_id，
+    // 則需要 JOIN figures 和 figure_variations 表來獲取正確的商品名稱。
+    // 這裡假設 product_name 直接存在於 sales_log 中，或可以通過 JOIN 獲得。
+    let queryText = `SELECT sl.id, sl.product_name, sl.quantity_sold, sl.sale_timestamp
+                     FROM sales_log sl`;
+    // 如果需要 JOIN:
+    // let queryText = `SELECT sl.id, COALESCE(f.name, fv.name, sl.product_name) as product_name,
+    //                         sl.quantity_sold, sl.sale_timestamp
+    //                  FROM sales_log sl
+    //                  LEFT JOIN figure_variations fv ON sl.figure_variation_id = fv.id
+    //                  LEFT JOIN figures f ON fv.figure_id = f.id`;
+
+
+    const queryParams = [];
+    const conditions = [];
+    let paramIndex = 1;
+    if (startDate) { conditions.push(`sl.sale_timestamp >= $${paramIndex++}`); queryParams.push(startDate); }
+    if (endDate) {
+        const nextDay = new Date(endDate);
+        nextDay.setDate(nextDay.getDate() + 1);
+        conditions.push(`sl.sale_timestamp < $${paramIndex++}`);
+        queryParams.push(nextDay.toISOString().split('T')[0]);
+    }
+    if (productName) { conditions.push(`sl.product_name ILIKE $${paramIndex++}`); queryParams.push(`%${productName}%`); }
+
+    if (conditions.length > 0) { queryText += ' WHERE ' + conditions.join(' AND '); }
+    queryText += ' ORDER BY sl.sale_timestamp DESC, sl.id DESC';
+
+    try {
+        const result = await pool.query(queryText, queryParams);
+        res.status(200).json(result.rows);
+    } catch (err) {
+        console.error('[Admin API Error] 獲取銷售紀錄時出錯:', err.stack || err);
+        res.status(500).json({ error: '獲取銷售紀錄時發生伺服器內部錯誤' });
+    }
+});
+
+// GET /api/admin/sales/summary - 獲取銷售彙總 (您已有的)
+app.get('/api/admin/sales/summary', async (req, res) => {
+    const { startDate, endDate } = req.query;
+    let whereClause = ''; const queryParams = []; let paramIndex = 1;
+    if (startDate) { whereClause += `WHERE sale_timestamp >= $${paramIndex++} `; queryParams.push(startDate); }
+    if (endDate) {
+        const nextDay = new Date(endDate);
+        nextDay.setDate(nextDay.getDate() + 1);
+        whereClause += (whereClause ? 'AND ' : 'WHERE ') + `sale_timestamp < $${paramIndex++} `;
+        queryParams.push(nextDay.toISOString().split('T')[0]);
+    }
+    try {
+        const totalItemsQuery = `SELECT COALESCE(SUM(quantity_sold)::integer, 0) as total_items FROM sales_log ${whereClause}`;
+        const totalItemsResult = await pool.query(totalItemsQuery, queryParams);
+        const totalItems = totalItemsResult.rows[0].total_items;
+
+        // 熱銷商品查詢 - 確保 product_name 來源正確
+        const topProductsQuery = `
+            SELECT product_name, SUM(quantity_sold)::integer as total_sold
+            FROM sales_log ${whereClause}
+            GROUP BY product_name
+            ORDER BY total_sold DESC
+            LIMIT 5;`;
+        const topProductsResult = await pool.query(topProductsQuery, queryParams);
+        const topProducts = topProductsResult.rows;
+
+        const salesTrendQuery = `
+            SELECT DATE(sale_timestamp) as sale_date, SUM(quantity_sold)::integer as daily_total
+            FROM sales_log ${whereClause}
+            GROUP BY sale_date
+            ORDER BY sale_date ASC;`;
+        const salesTrendResult = await pool.query(salesTrendQuery, queryParams);
+        const salesTrend = salesTrendResult.rows.map(row => ({ date: new Date(row.sale_date).toISOString().split('T')[0], quantity: row.daily_total }));
+
+        res.status(200).json({ totalItems, topProducts, salesTrend });
+    } catch (err) {
+        console.error('[Admin API Error] 獲取銷售彙總數據時出錯:', err.stack || err);
+        res.status(500).json({ error: '獲取銷售彙總數據時發生伺服器內部錯誤' });
+    }
+});
+
+// 新增: GET /api/admin/sales/product-names - 用於商品名稱輸入建議
+app.get('/api/admin/sales/product-names', async (req, res) => {
+    try {
+        // 這個查詢假設商品名稱直接存儲在 sales_log 中。
+        // 更健壯的系統可能從您的實際商品表（例如 `figures` 或 `products`）查詢。
+        const result = await pool.query('SELECT DISTINCT product_name FROM sales_log WHERE product_name IS NOT NULL ORDER BY product_name ASC');
+        const productNames = result.rows.map(row => row.product_name);
+        res.json(productNames);
+    } catch (error) {
+        console.error('獲取商品名稱列表失敗:', error);
+        res.status(500).json({ error: '無法獲取商品名稱列表' });
+    }
+});
 
 
 // 新增: POST /api/admin/sales - 新增一筆銷售紀錄
@@ -9534,21 +9881,21 @@ adminRouter.delete('/news-categories/:id', async (req, res) => {
     if (isNaN(categoryId)) {
         return res.status(400).json({ error: '無效的分類 ID 格式。' });
     }
-
+    
     try {
         // 首先檢查該分類是否有關聯的新聞
         const checkResult = await pool.query('SELECT COUNT(*) FROM news WHERE category_id = $1', [categoryId]);
         if (parseInt(checkResult.rows[0].count) > 0) {
-            return res.status(400).json({
-                error: '無法刪除此分類，因為有新聞正在使用它。請先變更這些新聞的分類，或考慮停用而非刪除該分類。'
+            return res.status(400).json({ 
+                error: '無法刪除此分類，因為有新聞正在使用它。請先變更這些新聞的分類，或考慮停用而非刪除該分類。' 
             });
         }
-
+        
         const result = await pool.query('DELETE FROM news_categories WHERE id = $1', [categoryId]);
         if (result.rowCount === 0) {
             return res.status(404).json({ error: '找不到要刪除的分類。' });
         }
-
+        
         res.status(204).send();
     } catch (err) {
         console.error(`[受保護 API 錯誤] 刪除分類 ID ${id} 時出錯:`, err.stack || err);
@@ -9560,45 +9907,48 @@ adminRouter.delete('/news-categories/:id', async (req, res) => {
 // --- Graceful Shutdown ---
 function gracefulShutdown() {
     console.log('收到關閉訊號，正在優雅關閉...');
-
+    
     // 停止 YouTube 抽獎輪詢
     if (youtubeLottery) {
-        console.log('正在停止 YouTube Lottery 監控...');
-        youtubeLottery.stopMonitoring();
+      console.log('正在停止 YouTube Lottery 監控...');
+      youtubeLottery.stopMonitoring();
     }
-
+  
     // 關閉 HTTP 伺服器
     server.close(() => {
-        console.log('已關閉剩餘的連線。');
-
-        // 關閉資料庫連接池
-        if (pool) {
-            pool.end(() => {
-                console.log('資料庫連接池已關閉。');
-                process.exit(0);
-            });
-        } else {
-            process.exit(0);
-        }
+      console.log('已關閉剩餘的連線。');
+      
+      // 關閉資料庫連接池
+      if (pool) {
+        pool.end(() => {
+          console.log('資料庫連接池已關閉。');
+          process.exit(0);
+        });
+      } else {
+        process.exit(0);
+      }
     });
-
+  
     // 如果伺服器在 10 秒內沒有關閉，強制退出
     setTimeout(() => {
-        console.error('無法在時限內關閉連線，強制關閉。');
-        process.exit(1);
+      console.error('無法在時限內關閉連線，強制關閉。');
+      process.exit(1);
     }, 10000); // 10 秒
-}
+  }
+  
+  // 監聽來自 pm2 或其他工具的 SIGTERM 訊號
+  process.on('SIGTERM', gracefulShutdown);
+  
+  // 監聽來自 Ctrl+C 的 SIGINT 訊號
+  process.on('SIGINT', gracefulShutdown);
 
-// 監聽來自 pm2 或其他工具的 SIGTERM 訊號
-process.on('SIGTERM', gracefulShutdown);
-
-// 監聽來自 Ctrl+C 的 SIGINT 訊號
-process.on('SIGINT', gracefulShutdown);
 
 
-
-server.listen(PORT, () => {
+  server.listen(PORT, () => {
     console.log(`伺服器正在監聽端口 ${PORT}`);
 });
 
 
+
+
+ 
