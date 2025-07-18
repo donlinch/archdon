@@ -6084,8 +6084,8 @@ app.post('/api/games/:id/play', async (req, res) => {
 
 
 
-// GET /api/guestbook - 獲取留言列表 (分頁, 最新活動排序)
-// app.get('/api/guestbook', async (req, res) => {
+ GET /api/guestbook - 獲取留言列表 (分頁, 最新活動排序)
+ app.get('/api/guestbook', async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
@@ -6221,42 +6221,19 @@ app.post('/api/guestbook', guestbookLimiter, async (req, res) => {
         res.status(500).json({ error: '無法新增留言，伺服器內部錯誤' });
     }
 });
+
+
+
 // POST /api/guestbook/replies - 新增公開回覆
 app.post('/api/guestbook/replies', guestbookLimiter, async (req, res) => {
-    const { message_id, parent_reply_id, author_name, content, edit_password, image_url } = req.body; // 新增 image_url
-    const messageIdInt = parseInt(message_id, 10);
-    const parentIdInt = parent_reply_id ? parseInt(parent_reply_id, 10) : null;
+   
 
-    if (isNaN(messageIdInt) || (parentIdInt !== null && isNaN(parentIdInt))) return res.status(400).json({ error: '無效的留言或父回覆 ID' });
 
-    let authorNameToSave = '匿名';
-    if (author_name && author_name.trim() !== '') { authorNameToSave = author_name.trim().substring(0, 100); }
-    if (!content || content.trim() === '') return res.status(400).json({ error: '回覆內容不能為空' });
-    const trimmedContent = content.trim();
-    const editPasswordToSave = edit_password && edit_password.trim() !== '' ? edit_password.trim() : null; // 處理 edit_password
-    const imageUrlToSave = image_url && image_url.trim() !== '' ? image_url.trim() : null; // 處理 image_url
 
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
-        const replyResult = await client.query(
-            `INSERT INTO guestbook_replies (message_id, parent_reply_id, author_name, content, edit_password, image_url, is_admin_reply, admin_identity_id, is_visible, like_count)
-             VALUES ($1, $2, $3, $4, $5, $6, FALSE, NULL, TRUE, 0)
-             RETURNING id, message_id, parent_reply_id, author_name, content, created_at, is_admin_reply, like_count, (edit_password IS NOT NULL) AS has_edit_password, image_url`,
-            [messageIdInt, parentIdInt, authorNameToSave, trimmedContent, editPasswordToSave, imageUrlToSave] // 新增 imageUrlToSave
-        );
-        await client.query('COMMIT');
-        res.status(201).json(replyResult.rows[0]);
-    } catch (err) {
-        await client.query('ROLLBACK');
-        console.error('[API POST /guestbook/replies] Error:', err);
-        if (err.code === '23503') {
-            return res.status(404).json({ error: '找不到要回覆的留言或父回覆。' });
-        }
-        res.status(500).json({ error: '無法新增回覆' });
-    } finally {
-        client.release();
-    }
+
+
+
+
 });
 
 
